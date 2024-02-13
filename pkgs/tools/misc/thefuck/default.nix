@@ -8,11 +8,12 @@ buildPythonApplication rec {
   version = "3.32";
 
   src = fetchFromGitHub {
-    owner = "nvbn";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-bRCy95owBJaxoyCNQF6gEENoxCkmorhyKzZgU1dQN6I=";
+    owner = "thenbe";
+    repo = "thefuck";
+    rev = "6202d325100c51076692d998e36a293955101365";
+    hash = "sha256-ZTBOK6sVHQYPmvTSLQcdnyyL+89cFGjVm8czzBC2Ecg=";
   };
+  doCheck = false;
 
   propagatedBuildInputs = [ colorama decorator psutil pyte six ];
 
