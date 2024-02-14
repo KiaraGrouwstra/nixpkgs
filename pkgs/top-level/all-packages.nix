@@ -8105,13 +8105,13 @@ with pkgs;
     };
   };
 
-  fcitx5-sogoupinyin = callPackage ../tools/inputmethods/fcitx-engines/fcitx-sogoupinyin { };
-
   fcitx5-skk = libsForQt5.callPackage ../tools/inputmethods/fcitx5/fcitx5-skk.nix { };
 
   fcitx5-skk-qt = fcitx5-skk.override {
     enableQt = true;
   };
+
+  fcitx5-sogoupinyin = callPackage ../tools/inputmethods/fcitx5/fcitx5-sogou-pinyin.nix { };
 
   fcitx5-unikey = libsForQt5.callPackage ../tools/inputmethods/fcitx5/fcitx5-unikey.nix { };
 
