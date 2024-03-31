@@ -2,7 +2,7 @@
 
 buildPythonPackage {
   pname = "gurobipy";
-  version = "9.1.2";
+  version = "11.0.1";
 
   src = gurobi.src;
 
