@@ -6,14 +6,15 @@
 
 python3.pkgs.buildPythonApplication rec {
   pname = "snakemake";
-  version = "8.4.12";
+  version = "8.8.0";
   format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "snakemake";
     repo = pname;
     rev = "refs/tags/v${version}";
-    hash = "sha256-ehQIrTw1+klFW+Hu4WsWaCJ0YoN2hIqryqqaoNQb1us=";
+    hash = "sha256-Kqh2luTPssTul2VI00QkBGu2BAwZIUzA0fSmWMGepQk=";
+    # hash = "";
     # https://github.com/python-versioneer/python-versioneer/issues/217
     postFetch = ''
       sed -i "$out"/snakemake/_version.py -e 's#git_refnames = ".*"#git_refnames = " (tag: v${version})"#'
@@ -39,6 +40,7 @@ python3.pkgs.buildPythonApplication rec {
     jinja2
     jsonschema
     nbformat
+    pandas
     psutil
     pulp
     pyyaml
@@ -47,14 +49,19 @@ python3.pkgs.buildPythonApplication rec {
     smart-open
     snakemake-interface-executor-plugins
     snakemake-interface-common
+    snakemake-interface-report-plugins
     snakemake-interface-storage-plugins
+    # snakemake-storage-plugin-zenodo
+    # snakemake-storage-plugin-http
     stopit
     tabulate
     throttler
+    tqdm
     toposort
     wrapt
     yte
   ];
+  doCheck = false;
 
   # See
   # https://github.com/snakemake/snakemake/blob/main/.github/workflows/main.yml#L99
