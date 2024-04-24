@@ -387,8 +387,7 @@ in {
       "autofs"
       # systemd-cryptenroll
     ] ++ lib.optional cfg.enableTpm2 "tpm-tis"
-    ++ lib.optional (cfg.enableTpm2 && !(pkgs.stdenv.hostPlatform.isRiscV64 || pkgs.stdenv.hostPlatform.isArmv7)) "tpm-crb"
-    ++ lib.optional cfg.package.withEfi "efivarfs";
+    ++ lib.optional (cfg.enableTpm2 && !(pkgs.stdenv.hostPlatform.isRiscV64 || pkgs.stdenv.hostPlatform.isArmv7)) "tpm-crb";
 
     boot.kernelParams = [
       "root=${config.boot.initrd.systemd.root}"
