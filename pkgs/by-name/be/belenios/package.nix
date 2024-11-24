@@ -38,6 +38,7 @@ ocamlPackages.buildDunePackage rec {
       js_of_ocaml
       menhir
       ocaml_gettext
+      # ocsigen_server
     ]);
 
   buildInputs =
@@ -59,6 +60,8 @@ ocamlPackages.buildDunePackage rec {
       js_of_ocaml-ppx
       js_of_ocaml-tyxml
       ocamlnet
+      # TODO: how do i override this one to version 3.0.0?
+      ocsigen_server
       ocsipersist-sqlite-config
       sodium
       xml-light
