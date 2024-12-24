@@ -27,6 +27,8 @@ rustPlatform.buildRustPackage rec {
   cargoBuildFlags = [
     "-p nickel-lang-cli"
     "-p nickel-lang-lsp"
+    "-p nickel-wasm-repl"
+    "-p pyckel"
   ];
 
   buildInputs = if enableNixImport then [
