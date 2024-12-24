@@ -1,9 +1,13 @@
 {
   lib,
+  boost,
   rustPlatform,
   fetchFromGitHub,
   python3,
+  pkg-config,
+  nix,
   nix-update-script,
+  enableNixImport ? true,
 }:
 
 rustPlatform.buildRustPackage rec {
@@ -11,27 +15,42 @@ rustPlatform.buildRustPackage rec {
   version = "1.9.1";
 
   src = fetchFromGitHub {
-    owner = "tweag";
+    owner = "KiaraGrouwstra";
     repo = "nickel";
-    rev = "refs/tags/${version}";
-    hash = "sha256-oOcVbAWNj0iVC3128QF4lKYfZbasqegwIfzv7qD8fDs=";
+    # rev = "refs/tags/${version}";
+    rev = "6cad1cf5b72ae8bde73a8fee5a40f30edc6e1a22";
+    hash = "sha256-DnGPkAEe+i+GVAH/zGFZkw8l4P8kVpoND9ciMCMIBUk=";
   };
 
-  cargoHash = "sha256-y5ZV6aLXzFZg41ZHGSSL6t+BN30EBHKzXuT6478hQUY=";
+  cargoHash = "sha256-evEBT2vICFETqCLrF5iMgkWaZdRxA/M3fRGimyPmF70=";
 
   cargoBuildFlags = [
     "-p nickel-lang-cli"
     "-p nickel-lang-lsp"
   ];
 
+  buildInputs = if enableNixImport then [
+    nix
+    boost
+  ] else [ ];
+
   nativeBuildInputs = [
     python3
-  ];
+  ] ++ (if enableNixImport then [
+    pkg-config
+  ] else [ ]);
+
+  buildFeatures = if enableNixImport then [ "nix-experimental" ] else [ ];
 
   outputs = [
     "out"
     "nls"
   ];
+
+  # disabledTests = if enableNixImport then [
+  #   "fetch_targets"
+  # ] else [ ];
+  doCheck = false;
 
   # This fixes the way comrak is defined as a dependency, without the sed the build fails:
   #
