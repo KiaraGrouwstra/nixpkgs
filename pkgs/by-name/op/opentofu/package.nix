@@ -99,7 +99,28 @@ let
     in
     test;
 
-  plugins = removeAttrs terraform-providers [
+  patchRegistry = provider:
+    if provider ? override then
+      # use opentofu plugin registry over terraform's
+      provider.override (
+        oldArgs:
+        if (builtins.hasAttr "homepage" oldArgs) then
+          {
+            provider-source-address =
+              lib.replaceStrings
+                [ "https://registry.terraform.io/providers" ]
+                [
+                  "registry.opentofu.org"
+                ]
+                oldArgs.homepage;
+          }
+        else
+          { }
+      )
+    else
+      provider;
+
+  plugins = lib.mapAttrs (_: patchRegistry) removeAttrs terraform-providers [
     "override"
     "overrideDerivation"
     "recurseForDerivations"
@@ -108,28 +129,7 @@ let
   withPlugins =
     plugins:
     let
-      actualPlugins = lib.lists.map (
-        provider:
-        if provider ? override then
-          # use opentofu plugin registry over terraform's
-          provider.override (
-            oldArgs:
-            if (builtins.hasAttr "homepage" oldArgs) then
-              {
-                provider-source-address =
-                  lib.replaceStrings
-                    [ "https://registry.terraform.io/providers" ]
-                    [
-                      "registry.opentofu.org"
-                    ]
-                    oldArgs.homepage;
-              }
-            else
-              { }
-          )
-        else
-          provider
-      ) (plugins package.plugins);
+      actualPlugins = lib.lists.map patchRegistry (plugins package.plugins);
 
       # Wrap PATH of plugins propagatedBuildInputs, plugins may have runtime dependencies on external binaries
       wrapperInputs = lib.unique (
