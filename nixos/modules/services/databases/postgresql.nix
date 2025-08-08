@@ -902,6 +902,18 @@ in
         ${pkgs.gzip}/bin/gunzip | ${pkgs.sudo}/bin/sudo -u ${cfg.superUser} ${pkgs.postgresql}/bin/psql postgres -U ${cfg.superUser}
       '';
     };
+
+    services.postgresql.streamingBackup = {
+      input.backupName = "postgres.sql";
+
+      input.backupCmd = ''
+        ${pkgs.sudo}/bin/sudo -u ${cfg.superUser} ${pkgs.postgresql}/bin/pg_dumpall -U ${cfg.superUser} | ${pkgs.gzip}/bin/gzip --rsyncable
+      '';
+
+      input.restoreCmd = ''
+        ${pkgs.gzip}/bin/gunzip | ${pkgs.sudo}/bin/sudo -u ${cfg.superUser} ${pkgs.postgresql}/bin/psql postgres -U ${cfg.superUser}
+      '';
+    };
   };
 
   meta.doc = ./postgresql.md;
