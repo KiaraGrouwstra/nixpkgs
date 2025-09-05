@@ -25,19 +25,21 @@ let
 
   uniqueFiles = map (x: x.file) (genericClosure {
     startSet = map (file: {
-      key = with file; (if type == null then "" else type + "+") + hash;
+      # key = with file; (if type == null then "" else type + "+") + hash;
+      key = file.outputHash;
       inherit file;
     }) files;
     operator = const [ ];
   });
 
-  files = map (drv: {
-    urls = drv.urls or [ drv.url ];
-    hash = drv.outputHash;
-    isPatch = (drv ? postFetch && drv.postFetch != "");
-    type = drv.outputHashAlgo;
-    name = drv.name;
-  }) fetchurlDependencies;
+  # files = map (drv: {
+  #   urls = drv.urls or [ drv.url ];
+  #   hash = drv.outputHash;
+  #   isPatch = (drv ? postFetch && drv.postFetch != "");
+  #   type = drv.outputHashAlgo;
+  #   name = drv.name;
+  # }) fetchurlDependencies;
+  files = fetchurlDependencies;
 
   fetchurlDependencies = filter (
     drv:
