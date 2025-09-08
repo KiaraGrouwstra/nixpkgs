@@ -48,6 +48,21 @@ runTest (
 
       nextcloud =
         { config, pkgs, ... }:
+        lib.mkMerge [
+        # config.services.nextcloud.fileBackup.other
+        # this attempt to expose fileBackup providers' `other` config here triggers an infinite recursion:
+
+         # … while evaluating config
+         #   at /home/kiara/code/nixpkgs/nixos/tests/nextcloud/basic.nix:54:9:
+         #     53|         # cfg.fileBackup.other
+         #     54|         config.services.nextcloud.fileBackup.other
+         #       |         ^
+         #     55|         {
+
+         # … while evaluating the module argument `config' in ":anon-1945:anon-1":
+
+         # … if you get an infinite recursion here, you probably reference `config` in `imports`. If you are trying to achieve a conditional import behavior dependent on `config`, consider importing unconditionally, and using `mkEnableOption` and `mkIf` to control its effect.
+
         {
           systemd.tmpfiles.rules = [
             "d /var/lib/nextcloud-data 0750 nextcloud nginx - -"
@@ -67,7 +82,9 @@ runTest (
           specialisation.withoutMagick.configuration = {
             services.nextcloud.enableImagemagick = false;
           };
-        };
+        }
+        ]
+        ;
     };
 
     test-helpers.extraTests =
