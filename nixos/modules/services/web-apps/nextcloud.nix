@@ -1026,6 +1026,19 @@ in
   };
 
   config = mkIf cfg.enable (mkMerge [
+    # an attempt to expose fileBackup providers' `other` config here triggers an infinite recursion:
+    # cfg.fileBackup.other
+    config.services.nextcloud.fileBackup.other
+
+      # … while evaluating config
+      #    at /home/kiara/code/nixpkgs/nixos/modules/services/web-apps/nextcloud.nix:1031:5:
+      #    1030|     # cfg.fileBackup.other
+      #    1031|     config.services.nextcloud.fileBackup.other
+      #        |     ^
+      #    1032|
+
+       # … if you get an infinite recursion here, you probably reference `config` in `imports`. If you are trying to achieve a conditional import behavior dependent on `config`, consider importing unconditionally, and using `mkEnableOption` and `mkIf` to control its effect.
+
     {
       warnings =
         let

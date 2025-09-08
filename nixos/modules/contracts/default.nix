@@ -154,8 +154,7 @@ in
                     type = submodule interface.config.other;
                   };
                 };
-              })
-              );
+              });
             };
             behaviorTest = mkOption {
               # The type should be more precise of course.
