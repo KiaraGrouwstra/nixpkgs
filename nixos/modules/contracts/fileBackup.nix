@@ -88,6 +88,10 @@ in
       };
     };
 
+    other = mkOption {
+      type = lib.types.raw;
+    };
+
     behaviorTest = {
       providerRoot,
       extraModules ? [],

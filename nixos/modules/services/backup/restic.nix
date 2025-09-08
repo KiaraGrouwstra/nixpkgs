@@ -305,7 +305,34 @@ in
 
             fileBackup = lib.mkOption {
               type = lib.types.nullOr config.contracts.fileBackup.provider;
-              default = null;
+              # default = null;
+              default = input: provider: {
+                inherit input; # sorry, boilerplate (for type safety)
+                output = {
+                  backupService = "restic-backups-${name}.service";
+                  restoreScript = lib.getExe (pkgs.writeShellApplication {
+                    name = "restic-${name}";
+                    text = ''
+                      if [ "$1" = "snapshots" ]; then
+                        restic-${name} snapshots
+                      elif [ "$1" = "restore" ]; then
+                        shift
+                        restic-${name} restore "$1" --target /
+                      fi
+                    '';
+                  });
+                };
+                # XXX how could we add this configuration somehow?
+                other.services.restic.backups.${name} = lib.mkIf (provider.config.input != null) (let
+                  inherit (provider.config) input;
+                in {
+                  user = input.user;
+                  paths = input.sourceDirectories;
+                  backupPrepareCommand = lib.concatStringsSep "\n" input.hooks.beforeBackup;
+                  backupCleanupCommand = lib.concatStringsSep "\n" input.hooks.afterBackup;
+                  exclude = input.excludePatterns;
+                });
+              };
             };
             # streamingBackup = lib.mkOption {
             #   type = lib.types.nullOr config.contracts.streamingBackup.provider;
