@@ -58,6 +58,9 @@ in
               '';
               type = deferredModule;
             };
+            other = mkOption {
+              type = deferredModule;
+            };
             consumer = mkOption {
               description = ''
                 Consumer type for a contract.
@@ -95,7 +98,14 @@ in
                   output = mkOption {
                     type = submodule interface.config.output;
                     readOnly = true;
-                    default = consumer.config.provider.output;
+                    # default = consumer.config.provider.output;
+                    default = (consumer.config.provider consumer.config.input).output;
+                  };
+                  other = mkOption {
+                    type = submodule interface.config.other;
+                    readOnly = true;
+                    # default = consumer.config.provider.other;
+                    default = (consumer.config.provider consumer.config.input).other;
                   };
                 };
               });
@@ -128,10 +138,10 @@ in
               '';
               default = submodule (provider: {
                 options = {
-                  consumer = mkOption {
-                    type = lib.types.nullOr interface.config.consumer;
-                    default = null;
-                  };
+                  # consumer = mkOption {
+                  #   type = lib.types.nullOr interface.config.consumer;
+                  #   default = null;
+                  # };
                   input = mkOption {
                     type = lib.types.nullOr (submodule interface.config.input);
                     readOnly = true;
@@ -140,8 +150,12 @@ in
                   output = mkOption {
                     type = submodule interface.config.output;
                   };
+                  other = mkOption {
+                    type = submodule interface.config.other;
+                  };
                 };
-              });
+              })
+              );
             };
             behaviorTest = mkOption {
               # The type should be more precise of course.
