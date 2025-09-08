@@ -78,7 +78,8 @@ let
               passwordFile = toString (pkgs.writeText "password" "password");
               initialize = true;
 
-              fileBackup.consumer = config.services.nextcloud.fileBackup;
+              # fileBackup.consumer = config.services.nextcloud.fileBackup;
+              # error after just commenting this: Unit restic-backups-nextcloud.service has a bad unit file setting.
             };
           };
       };
