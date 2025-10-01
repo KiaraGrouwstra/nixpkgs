@@ -98,8 +98,11 @@ let
   pluggable =
     terraform:
     let
-      withPlugins =
-        plugins:
+      withPackageAndPlugins =
+        {
+          plugins,
+          terraform ? terraform,
+        }:
         let
           actualPlugins = plugins terraform.plugins;
 
@@ -133,7 +136,12 @@ let
             #
             # See nixpkgs#158620 for details.
             overrideDerivation = f: (pluggable (terraform.overrideDerivation f)).withPlugins plugins;
-            overrideAttrs = f: (pluggable (terraform.overrideAttrs f)).withPlugins plugins;
+            overrideAttrs =
+              f:
+              withPackageAndPlugins {
+                inherit plugins;
+                terraform = pluggable (terraform.overrideAttrs f);
+              };
             override = x: (pluggable (terraform.override x)).withPlugins plugins;
           };
         in
@@ -180,6 +188,8 @@ let
               '';
             }
           );
+
+      withPlugins = plugins: withPackageAndPlugins { inherit terraform plugins; };
     in
     withPlugins (_: [ ]);
 
