@@ -105,8 +105,11 @@ let
     "recurseForDerivations"
   ];
 
-  withPlugins =
-    plugins:
+  withPackageAndPlugins =
+    {
+      plugins,
+      package ? package,
+    }:
     let
       actualPlugins = plugins package.plugins;
 
@@ -139,7 +142,12 @@ let
         #
         # See nixpkgs#158620 for details.
         overrideDerivation = f: (package.overrideDerivation f).withPlugins plugins;
-        overrideAttrs = f: (package.overrideAttrs f).withPlugins plugins;
+        overrideAttrs =
+          f:
+          withPackageAndPlugins {
+            inherit plugins;
+            package = package.overrideAttrs f;
+          };
         override = x: (package.override x).withPlugins plugins;
       };
     in
@@ -189,5 +197,7 @@ let
           '';
         }
       );
+
+  withPlugins = plugins: withPackageAndPlugins { inherit package plugins; };
 in
 package
