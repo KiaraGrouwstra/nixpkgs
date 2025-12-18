@@ -67,19 +67,16 @@ let
               config = {
                 adminpassFile = "${pkgs.writeText "adminpass" topLevelConfig.adminpass}"; # Don't try this at home!
               };
-              fileBackup.provider = config.services.restic.backups.nextcloud.fileBackup;
             };
+            contracts.fileBackup.contracts.restic.my-nextcloud-backup.input = config.services.nextcloud.fileBackup.input;
 
             systemd.tmpfiles.rules = [
               "d '/var/lib/backups/nextcloud' 0750 nextcloud root - -"
             ];
-            services.restic.backups.nextcloud = {
+            services.restic.backups.my-nextcloud-backup = {
               repository = "/var/lib/backups/nextcloud";
               passwordFile = toString (pkgs.writeText "password" "password");
               initialize = true;
-
-              # fileBackup.consumer = config.services.nextcloud.fileBackup;
-              # error after just commenting this: Unit restic-backups-nextcloud.service has a bad unit file setting.
             };
           };
       };
@@ -110,7 +107,7 @@ let
               )
 
           with subtest("Backup using file backup contract"):
-              nextcloud.succeed("systemctl start ${nodes.nextcloud.services.nextcloud.fileBackup.output.backupService}")
+              nextcloud.succeed("systemctl start ${config.nodes.nextcloud.contracts.fileBackup.contracts.restic.my-nextcloud-backup.output.backupService}")
 
           ${
             if pkgs.lib.isFunction test-helpers.extraTests then

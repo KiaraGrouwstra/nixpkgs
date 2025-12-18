@@ -345,9 +345,6 @@ in
   containers-restart_networking = handleTest ./containers-restart_networking.nix { };
   containers-tmpfs = handleTest ./containers-tmpfs.nix { };
   containers-unified-hierarchy = handleTest ./containers-unified-hierarchy.nix { };
-  contracts-fileBackup-restic = runTest ./contracts/fileBackup/restic.nix;
-  contracts-secret-hardcodedSecret = runTest ./contracts/secret/hardcodedSecret.nix;
-  contracts-streamingBackup-restic = runTest ./contracts/streamingBackup/restic.nix;
   convos = handleTest ./convos.nix { };
   corerad = handleTest ./corerad.nix { };
   cosmic = runTest {

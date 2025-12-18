@@ -1,156 +1,122 @@
-{ lib, ... }:
+{
+  lib,
+  pkgs,
+  config,
+  ...
+}:
 let
   inherit (lib) mkOption;
-  inherit (lib.types) attrs lazyAttrsOf functionTo submodule listOf str deferredModule optionType;
+  inherit (lib.types)
+    attrsOf
+    listOf
+    nonEmptyListOf
+    nullOr
+    path
+    str
+    submodule
+    ;
 in
 {
-  options.contracts = mkOption {
-    description = ''
-      Base option for a contract.
+  options.contracts.fileBackup.contracts.restic = mkOption {
+    default = { };
+    type = attrsOf (
+      submodule (instance: {
+        options = {
+          input = mkOption {
+            default = null;
+            type = nullOr (submodule {
+              options.user = mkOption {
+                description = ''
+                  Unix user doing the backups.
+                '';
+                type = str;
+                example = "vaultwarden";
+              };
 
-      To create a new contract, add an instance of `config.contracts.<name>`
-      and define the `meta`, `input` and `output` options.
-      The `consumer` and `provider` options will then be set up automatically
-      and contain respectively the type of a consumer and provider
-      of this new contract.
+              options.sourceDirectories = mkOption {
+                description = "Directories to back up.";
+                type = nonEmptyListOf str;
+                example = "/var/lib/vaultwarden";
+              };
 
-      To use the `<name>` contract, declare an option with either the
-      `config.contracts.<name>.consumer` or `config.contracts.<name>.provider`
-      type.
+              options.excludePatterns = mkOption {
+                description = "File patterns to exclude.";
+                type = listOf str;
+                default = [ ];
+              };
 
-      The `behaviorTest` option is used to ensure all `provider` of a contract
-      behave the same way.
-    '';
-    type =
-      lazyAttrsOf (
-        submodule (interface: {
-          options = {
-            meta = mkOption {
-              description = ''
-                Useful information about the contract and its maintenance.
-              '';
-              type = submodule {
-                options = {
-                  maintainers = mkOption {
-                    description = ''
-                      Maintainers of the contract.
-                    '';
-                    type = listOf str;
-                  };
-                  description = mkOption {
-                    description = ''
-                      Description of the contract.
-                    '';
-                    type = str;
+              options.hooks = mkOption {
+                description = "Hooks to run around the backup.";
+                default = { };
+                type = submodule {
+                  options = {
+                    beforeBackup = mkOption {
+                      description = "Hooks to run before backup.";
+                      type = listOf path;
+                      default = [ ];
+                    };
+
+                    afterBackup = mkOption {
+                      description = "Hooks to run after backup.";
+                      type = listOf path;
+                      default = [ ];
+                    };
                   };
                 };
               };
-            };
-            input = mkOption {
-              description = ''
-                Input type of a contract.
-              '';
-              type = deferredModule;
-            };
-            output = mkOption {
-              description = ''
-                Output type of a contract.
-              '';
-              type = deferredModule;
-            };
-            consumer = mkOption {
-              description = ''
-                Consumer type for a contract.
-
-                This option is set up automatically.
-                Define instead the `input` and `output` options.
-              '';
-              type = optionType;
-              readOnly = true;
-              defaultText = lib.literalExpression ''
-                submodule (consumer: {
-                  options = {
-                    provider = mkOption {
-                      type = interface.config.provider;
-                    };
-                    input = mkOption {
-                      type = submodule interface.config.input;
-                    };
-                    output = mkOption {
-                      type = submodule interface.config.output;
-                      readOnly = true;
-                      default = consumer.config.provider.output;
-                    };
-                  };
-                })
-              '';
-              default = submodule (consumer: {
-                options = {
-                  provider = mkOption {
-                    type = interface.config.provider;
-                  };
-                  input = mkOption {
-                    type = submodule interface.config.input;
-                  };
-                  output = mkOption {
-                    type = submodule interface.config.output;
-                    readOnly = true;
-                    default = consumer.config.provider.output;
-                  };
-                };
-              });
-            };
-            provider = mkOption {
-              description = ''
-                Provider type for a contract.
-
-                This option is set up automatically.
-                Define instead the `input` and `output` options.
-              '';
-              type = optionType;
-              readOnly = true;
-              defaultText = lib.literalExpression ''
-                submodule (provider: {
-                  options = {
-                    consumer = mkOption {
-                      type = interface.config.consumer;
-                    };
-                    input = mkOption {
-                      type = submodule interface.config.input;
-                      readOnly = true;
-                      default = provider.config.consumer.input;
-                    };
-                    output = mkOption {
-                      type = submodule interface.config.output;
-                    };
-                  };
-                }
-              '';
-              default = submodule (provider: {
-                options = {
-                  consumer = mkOption {
-                    type = lib.types.nullOr interface.config.consumer;
-                    default = null;
-                  };
-                  input = mkOption {
-                    type = lib.types.nullOr (submodule interface.config.input);
-                    readOnly = true;
-                    default = provider.config.consumer.input or null;
-                  };
-                  output = mkOption {
-                    type = submodule interface.config.output;
-                  };
-                };
-              });
-            };
-            behaviorTest = mkOption {
-              # The type should be more precise of course.
-              # There should actually be a NixOSTest type.
-              # And we can probably do something fancy with the `input` and `output` deferred modules.
-              type = functionTo attrs;
-            };
+            });
           };
-        })
-      );
+          output = mkOption {
+            type = nullOr (submodule {
+              options.restoreScript = mkOption {
+                type = path;
+              };
+              options.backupService = mkOption {
+                type = str;
+              };
+            });
+            default =
+              let
+                inherit (instance.config._module.args) name;
+              in
+              if lib.hasAttr name config.services.restic.backups then
+                {
+                  backupService = "restic-backups-${name}.service";
+                  restoreScript = lib.getExe (
+                    pkgs.writeShellApplication {
+                      name = "restic-${name}";
+                      text = ''
+                        if [ "$1" = "snapshots" ]; then
+                          restic-${name} snapshots
+                        elif [ "$1" = "restore" ]; then
+                          shift
+                          restic-${name} restore "$1" --target /
+                        fi
+                      '';
+                    }
+                  );
+                }
+              else
+                null;
+          };
+        };
+      })
+    );
   };
+  config.services.restic.backups = lib.mapAttrs (
+    name: instance:
+    lib.mkIf (instance.input != null) (
+      let
+        inherit (instance) input;
+        inherit (input) user hooks;
+      in
+      {
+        inherit user;
+        paths = input.sourceDirectories;
+        backupPrepareCommand = lib.concatStringsSep "\n" hooks.beforeBackup;
+        backupCleanupCommand = lib.concatStringsSep "\n" hooks.afterBackup;
+        exclude = input.excludePatterns;
+      }
+    )
+  ) config.contracts.fileBackup.contracts.restic;
 }

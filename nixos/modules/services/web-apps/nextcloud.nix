@@ -1013,8 +1013,8 @@ in
       '';
     };
 
-    fileBackup = lib.mkOption {
-      type = config.contracts.fileBackup.consumer;
+    fileBackup.input = lib.mkOption {
+      # type = config.contracts.fileBackup.contracts.*.*.input.type;
     };
   };
 
