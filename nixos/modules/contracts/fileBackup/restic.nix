@@ -15,7 +15,7 @@ in
       submodule (instance: {
         options =
           let
-            inherit ((pkgs.callPackage ./. { }).interface) input output;
+            inherit (config.contracts.fileBackup) input output;
           in
           {
             input = mkOption {
