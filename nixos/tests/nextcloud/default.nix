@@ -68,7 +68,7 @@ let
                 adminpassFile = "${pkgs.writeText "adminpass" topLevelConfig.adminpass}"; # Don't try this at home!
               };
             };
-            contracts.fileBackup.contracts.restic.my-nextcloud-backup.input = config.services.nextcloud.fileBackup.input;
+            blocks.restic.contracts.my-nextcloud-backup.input = config.services.nextcloud.fileBackup.input;
 
             systemd.tmpfiles.rules = [
               "d '/var/lib/backups/nextcloud' 0750 nextcloud root - -"
@@ -107,7 +107,7 @@ let
               )
 
           with subtest("Backup using file backup contract"):
-              nextcloud.succeed("systemctl start ${config.nodes.nextcloud.contracts.fileBackup.contracts.restic.my-nextcloud-backup.output.backupService}")
+              nextcloud.succeed("systemctl start ${config.nodes.nextcloud.blocks.restic.contracts.my-nextcloud-backup.output.backupService}")
 
           ${
             if pkgs.lib.isFunction test-helpers.extraTests then

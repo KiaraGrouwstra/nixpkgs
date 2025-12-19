@@ -47,7 +47,7 @@
   ./config/xdg/sounds.nix
   ./config/xdg/terminal-exec.nix
   ./config/zram.nix
-  ./contracts/default.nix
+  ./contracts/fileBackup/restic.nix
   ./hardware/acpilight.nix
   ./hardware/all-firmware.nix
   ./hardware/all-hardware.nix
