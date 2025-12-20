@@ -628,6 +628,18 @@ in
       };
     };
 
+    streamingBackup = lib.mkOption {
+      type = config.contracts.streamingBackup.consumer;
+      default.input = {
+        backupName = "postgres.sql";
+        backupCmd = ''
+          ${pkgs.sudo}/bin/sudo -u ${cfg.superUser} ${pkgs.postgresql}/bin/pg_dumpall -U ${cfg.superUser} | ${pkgs.gzip}/bin/gzip --rsyncable
+        '';
+        restoreCmd = ''
+          ${pkgs.gzip}/bin/gunzip | ${pkgs.sudo}/bin/sudo -u ${cfg.superUser} ${pkgs.postgresql}/bin/psql postgres -U ${cfg.superUser}
+        '';
+      };
+    };
   };
 
   ###### implementation
