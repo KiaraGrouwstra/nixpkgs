@@ -65,6 +65,10 @@ in
             '';
             type = optionType;
           };
+          requests = mkOption {
+            # type = listOf ?;
+            default = [ ];
+          };
           behaviorTest = mkOption {
             # The type should be more precise of course.
             # There should actually be a NixOSTest type.

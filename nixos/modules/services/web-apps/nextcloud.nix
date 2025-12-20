@@ -1013,8 +1013,17 @@ in
       '';
     };
 
-    fileBackup.input = lib.mkOption {
-      # type = config.contracts.fileBackup.contracts.*.*.input.type;
+    consumer.fileBackup = lib.mkOption {
+      type = config.contracts.fileBackup.input;
+      default = {
+        user = "nextcloud";
+        sourceDirectories = [
+          cfg.datadir
+        ];
+        excludePatterns = [
+          ".rnd"
+        ];
+      };
     };
   };
 
@@ -1054,6 +1063,8 @@ in
         ++ (optional (versionOlder overridePackage.version "29") (upgradeWarning 28 "24.11"))
         ++ (optional (versionOlder overridePackage.version "30") (upgradeWarning 29 "24.11"))
         ++ (optional (versionOlder overridePackage.version "31") (upgradeWarning 30 "25.05"));
+
+      contracts.fileBackup.requests.nextcloud = cfg.consumer.fileBackup;
 
       services.nextcloud.package =
         with pkgs;
@@ -1560,18 +1571,6 @@ in
             rewrite ^/.well-known/host-meta.json /public.php?service=host-meta-json last;
           ''}
         '';
-      };
-    }
-
-    {
-      services.nextcloud.fileBackup.input = {
-        user = "nextcloud";
-        sourceDirectories = [
-          cfg.datadir
-        ];
-        excludePatterns = [
-          ".rnd"
-        ];
       };
     }
   ]);
