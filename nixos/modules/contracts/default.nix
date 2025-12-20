@@ -30,7 +30,7 @@ in
       behave the same way.
     '';
     type = attrsOf (
-      submodule (interface: {
+      submodule (instance: {
         options = {
           meta = mkOption {
             description = ''
@@ -53,17 +53,42 @@ in
               };
             };
           };
-          input = mkOption {
-            description = ''
-              Input type of a contract.
-            '';
-            type = optionType;
+          interface = mkOption {
+            default = { };
+            type = submodule {
+              options = {
+                input = mkOption {
+                  description = ''
+                    Input type of a contract.
+                  '';
+                  type = optionType;
+                };
+                output = mkOption {
+                  description = ''
+                    Output type of a contract.
+                  '';
+                  type = optionType;
+                };
+              };
+            };
           };
-          output = mkOption {
+          consumer = mkOption {
             description = ''
-              Output type of a contract.
+              Consumer type for a contract.
+              This option is set up automatically.
+              Define instead the `input` and `output` options.
             '';
             type = optionType;
+            default = submodule {
+              options = {
+                input = mkOption {
+                  type = instance.config.interface.input;
+                };
+                output = mkOption {
+                  type = instance.config.interface.output;
+                };
+              };
+            };
           };
           requests = mkOption {
             # type = listOf ?;

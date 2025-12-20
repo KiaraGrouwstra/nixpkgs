@@ -19,79 +19,81 @@ in
       '';
     };
 
-    input = submodule {
-      options = {
-        user = mkOption {
-          description = ''
-            Unix user doing the backups.
-          '';
-          type = str;
-          example = "vaultwarden";
-        };
+    interface = {
+      input = submodule {
+        options = {
+          user = mkOption {
+            description = ''
+              Unix user doing the backups.
+            '';
+            type = str;
+            example = "vaultwarden";
+          };
 
-        sourceDirectories = mkOption {
-          description = "Directories to back up.";
-          type = nonEmptyListOf str;
-          example = "/var/lib/vaultwarden";
-        };
+          sourceDirectories = mkOption {
+            description = "Directories to back up.";
+            type = nonEmptyListOf str;
+            example = "/var/lib/vaultwarden";
+          };
 
-        excludePatterns = mkOption {
-          description = "File patterns to exclude.";
-          type = listOf str;
-          default = [ ];
-        };
+          excludePatterns = mkOption {
+            description = "File patterns to exclude.";
+            type = listOf str;
+            default = [ ];
+          };
 
-        hooks = mkOption {
-          description = "Hooks to run around the backup.";
-          default = { };
-          type = submodule {
-            options = {
-              beforeBackup = mkOption {
-                description = "Hooks to run before backup.";
-                type = listOf path;
-                default = [ ];
-              };
+          hooks = mkOption {
+            description = "Hooks to run around the backup.";
+            default = { };
+            type = submodule {
+              options = {
+                beforeBackup = mkOption {
+                  description = "Hooks to run before backup.";
+                  type = listOf path;
+                  default = [ ];
+                };
 
-              afterBackup = mkOption {
-                description = "Hooks to run after backup.";
-                type = listOf path;
-                default = [ ];
+                afterBackup = mkOption {
+                  description = "Hooks to run after backup.";
+                  type = listOf path;
+                  default = [ ];
+                };
               };
             };
           };
         };
       };
+
+      output = submodule (output: {
+        options = {
+          restoreScript = mkOption {
+            description = ''
+              Name of script that can restore the database.
+              One can then list snapshots with:
+              ```bash
+              $ ${output.options.restoreScript.value} snapshots
+              ```
+              And restore the database with:
+              ```bash
+              $ ${output.options.restoreScript.value} restore latest
+              ```
+            '';
+            type = path;
+          };
+
+          backupService = mkOption {
+            description = ''
+              Name of service backing up the database.
+              This script can be ran manually to back up the database:
+              ```bash
+              $ systemctl start ${output.options.backupService.value}
+              ```
+            '';
+            type = str;
+          };
+        };
+      });
     };
-
-    output = submodule (output: {
-      options = {
-        restoreScript = mkOption {
-          description = ''
-            Name of script that can restore the database.
-            One can then list snapshots with:
-            ```bash
-            $ ${output.options.restoreScript.value} snapshots
-            ```
-            And restore the database with:
-            ```bash
-            $ ${output.options.restoreScript.value} restore latest
-            ```
-          '';
-          type = path;
-        };
-
-        backupService = mkOption {
-          description = ''
-            Name of service backing up the database.
-            This script can be ran manually to back up the database:
-            ```bash
-            $ systemctl start ${output.options.backupService.value}
-            ```
-          '';
-          type = str;
-        };
-      };
-    });
 
     behaviorTest =
       {

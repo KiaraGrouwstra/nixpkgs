@@ -343,7 +343,7 @@ in
       type = submodule {
         options =
           let
-            inherit (config.contracts.fileBackup) input output;
+            inherit (config.contracts.fileBackup.interface) input output;
             cfg = config.services.restic.providers.fileBackup;
           in
           {

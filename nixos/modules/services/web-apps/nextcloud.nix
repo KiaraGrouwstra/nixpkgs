@@ -1013,9 +1013,9 @@ in
       '';
     };
 
-    consumer.fileBackup = lib.mkOption {
-      type = config.contracts.fileBackup.input;
-      default = {
+    fileBackup = lib.mkOption {
+      type = config.contracts.fileBackup.consumer;
+      default.input = {
         user = "nextcloud";
         sourceDirectories = [
           cfg.datadir
@@ -1064,7 +1064,7 @@ in
         ++ (optional (versionOlder overridePackage.version "30") (upgradeWarning 29 "24.11"))
         ++ (optional (versionOlder overridePackage.version "31") (upgradeWarning 30 "25.05"));
 
-      contracts.fileBackup.requests.nextcloud = cfg.consumer.fileBackup;
+      contracts.fileBackup.requests.nextcloud = cfg.fileBackup.input;
 
       services.nextcloud.package =
         with pkgs;

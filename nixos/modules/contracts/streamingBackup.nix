@@ -13,63 +13,65 @@ in
       '';
     };
 
-    input = submodule {
-      options = {
-        backupName = mkOption {
-          description = "Name of the backup in the repository.";
-          type = str;
-          example = "postgresql.sql";
-        };
+    interface = {
+      input = submodule {
+        options = {
+          backupName = mkOption {
+            description = "Name of the backup in the repository.";
+            type = str;
+            example = "postgresql.sql";
+          };
 
-        backupCmd = mkOption {
-          description = "A bash command that produces the database dump on stdout.";
-          type = str;
-          example = literalExpression ''
-            ''${pkgs.postgresql}/bin/pg_dumpall | ''${pkgs.gzip}/bin/gzip --rsyncable
-          '';
-        };
+          backupCmd = mkOption {
+            description = "A bash command that produces the database dump on stdout.";
+            type = str;
+            example = literalExpression ''
+              ''${pkgs.postgresql}/bin/pg_dumpall | ''${pkgs.gzip}/bin/gzip --rsyncable
+            '';
+          };
 
-        restoreCmd = mkOption {
-          description = ''
-            A bash command that reads the database dump on stdin and restores the database.
-          '';
-          type = str;
-          example = literalExpression ''
-            ''${pkgs.gzip}/bin/gunzip | ''${pkgs.postgresql}/bin/psql postgres
-          '';
+          restoreCmd = mkOption {
+            description = ''
+              A bash command that reads the database dump on stdin and restores the database.
+            '';
+            type = str;
+            example = literalExpression ''
+              ''${pkgs.gzip}/bin/gunzip | ''${pkgs.postgresql}/bin/psql postgres
+            '';
+          };
         };
       };
+
+      output = submodule (output: {
+        options = {
+          restoreScript = mkOption {
+            description = ''
+              Name of script that can restore the database.
+              One can then list snapshots with:
+              ```bash
+              $ ${output.options.restoreScript.value} snapshots
+              ```
+              And restore the database with:
+              ```bash
+              $ ${output.options.restoreScript.value} restore latest
+              ```
+            '';
+            type = path;
+          };
+
+          backupService = mkOption {
+            description = ''
+              Name of service backing up the database.
+              This script can be ran manually to back up the database:
+              ```bash
+              $ systemctl start ${(lib.debug.traceValFn lib.attrNames output.config).backupService.value}
+              ```
+            '';
+            type = str;
+          };
+        };
+      });
     };
-
-    output = submodule (output: {
-      options = {
-        restoreScript = mkOption {
-          description = ''
-            Name of script that can restore the database.
-            One can then list snapshots with:
-            ```bash
-            $ ${output.options.restoreScript.value} snapshots
-            ```
-            And restore the database with:
-            ```bash
-            $ ${output.options.restoreScript.value} restore latest
-            ```
-          '';
-          type = path;
-        };
-
-        backupService = mkOption {
-          description = ''
-            Name of service backing up the database.
-            This script can be ran manually to back up the database:
-            ```bash
-            $ systemctl start ${(lib.debug.traceValFn lib.attrNames output.config).backupService.value}
-            ```
-          '';
-          type = str;
-        };
-      };
-    });
 
     behaviorTest =
       {
