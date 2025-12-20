@@ -97,7 +97,7 @@ in
           behaviorTest = mkOption {
             # The type should be more precise of course.
             # There should actually be a NixOSTest type.
-            # And we can probably do something fancy with the `input` and `output` deferred modules.
+            # And we can probably do something fancy with the `input` and `output` modules.
             type = functionTo attrs;
           };
         };
