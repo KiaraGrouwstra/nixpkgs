@@ -71,9 +71,9 @@ let
               "d '/var/lib/backups/nextcloud' 0750 nextcloud root - -"
             ];
 
-            services.restic = {
-              providers.fileBackup.enable = true;
-              backups."contracts-fileBackup-nextcloud" = {
+            services.restic.providers.fileBackup = {
+              enable = true;
+              configure = {
                 repository = "/var/lib/backups/nextcloud";
                 passwordFile = toString (pkgs.writeText "password" "password");
                 initialize = true;

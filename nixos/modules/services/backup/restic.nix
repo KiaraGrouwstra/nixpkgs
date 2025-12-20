@@ -1,5 +1,6 @@
 {
   config,
+  options,
   lib,
   pkgs,
   utils,
@@ -8,6 +9,7 @@
 let
   inherit (lib)
     mapAttrs'
+    recursiveUpdate
     mkOption
     optionalAttrs
     types
@@ -15,6 +17,7 @@ let
   inherit (types) attrsOf submodule;
   # Type for a valid systemd unit option. Needed for correctly passing "timerConfig" to "systemd.timers"
   inherit (utils.systemdUtils.unitOptions) unitOption;
+  backupModule = options.services.restic.backups.type.nestedTypes.elemType;
 in
 {
   options.services.restic = {
@@ -246,7 +249,9 @@ in
 
               runCheck = lib.mkOption {
                 type = lib.types.bool;
-                default = (builtins.length config.services.restic.backups.${name}.checkOpts > 0);
+                # for some reason triggers `error: attribute 'configure' missing`
+                # default = (builtins.length config.services.restic.backups.${name}.checkOpts > 0);
+                default = false;
                 defaultText = lib.literalExpression ''builtins.length config.services.backups.${name}.checkOpts > 0'';
                 description = "Whether to run the `check` command with the provided `checkOpts` options.";
                 example = true;
@@ -341,17 +346,25 @@ in
     providers = {
       fileBackup = mkOption {
         default = { };
-        type = submodule {
+        type = submodule (provider: {
           options =
             let
-              inherit (config.contracts.fileBackup.interface) input output;
-              cfg = config.services.restic.providers.fileBackup;
+              cfg = provider.config;
+              inherit (cfg.contract) interface requests;
+              inherit (interface) input output;
             in
             {
               enable = lib.mkEnableOption "restic block implementing fileBackup contract";
+              contract = mkOption {
+                default = config.contracts.fileBackup;
+              };
+              configure = mkOption {
+                type = backupModule;
+                default = { };
+              };
               requests = mkOption {
                 type = attrsOf input;
-                default = config.contracts.fileBackup.requests;
+                default = requests;
               };
               outputs = mkOption {
                 type = attrsOf output;
@@ -389,22 +402,30 @@ in
                 default = name: "contracts-fileBackup-${name}";
               };
             };
-        };
+        });
       };
 
       streamingBackup = mkOption {
         default = { };
-        type = submodule {
+        type = submodule (provider: {
           options =
             let
-              inherit (config.contracts.streamingBackup.interface) input output;
-              cfg = config.services.restic.providers.streamingBackup;
+              cfg = provider.config;
+              inherit (cfg.contract) interface requests;
+              inherit (interface) input output;
             in
             {
               enable = lib.mkEnableOption "restic block implementing streamingBackup contract";
+              contract = mkOption {
+                default = config.contracts.streamingBackup;
+              };
+              configure = mkOption {
+                type = backupModule;
+                default = { };
+              };
               requests = mkOption {
                 type = attrsOf input;
-                default = config.contracts.streamingBackup.requests;
+                default = requests;
               };
               outputs = mkOption {
                 type = attrsOf output;
@@ -419,17 +440,19 @@ in
                       name = k;
                       value = {
                         backupService = "restic-backups-${name}.service";
-                        restoreScript = lib.getExe (pkgs.writeShellApplication {
-                          name = "restic-${name}";
-                          text = ''
-                            if [ "$1" = "snapshots" ]; then
-                              restic-${name} snapshots
-                            elif [ "$1" = "restore" ]; then
-                              shift
-                              restic-${name} dump "$1" ${input.backupName} | ${input.restoreCmd}
-                            fi
-                          '';
-                        });
+                        restoreScript = lib.getExe (
+                          pkgs.writeShellApplication {
+                            name = "restic-${name}";
+                            text = ''
+                              if [ "$1" = "snapshots" ]; then
+                                restic-${name} snapshots
+                              elif [ "$1" = "restore" ]; then
+                                shift
+                                restic-${name} dump "$1" ${input.backupName} | ${input.restoreCmd}
+                              fi
+                            '';
+                          }
+                        );
                       };
                     }
                   ) cfg.requests
@@ -440,7 +463,7 @@ in
                 default = name: "contracts-streamingBackup-${name}";
               };
             };
-        };
+        });
       };
     };
   };
@@ -607,7 +630,7 @@ in
               let
                 inherit (request) user hooks;
               in
-              {
+              recursiveUpdate cfg.configure {
                 inherit user;
                 paths = request.sourceDirectories;
                 backupPrepareCommand = lib.concatStringsSep "\n" hooks.beforeBackup;
@@ -624,7 +647,7 @@ in
         optionalAttrs cfg.enable (
           mapAttrs' (name: request: {
             name = cfg.instanceName name;
-            value = {
+            value = recursiveUpdate cfg.configure {
               extraBackupArgs = (
                 let
                   dumpCmd = lib.getExe (
