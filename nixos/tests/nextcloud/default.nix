@@ -66,15 +66,18 @@ let
                 adminpassFile = "${pkgs.writeText "adminpass" config.adminpass}"; # Don't try this at home!
               };
             };
-            services.restic.providers.fileBackup.enable = true;
 
             systemd.tmpfiles.rules = [
               "d '/var/lib/backups/nextcloud' 0750 nextcloud root - -"
             ];
-            services.restic.backups."contracts-fileBackup-nextcloud" = {
-              repository = "/var/lib/backups/nextcloud";
-              passwordFile = toString (pkgs.writeText "password" "password");
-              initialize = true;
+
+            services.restic = {
+              providers.fileBackup.enable = true;
+              backups."contracts-fileBackup-nextcloud" = {
+                repository = "/var/lib/backups/nextcloud";
+                passwordFile = toString (pkgs.writeText "password" "password");
+                initialize = true;
+              };
             };
           };
       };
