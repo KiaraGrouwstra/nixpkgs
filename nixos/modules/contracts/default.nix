@@ -91,8 +91,8 @@ in
             };
           };
           requests = mkOption {
-            # type = listOf ?;
-            default = [ ];
+            type = attrsOf instance.config.interface.input;
+            default = { };
           };
           behaviorTest = mkOption {
             # The type should be more precise of course.
