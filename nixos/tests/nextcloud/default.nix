@@ -71,7 +71,7 @@ let
             systemd.tmpfiles.rules = [
               "d '/var/lib/backups/nextcloud' 0750 nextcloud root - -"
             ];
-            services.restic.backups."contracts-nextcloud" = {
+            services.restic.backups."contracts-fileBackup-nextcloud" = {
               repository = "/var/lib/backups/nextcloud";
               passwordFile = toString (pkgs.writeText "password" "password");
               initialize = true;

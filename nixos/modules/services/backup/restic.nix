@@ -338,56 +338,109 @@ in
       };
     };
 
-    providers.fileBackup = mkOption {
-      default = { };
-      type = submodule {
-        options =
-          let
-            inherit (config.contracts.fileBackup.interface) input output;
-            cfg = config.services.restic.providers.fileBackup;
-          in
-          {
-            enable = lib.mkEnableOption "restic block implementing fileBackup contract";
-            requests = mkOption {
-              type = attrsOf input;
-              default = config.contracts.fileBackup.requests;
+    providers = {
+      fileBackup = mkOption {
+        default = { };
+        type = submodule {
+          options =
+            let
+              inherit (config.contracts.fileBackup.interface) input output;
+              cfg = config.services.restic.providers.fileBackup;
+            in
+            {
+              enable = lib.mkEnableOption "restic block implementing fileBackup contract";
+              requests = mkOption {
+                type = attrsOf input;
+                default = config.contracts.fileBackup.requests;
+              };
+              outputs = mkOption {
+                type = attrsOf output;
+                readOnly = true;
+                default = optionalAttrs cfg.enable (
+                  mapAttrs' (
+                    k: request:
+                    let
+                      name = cfg.instanceName k;
+                    in
+                    {
+                      name = k;
+                      value = {
+                        backupService = "restic-backups-${name}.service";
+                        restoreScript = lib.getExe (
+                          pkgs.writeShellApplication {
+                            name = "restic-${name}";
+                            text = ''
+                              if [ "$1" = "snapshots" ]; then
+                                restic-${name} snapshots
+                              elif [ "$1" = "restore" ]; then
+                                shift
+                                restic-${name} restore "$1" --target /
+                              fi
+                            '';
+                          }
+                        );
+                      };
+                    }
+                  ) cfg.requests
+                );
+              };
+              instanceName = mkOption {
+                type = types.functionTo types.str;
+                default = name: "contracts-fileBackup-${name}";
+              };
             };
-            outputs = mkOption {
-              type = attrsOf output;
-              readOnly = true;
-              default = optionalAttrs cfg.enable (
-                mapAttrs' (
-                  k: request:
-                  let
-                    name = cfg.instanceName k;
-                  in
-                  {
-                    name = k;
-                    value = {
-                      backupService = "restic-backups-${name}.service";
-                      restoreScript = lib.getExe (
-                        pkgs.writeShellApplication {
+        };
+      };
+
+      streamingBackup = mkOption {
+        default = { };
+        type = submodule {
+          options =
+            let
+              inherit (config.contracts.streamingBackup.interface) input output;
+              cfg = config.services.restic.providers.streamingBackup;
+            in
+            {
+              enable = lib.mkEnableOption "restic block implementing streamingBackup contract";
+              requests = mkOption {
+                type = attrsOf input;
+                default = config.contracts.streamingBackup.requests;
+              };
+              outputs = mkOption {
+                type = attrsOf output;
+                readOnly = true;
+                default = optionalAttrs cfg.enable (
+                  mapAttrs' (
+                    k: request:
+                    let
+                      name = cfg.instanceName k;
+                    in
+                    {
+                      name = k;
+                      value = {
+                        backupService = "restic-backups-${name}.service";
+                        restoreScript = lib.getExe (pkgs.writeShellApplication {
                           name = "restic-${name}";
                           text = ''
                             if [ "$1" = "snapshots" ]; then
                               restic-${name} snapshots
                             elif [ "$1" = "restore" ]; then
                               shift
-                              restic-${name} restore "$1" --target /
+                              restic-${name} dump "$1" ${input.backupName} | ${input.restoreCmd}
                             fi
                           '';
-                        }
-                      );
-                    };
-                  }
-                ) cfg.requests
-              );
+                        });
+                      };
+                    }
+                  ) cfg.requests
+                );
+              };
+              instanceName = mkOption {
+                type = types.functionTo types.str;
+                default = name: "contracts-streamingBackup-${name}";
+              };
             };
-            instanceName = mkOption {
-              type = types.functionTo types.str;
-              default = name: "contracts-${name}";
-            };
-          };
+        };
       };
     };
   };
@@ -542,25 +595,53 @@ in
       ''
     ) (lib.filterAttrs (_: v: v.createWrapper) config.services.restic.backups);
 
-    services.restic.backups =
-      let
-        cfg = config.services.restic.providers.fileBackup;
-      in
-      optionalAttrs cfg.enable (
-        mapAttrs' (name: request: {
-          name = cfg.instanceName name;
-          value =
-            let
-              inherit (request) user hooks;
-            in
-            {
-              inherit user;
-              paths = request.sourceDirectories;
-              backupPrepareCommand = lib.concatStringsSep "\n" hooks.beforeBackup;
-              backupCleanupCommand = lib.concatStringsSep "\n" hooks.afterBackup;
-              exclude = request.excludePatterns;
+    services.restic.backups = lib.mkMerge [
+      (
+        let
+          cfg = config.services.restic.providers.fileBackup;
+        in
+        optionalAttrs cfg.enable (
+          mapAttrs' (name: request: {
+            name = cfg.instanceName name;
+            value =
+              let
+                inherit (request) user hooks;
+              in
+              {
+                inherit user;
+                paths = request.sourceDirectories;
+                backupPrepareCommand = lib.concatStringsSep "\n" hooks.beforeBackup;
+                backupCleanupCommand = lib.concatStringsSep "\n" hooks.afterBackup;
+                exclude = request.excludePatterns;
+              };
+          }) cfg.requests
+        )
+      )
+      (
+        let
+          cfg = config.services.restic.providers.streamingBackup;
+        in
+        optionalAttrs cfg.enable (
+          mapAttrs' (name: request: {
+            name = cfg.instanceName name;
+            value = {
+              extraBackupArgs = (
+                let
+                  dumpCmd = lib.getExe (
+                    pkgs.writeShellApplication {
+                      name = "dump.sh";
+                      text = request.backupCmd;
+                    }
+                  );
+                in
+                [
+                  "--stdin-filename ${request.backupName} --stdin-from-command -- ${dumpCmd}"
+                ]
+              );
             };
-        }) cfg.requests
-      );
+          }) cfg.requests
+        )
+      )
+    ];
   };
 }
