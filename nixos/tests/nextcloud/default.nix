@@ -71,7 +71,7 @@ let
               "d '/var/lib/backups/nextcloud' 0750 nextcloud root - -"
             ];
 
-            services.restic.providers.fileBackup = {
+            services.restic.fileBackup = {
               enable = true;
               configure = {
                 repository = "/var/lib/backups/nextcloud";
@@ -108,7 +108,7 @@ let
               )
 
           with subtest("Backup using file backup contract"):
-              nextcloud.succeed("systemctl start ${config.nodes.nextcloud.services.restic.providers.fileBackup.outputs.nextcloud.backupService}")
+              nextcloud.succeed("systemctl start ${config.nodes.nextcloud.services.restic.fileBackup.outputs.nextcloud.backupService}")
 
           ${
             if pkgs.lib.isFunction test-helpers.extraTests then
