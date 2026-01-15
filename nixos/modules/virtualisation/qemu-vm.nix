@@ -737,6 +737,16 @@ in
       '';
     };
 
+    virtualisation.writableStoreOptions = mkOption {
+      type = types.listOf types.str;
+      default = [
+        "mode=0755"
+      ];
+      description = ''
+        Options to pass when mounting the writable store.
+      '';
+    };
+
     networking.primaryIPAddress = mkOption {
       type = types.str;
       default = "";
@@ -1392,7 +1402,7 @@ in
           };
           "/nix/.rw-store" = lib.mkIf (cfg.writableStore && cfg.writableStoreUseTmpfs) {
             fsType = "tmpfs";
-            options = [ "mode=0755" ];
+            options = cfg.writableStoreOptions;
             neededForBoot = true;
           };
           "${config.boot.loader.efi.efiSysMountPoint}" =
