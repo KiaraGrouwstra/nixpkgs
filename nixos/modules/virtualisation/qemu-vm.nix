@@ -103,7 +103,9 @@ let
   drivesCmdLine = drives: concatStringsSep "\\\n    " (imap1 driveCmdline drives);
 
   # Shell script to start the VM.
-  startVM = ''
+  startVM = builtins.trace
+  "diskSize:${builtins.toString cfg.diskSize}, memorySize:${builtins.toString cfg.memorySize}, writableStoreOptions:${builtins.toJSON cfg.writableStoreOptions}, qemu.options:${builtins.toJSON cfg.qemu.options}"
+  ''
     #! ${hostPkgs.runtimeShell}
 
     export PATH=${makeBinPath [ hostPkgs.coreutils ]}''${PATH:+:}$PATH
