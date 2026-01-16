@@ -108,7 +108,7 @@ let
 
     export PATH=${makeBinPath [ hostPkgs.coreutils ]}''${PATH:+:}$PATH
 
-    set -e
+    set -xe
 
     # Create an empty ext4 filesystem image. A filesystem image does not
     # contain a partition table but just a filesystem.
