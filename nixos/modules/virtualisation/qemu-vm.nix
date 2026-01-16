@@ -104,7 +104,7 @@ let
 
   # Shell script to start the VM.
   startVM = builtins.trace
-  "diskSize:${builtins.toString cfg.diskSize}, memorySize:${builtins.toString cfg.memorySize}, writableStoreOptions:${builtins.toJSON cfg.writableStoreOptions}, qemu.options:${builtins.toJSON cfg.qemu.options}"
+  "${config.networking.hostName}: diskSize:${builtins.toString cfg.diskSize}, memorySize:${builtins.toString cfg.memorySize}, writableStoreOptions:${builtins.toJSON cfg.writableStoreOptions}, qemu.options:${builtins.toJSON cfg.qemu.options}"
   ''
     #! ${hostPkgs.runtimeShell}
 
