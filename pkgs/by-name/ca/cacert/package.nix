@@ -80,6 +80,7 @@ stdenv.mkDerivation {
   nativeBuildInputs = [ buildcatrust ];
 
   buildPhase = ''
+    set -x
     mkdir unbundled hashed
     buildcatrust \
       --certdata_input certdata.txt \
@@ -91,7 +92,7 @@ stdenv.mkDerivation {
       --ca_standard_bundle_output ca-no-trust-rules-bundle.crt \
       --ca_unpacked_output unbundled \
       --ca_hashed_unpacked_output hashed \
-      --p11kit_output ca-bundle.trust.p11-kit
+      --p11kit_output ca-bundle.trust.p11-kit >&2
   '';
 
   installPhase = ''
