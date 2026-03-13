@@ -24,7 +24,7 @@ import ../../make-test-python.nix (
       izorkin
     ];
 
-    nodes = {
+    containers = {
       databases =
         { config, ... }:
         {
@@ -76,7 +76,7 @@ import ../../make-test-python.nix (
         };
 
       nginx =
-        { nodes, ... }:
+        { containers, ... }:
         {
           networking = {
             interfaces.eth1 = {
@@ -111,7 +111,7 @@ import ../../make-test-python.nix (
                 tryFiles = "$uri @proxy";
               };
               locations."@proxy" = {
-                proxyPass = "http://192.168.2.201:${toString nodes.server.services.mastodon.webPort}";
+                proxyPass = "http://192.168.2.201:${toString containers.server.services.mastodon.webPort}";
                 proxyWebsockets = true;
               };
             };
@@ -121,8 +121,6 @@ import ../../make-test-python.nix (
       server =
         { config, pkgs, ... }:
         {
-          virtualisation.memorySize = 2048;
-
           environment = {
             etc = {
               "mastodon/password-redis-db".text = redisPassword;
@@ -210,10 +208,6 @@ import ../../make-test-python.nix (
         databases.wait_for_unit("postgresql.target")
         databases.wait_for_open_port(31637)
         databases.wait_for_open_port(5432)
-      '';
-      extraShutdown = ''
-        nginx.shutdown()
-        databases.shutdown()
       '';
     };
   }

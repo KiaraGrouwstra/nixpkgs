@@ -45,9 +45,4 @@
   client.fail("curl --fail https://mastodon.local/about")
   server.succeed("mastodon-tootctl ip_blocks remove 192.168.0.0/16")
   client.succeed("curl --fail https://mastodon.local/about")
-
-  server.shutdown()
-  client.shutdown()
-
-  ${extraShutdown}
 ''
