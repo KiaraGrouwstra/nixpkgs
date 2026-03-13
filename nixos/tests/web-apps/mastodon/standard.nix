@@ -22,12 +22,10 @@ import ../../make-test-python.nix (
       turion
     ];
 
-    nodes = {
+    containers = {
       server =
         { pkgs, ... }:
         {
-
-          virtualisation.memorySize = 2048;
 
           networking = {
             interfaces.eth1 = {
