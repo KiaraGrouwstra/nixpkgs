@@ -835,6 +835,7 @@ checkConfigOutput '^true$' config.mkForce ./mkDefinition.nix
 
 # extend*
 checkConfigError 'not of type' config.foo.bar ./extendOption.nix
+checkConfigError 'not of type' config.foo.bar ./extendSubmodule.nix
 
 # specialArgs._class
 checkConfigOutput '"nixos"' config.nixos.config.foo ./specialArgs-class.nix
