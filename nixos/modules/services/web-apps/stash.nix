@@ -500,6 +500,10 @@ in
       }
     ];
 
+    contracts.fileSecrets.requests.stash = {
+      inherit (cfg) passwordFile jwtSecretKey sessionStoreKey;
+    };
+
     services.stash.settings = {
       username = mkIf (cfg.username != null) cfg.username;
       plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;

@@ -79,6 +79,9 @@ in
   };
 
   config = {
+    contracts.fileSecrets.providers = {
+      inherit (config.testing) hardcoded-secret;
+    };
     system.activationScripts = mapAttrs' (
       n: cfg':
       let
