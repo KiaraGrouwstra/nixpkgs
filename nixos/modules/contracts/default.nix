@@ -23,13 +23,20 @@ in
         in
         {
           options = {
-            input = mkOption {
-              description = "Input type of the ${name} contract.";
-              type = optionType;
-            };
-            output = mkOption {
-              description = "Output type of the ${name} contract.";
-              type = optionType;
+            interface = mkOption {
+              default = { };
+              type = submodule {
+                options = {
+                  input = mkOption {
+                    description = "Input type of the ${name} contract.";
+                    type = optionType;
+                  };
+                  output = mkOption {
+                    description = "Output type of the ${name} contract.";
+                    type = optionType;
+                  };
+                };
+              };
             };
             defaultProvider = mkOption {
               type = attrTag config.providerOptions;
@@ -64,10 +71,10 @@ in
                 attrsOf (submodule {
                   options = {
                     input = mkOption {
-                      type = config.input;
+                      type = config.interface.input;
                     };
                     output = mkOption {
-                      type = config.output;
+                      type = config.interface.output;
                     };
                   };
                 })
@@ -82,8 +89,10 @@ in
     _:
     { input, output, ... }:
     {
-      input = input { };
-      output = output { };
+      interface = {
+        input = input { };
+        output = output { };
+      };
     }
   ) lib.contracts;
 }
