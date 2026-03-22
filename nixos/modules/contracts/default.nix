@@ -2,10 +2,13 @@
 let
   inherit (lib) mkOption types;
   inherit (types)
+    attrs
     attrsOf
     attrTag
+    listOf
     option
     optionType
+    str
     submodule
     ;
 in
@@ -28,11 +31,32 @@ in
               description = "Output type of the ${name} contract.";
               type = optionType;
             };
-            provider = mkOption {
+            defaultProvider = mkOption {
+              type = attrTag config.providerOptions;
             };
-            providers = mkOption {
+            provider = mkOption {
+              type = attrsOf (attrsOf attrs);
+              default =
+                let
+                  tag = lib.head (lib.attrNames config.defaultProvider);
+                in
+                lib.getAttrFromPath config.providerPaths.${tag} config.providerConfigs.${tag};
+            };
+            providerPaths = mkOption {
+              default = { };
+              type = attrsOf (listOf str);
+            };
+            providerOptions = mkOption {
               description = "Providers of the ${name} contract.";
               type = attrsOf option;
+              default = { };
+            };
+            # XXX is this redundant with `defaultProvider`?
+            providerConfigs = mkOption {
+              description = "Providers of the ${name} contract.";
+              type = submodule {
+                options = config.providerOptions;
+              };
               default = { };
             };
             requests = mkOption {
