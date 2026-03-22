@@ -40,7 +40,7 @@ in
                 let
                   tag = lib.head (lib.attrNames config.defaultProvider);
                 in
-                lib.getAttrFromPath config.providerPaths.${tag} config.providerConfigs.${tag};
+                lib.getAttrFromPath (config.providerPaths.${tag} or [ "instances" ]) config.providerConfigs.${tag};
             };
             providerPaths = mkOption {
               default = { };
