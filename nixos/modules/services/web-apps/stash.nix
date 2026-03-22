@@ -448,6 +448,9 @@ in
       passwordFile = mkOption {
         type = types.nullOr secretOptionType;
         default = { inherit (passwordFile) output; };
+        defaultText = ''
+          { inherit (config.contracts.fileSecrets.instances.stash.passwordFile) output; }
+        '';
         example = "/path/to/password/file";
         description = ''
           Path to file containing password for login.
@@ -463,11 +466,17 @@ in
         type = secretOptionType;
         description = "Path to file containing a secret used to sign JWT tokens.";
         default = { inherit (jwtSecretKey) output; };
+        defaultText = ''
+          { inherit (config.contracts.fileSecrets.instances.stash.jwtSecretKey) output; }
+        '';
       };
       sessionStoreKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret for session store.";
         default = { inherit (sessionStoreKey) output; };
+        defaultText = ''
+          { inherit (config.contracts.fileSecrets.instances.stash.sessionStoreKey) output; }
+        '';
       };
 
       mutableSettings = mkOption {
