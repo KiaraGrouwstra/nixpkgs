@@ -10,17 +10,13 @@ import ./make-test-python.nix (
     meta.maintainers = pkgs.stash.meta.maintainers;
 
     nodes.machine =
-      { config, ... }:
+      { ... }:
       {
         services.stash = {
           inherit dataDir;
           enable = true;
 
           username = "test";
-
-          passwordFile.output = config.testing.hardcoded-secret.stash.passwordFile.output;
-          jwtSecretKey.output = config.testing.hardcoded-secret.stash.jwtSecretKey.output;
-          sessionStoreKey.output = config.testing.hardcoded-secret.stash.sessionStoreKey.output;
 
           plugins =
             let

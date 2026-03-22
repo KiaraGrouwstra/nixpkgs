@@ -504,10 +504,15 @@ in
       inherit (cfg) passwordFile jwtSecretKey sessionStoreKey;
     };
 
-    services.stash.settings = {
-      username = mkIf (cfg.username != null) cfg.username;
-      plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
-      scrapers_path = mkIf (!cfg.mutableScrapers) cfg.scrapers;
+    services.stash = {
+      settings = {
+        username = mkIf (cfg.username != null) cfg.username;
+        plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
+        scrapers_path = mkIf (!cfg.mutableScrapers) cfg.scrapers;
+      };
+      passwordFile.output = config.testing.hardcoded-secret.stash.passwordFile.output;
+      jwtSecretKey.output = config.testing.hardcoded-secret.stash.jwtSecretKey.output;
+      sessionStoreKey.output = config.testing.hardcoded-secret.stash.sessionStoreKey.output;
     };
 
     networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [ cfg.settings.port ];
