@@ -20,7 +20,7 @@ let
   inherit (contracts) fileSecrets;
 
   cfg = config.services.stash;
-  fileSecretsProvider = config.contracts.fileSecrets.provider.stash;
+  fileSecretsProvider = config.contracts.fileSecrets.instances.stash;
 
   stashType = types.submodule {
     options = {

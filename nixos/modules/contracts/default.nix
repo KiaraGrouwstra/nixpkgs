@@ -34,7 +34,7 @@ in
             defaultProvider = mkOption {
               type = attrTag config.providerOptions;
             };
-            provider = mkOption {
+            instances = mkOption {
               type = attrsOf (attrsOf attrs);
               default =
                 let
