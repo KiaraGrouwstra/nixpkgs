@@ -65,10 +65,16 @@ in
                   input = mkOption {
                     description = "Input type of the ${name} contract.";
                     type = optionType;
+                    default = submodule {
+                      options = { };
+                    };
                   };
                   output = mkOption {
                     description = "Output type of the ${name} contract.";
                     type = optionType;
+                    default = submodule {
+                      options = { };
+                    };
                   };
                 };
               };
@@ -85,6 +91,14 @@ in
                   inherit (config.providers.${tag}) path cfg;
                 in
                 lib.getAttrFromPath path cfg;
+              defaultText = ''
+                let
+                  contract = config.contracts.<contract>;
+                  tag = (lib.unPair contract.defaultProvider).name;
+                  inherit (config.providers.''${tag}) path cfg;
+                in
+                lib.getAttrFromPath path cfg;
+              '';
             };
             providers = mkOption {
               description = "Providers of the ${name} contract.";
@@ -98,6 +112,12 @@ in
                     };
                     options = mkOption {
                       type = option;
+                      default = mkOption {
+                        type = submodule {
+                          options = { };
+                        };
+                        default = { };
+                      };
                     };
                     cfg = mkOption {
                       inherit (provider.config.options) type default;
