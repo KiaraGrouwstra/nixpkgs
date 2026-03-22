@@ -21,6 +21,7 @@ let
     ;
   inherit (pkgs) writeText;
   inherit (contracts) fileSecrets;
+  contract = "fileSecrets";
 in
 {
   options.testing.hardcoded-secret = mkOption {
@@ -95,8 +96,8 @@ in
   };
 
   config = {
-    testing.hardcoded-secret = (lib.unPair config.contracts.fileSecrets.defaultProvider).value // {
-      instances = lib.contract.getInputs config.contracts.fileSecrets;
+    testing.hardcoded-secret = (lib.unPair config.contracts.${contract}.defaultProvider).value // {
+      instances = lib.contract.getInputs config.contracts.${contract};
     };
     contracts.fileSecrets = {
       providerOptions = { inherit (options.testing) hardcoded-secret; };
