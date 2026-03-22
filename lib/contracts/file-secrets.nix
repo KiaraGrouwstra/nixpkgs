@@ -17,39 +17,40 @@ in
       kiara
     ];
   };
+  interface = {
+    input = {
+      mode = mkOption {
+        description = ''
+          Mode the secret file must have.
+        '';
+        type = str;
+        default = "0400";
+      };
 
-  input = {
-    mode = mkOption {
-      description = ''
-        Mode the secret file must have.
-      '';
-      type = str;
-      default = "0400";
+      owner = mkOption {
+        description = ''
+          Linux user that must own the secret file.
+        '';
+        type = str;
+      };
+
+      group = mkOption {
+        description = ''
+          Linux group that must own the secret file.
+        '';
+        type = str;
+      };
     };
+    output = {
+      path = mkOption {
+        type = str;
+        description = ''
+          Path to the file containing the secret generated out of band.
 
-    owner = mkOption {
-      description = ''
-        Linux user that must own the secret file.
-      '';
-      type = str;
-    };
-
-    group = mkOption {
-      description = ''
-        Linux group that must own the secret file.
-      '';
-      type = str;
-    };
-  };
-  output = {
-    path = mkOption {
-      type = str;
-      description = ''
-        Path to the file containing the secret generated out of band.
-
-        This path will exist after deploying to a target host,
-        it is not available through the nix store.
-      '';
+          This path will exist after deploying to a target host,
+          it is not available through the nix store.
+        '';
+      };
     };
   };
   behaviorTest =

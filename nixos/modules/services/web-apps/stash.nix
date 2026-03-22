@@ -17,7 +17,7 @@ let
     toUpper
     types
     ;
-  inherit (contracts) fileSecrets;
+  inherit (contracts.fileSecrets) interface;
   inherit (config.contracts.fileSecrets.instances.stash) passwordFile jwtSecretKey sessionStoreKey;
 
   cfg = config.services.stash;
@@ -377,7 +377,7 @@ let
           input = mkOption {
             description = "Input of the contract for file secrets.";
             default = { };
-            type = fileSecrets.input {
+            type = interface.input {
               owner.default = cfg.user;
               group.default = cfg.group;
             };
@@ -385,7 +385,7 @@ let
 
           output = mkOption {
             description = "Output of the contract for file secrets.";
-            type = fileSecrets.output { };
+            type = interface.output { };
           };
         };
       };

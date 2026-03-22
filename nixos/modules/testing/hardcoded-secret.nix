@@ -20,7 +20,7 @@ let
     submodule
     ;
   inherit (pkgs) writeText;
-  inherit (contracts) fileSecrets;
+  inherit (contracts.fileSecrets) interface;
   contract = "fileSecrets";
 in
 {
@@ -63,7 +63,7 @@ in
                     options = {
                       input = mkOption {
                         description = "Input of the contract for file secrets.";
-                        type = fileSecrets.input {
+                        type = interface.input {
                           owner.default = "root";
                           group.default = "root";
                         };
@@ -71,7 +71,7 @@ in
                       output = mkOption {
                         description = "Output of the contract for file secrets.";
                         default = { };
-                        type = fileSecrets.output {
+                        type = interface.output {
                           path.default = "${config.directory}/${name}";
                         };
                       };

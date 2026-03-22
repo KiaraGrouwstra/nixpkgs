@@ -114,7 +114,10 @@ in
   };
   config.contracts = lib.mapAttrs (
     _:
-    { meta, input, output, ... }:
+    { meta, interface, ... }:
+    let
+      inherit (interface) input output;
+    in
     {
       inherit meta;
       interface = {
