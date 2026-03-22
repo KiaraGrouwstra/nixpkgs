@@ -20,6 +20,7 @@
       { config, ... }:
       {
         contracts.fileSecrets.defaultProvider = {
+          # FIXME ensure such configuration can still be set from testing.hardcoded-secret directly as well
           hardcoded-secret = {
             directory = "/run/hardcodedsecrets";
           };
