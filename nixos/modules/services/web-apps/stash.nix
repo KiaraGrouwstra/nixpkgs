@@ -18,9 +18,9 @@ let
     types
     ;
   inherit (contracts) fileSecrets;
+  inherit (config.contracts.fileSecrets.instances.stash) passwordFile jwtSecretKey sessionStoreKey;
 
   cfg = config.services.stash;
-  fileSecretsProvider = config.contracts.fileSecrets.instances.stash;
 
   stashType = types.submodule {
     options = {
@@ -447,7 +447,7 @@ in
 
       passwordFile = mkOption {
         type = types.nullOr secretOptionType;
-        default = { inherit (fileSecretsProvider.passwordFile) output; };
+        default = { inherit (passwordFile) output; };
         example = "/path/to/password/file";
         description = ''
           Path to file containing password for login.
@@ -462,12 +462,12 @@ in
       jwtSecretKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret used to sign JWT tokens.";
-        default = { inherit (fileSecretsProvider.jwtSecretKey) output; };
+        default = { inherit (jwtSecretKey) output; };
       };
       sessionStoreKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret for session store.";
-        default = { inherit (fileSecretsProvider.sessionStoreKey) output; };
+        default = { inherit (sessionStoreKey) output; };
       };
 
       mutableSettings = mkOption {
