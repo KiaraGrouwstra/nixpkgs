@@ -82,6 +82,10 @@ in
     contracts.fileSecrets.providers = {
       inherit (config.testing) hardcoded-secret;
     };
+    testing.hardcoded-secret = lib.concatMapAttrs (
+      service: lib.mapAttrs' (k: instance: lib.nameValuePair "${service}-${k}" { inherit (instance) input; })
+    ) config.contracts.fileSecrets.requests;
+
     system.activationScripts = mapAttrs' (
       n: cfg':
       let
