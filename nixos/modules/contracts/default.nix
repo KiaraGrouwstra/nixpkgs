@@ -51,7 +51,6 @@ in
               type = attrsOf option;
               default = { };
             };
-            # XXX is this redundant with `defaultProvider`?
             providerConfigs = mkOption {
               description = "Providers of the ${name} contract.";
               type = submodule {
