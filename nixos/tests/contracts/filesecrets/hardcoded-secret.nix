@@ -19,7 +19,10 @@
     (
       { config, ... }:
       {
-        testing.hardcoded-secret.secrets.my.secret.content = config.test.content;
+        testing.hardcoded-secret = {
+          directory = "/run/hardcodedsecrets";
+          secrets.my.secret.content = config.test.content;
+        };
       }
     )
   ];

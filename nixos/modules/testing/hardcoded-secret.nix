@@ -28,7 +28,6 @@ in
       options = {
         directory = mkOption {
           type = str;
-          default = "/run/hardcodedsecrets";
         };
         secrets = mkOption {
           default = { };
@@ -95,6 +94,11 @@ in
     contracts.fileSecrets = {
       providers = {
         inherit (config.testing) hardcoded-secret;
+      };
+      defaultProvider = lib.mkDefault {
+        hardcoded-secret = {
+          directory = "/run/hardcodedsecrets";
+        };
       };
       provider = config.testing.hardcoded-secret.secrets;
     };
