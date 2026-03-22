@@ -11,7 +11,7 @@
     "testing"
     "hardcoded-secret"
     "instances"
-    "my"
+    "testing"
     "secret"
   ];
   extraModules = [
@@ -21,7 +21,7 @@
       {
         testing.hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
-          instances.my.secret.content = config.test.content;
+          instances."testing"."secret".content = config.test.content;
         };
       }
     )
