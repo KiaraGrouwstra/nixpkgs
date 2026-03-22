@@ -10,14 +10,15 @@
   providerRoot = [
     "testing"
     "hardcoded-secret"
-    "mysecret"
+    "my"
+    "secret"
   ];
   extraModules = [
     ../../../modules/testing/hardcoded-secret.nix
     (
       { config, ... }:
       {
-        testing.hardcoded-secret.mysecret.content = config.test.content;
+        testing.hardcoded-secret.my.secret.content = config.test.content;
       }
     )
   ];
