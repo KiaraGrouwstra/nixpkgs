@@ -107,12 +107,8 @@ in
         ) config.contracts.fileSecrets.requests;
       };
     contracts.fileSecrets = {
-      providerOptions = {
-        inherit (options.testing) hardcoded-secret;
-      };
-      providerConfigs = {
-        inherit (config.testing) hardcoded-secret;
-      };
+      providerOptions = { inherit (options.testing) hardcoded-secret; };
+      providerConfigs = { inherit (config.testing) hardcoded-secret; };
       providerPaths.hardcoded-secret = [ "secrets" ];
       # only one provider per contract can be the default provider
       defaultProvider = lib.mkDefault {
