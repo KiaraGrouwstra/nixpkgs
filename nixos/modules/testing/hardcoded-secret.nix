@@ -24,60 +24,67 @@ in
 {
   options.testing.hardcoded-secret = mkOption {
     default = { };
-    description = ''
-      Hardcoded file secrets. These should only be used in tests.
+    type = submodule {
+      options = {
+        secrets = mkOption {
+          default = { };
+          description = ''
+            Hardcoded file secrets. These should only be used in tests.
 
-      They aim to replace the usage of pkgs.writeText in NixOS VM tests
-      as those make the file world readable
-      while this module set runtime permissions on the file.
-      This makes the tests more accurate, ensuring the permissions
-      set by the contract consumer are correct.
-    '';
-    example = lib.literalExpression ''
-      {
-        my.secret = {
-          input = {
-            user = "me";
-            mode = "0400";
-          };
-          content = "My Secret";
+            They aim to replace the usage of pkgs.writeText in NixOS VM tests
+            as those make the file world readable
+            while this module set runtime permissions on the file.
+            This makes the tests more accurate, ensuring the permissions
+            set by the contract consumer are correct.
+          '';
+          example = lib.literalExpression ''
+            {
+              my.secret = {
+                input = {
+                  user = "me";
+                  mode = "0400";
+                };
+                content = "My Secret";
+              };
+            }
+          '';
+          type = attrsOf (
+            attrsOf (
+              submodule (
+                { name, ... }:
+                {
+                  options = {
+                    input = mkOption {
+                      description = "Input of the contract for file secrets.";
+                      type = fileSecrets.input {
+                        owner.default = "root";
+                        group.default = "root";
+                      };
+                    };
+                    output = mkOption {
+                      description = "Output of the contract for file secrets.";
+                      default = { };
+                      type = fileSecrets.output {
+                        path.default = "/run/hardcodedsecrets/${name}";
+                      };
+                    };
+
+                    content = mkOption {
+                      type = str;
+                      description = ''
+                        Content of the secret as a string.
+
+                        This will be stored in the nix store and should only be used for testing or maybe in dev.
+                      '';
+                    };
+                  };
+                }
+              )
+            )
+          );
         };
-      }
-    '';
-    type = attrsOf (
-      attrsOf (
-        submodule (
-          { name, ... }:
-          {
-            options = {
-              input = mkOption {
-                description = "Input of the contract for file secrets.";
-                type = fileSecrets.input {
-                  owner.default = "root";
-                  group.default = "root";
-                };
-              };
-              output = mkOption {
-                description = "Output of the contract for file secrets.";
-                default = { };
-                type = fileSecrets.output {
-                  path.default = "/run/hardcodedsecrets/${name}";
-                };
-              };
-
-              content = mkOption {
-                type = str;
-                description = ''
-                  Content of the secret as a string.
-
-                  This will be stored in the nix store and should only be used for testing or maybe in dev.
-                '';
-              };
-            };
-          }
-        )
-      )
-    );
+      };
+    };
   };
 
   config = {
@@ -85,9 +92,9 @@ in
       providers = {
         inherit (config.testing) hardcoded-secret;
       };
-      provider = config.testing.hardcoded-secret;
+      provider = config.testing.hardcoded-secret.secrets;
     };
-    testing.hardcoded-secret = lib.mapAttrs (
+    testing.hardcoded-secret.secrets = lib.mapAttrs (
       _: lib.mapAttrs (_: instance: { inherit (instance) input; })
     ) config.contracts.fileSecrets.requests;
 
@@ -108,6 +115,6 @@ in
           cp ${source} "${output.path}"
         ''
       )
-    ) cfg;
+    ) cfg.secrets;
   };
 }

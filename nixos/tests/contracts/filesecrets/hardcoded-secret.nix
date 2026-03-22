@@ -10,6 +10,7 @@
   providerRoot = [
     "testing"
     "hardcoded-secret"
+    "secrets"
     "my"
     "secret"
   ];
@@ -18,7 +19,7 @@
     (
       { config, ... }:
       {
-        testing.hardcoded-secret.my.secret.content = config.test.content;
+        testing.hardcoded-secret.secrets.my.secret.content = config.test.content;
       }
     )
   ];
