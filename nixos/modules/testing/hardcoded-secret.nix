@@ -95,15 +95,9 @@ in
   };
 
   config = {
-    testing.hardcoded-secret =
-      let
-        provider = config.contracts.fileSecrets.defaultProvider;
-        tag = lib.head (lib.attrNames provider);
-      in
-      provider.${tag}
-      // {
-        instances = lib.contract.getInputs config.contracts.fileSecrets;
-      };
+    testing.hardcoded-secret = (lib.unPair config.contracts.fileSecrets.defaultProvider).value // {
+      instances = lib.contract.getInputs config.contracts.fileSecrets;
+    };
     contracts.fileSecrets = {
       providerOptions = { inherit (options.testing) hardcoded-secret; };
       providerConfigs = { inherit (config.testing) hardcoded-secret; };

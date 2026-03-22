@@ -38,7 +38,7 @@ in
               type = attrsOf (attrsOf attrs);
               default =
                 let
-                  tag = lib.head (lib.attrNames config.defaultProvider);
+                  tag = (lib.unPair config.defaultProvider).name;
                 in
                 lib.getAttrFromPath (config.providerPaths.${tag} or [ "instances" ]) config.providerConfigs.${tag};
             };
