@@ -82,9 +82,9 @@ in
               default =
                 let
                   tag = (lib.unPair config.defaultProvider).name;
-                  inherit (config.providers.${tag}) path configuration;
+                  inherit (config.providers.${tag}) path cfg;
                 in
-                lib.getAttrFromPath path configuration;
+                lib.getAttrFromPath path cfg;
             };
             providers = mkOption {
               description = "Providers of the ${name} contract.";
@@ -99,7 +99,7 @@ in
                     options = mkOption {
                       type = option;
                     };
-                    configuration = mkOption {
+                    cfg = mkOption {
                       inherit (provider.config.options) type default;
                     };
                   };
