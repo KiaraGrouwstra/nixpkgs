@@ -33,19 +33,27 @@ let
           };
           default = { };
         };
-        input = mkOption {
-          description = ''
-            Input type of a contract.
-          '';
-          type = attrsOf option;
-          apply = modules.mkContract;
-        };
-        output = mkOption {
-          description = ''
-            Output type of a contract.
-          '';
-          type = attrsOf option;
-          apply = modules.mkContract;
+        interface = mkOption {
+          description = "Interface describing the types used in the contract.";
+          default = { };
+          type = submodule {
+            options = {
+              input = mkOption {
+                description = ''
+                  Input type of a contract.
+                '';
+                type = attrsOf option;
+                apply = modules.mkContract;
+              };
+              output = mkOption {
+                description = ''
+                  Output type of a contract.
+                '';
+                type = attrsOf option;
+                apply = modules.mkContract;
+              };
+            };
+          };
         };
         behaviorTest = mkOption {
           # The type should be more precise of course.
