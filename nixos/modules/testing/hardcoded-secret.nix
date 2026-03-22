@@ -95,20 +95,6 @@ in
   };
 
   config = {
-    contracts.fileSecrets = {
-      providerOptions = {
-        inherit (options.testing) hardcoded-secret;
-      };
-      providerConfigs = {
-        inherit (config.testing) hardcoded-secret;
-      };
-      providerPaths.hardcoded-secret = [ "secrets" ];
-      defaultProvider = lib.mkDefault {
-        hardcoded-secret = {
-          directory = "/run/hardcodedsecrets";
-        };
-      };
-    };
     testing.hardcoded-secret =
       let
         provider = config.contracts.fileSecrets.defaultProvider;
@@ -120,6 +106,21 @@ in
           _: lib.mapAttrs (_: instance: { inherit (instance) input; })
         ) config.contracts.fileSecrets.requests;
       };
+    contracts.fileSecrets = {
+      providerOptions = {
+        inherit (options.testing) hardcoded-secret;
+      };
+      providerConfigs = {
+        inherit (config.testing) hardcoded-secret;
+      };
+      providerPaths.hardcoded-secret = [ "secrets" ];
+      # only one provider per contract can be the default provider
+      defaultProvider = lib.mkDefault {
+        hardcoded-secret = {
+          directory = "/run/hardcodedsecrets";
+        };
+      };
+    };
 
     system.activationScripts = lib.concatMapAttrs (
       namespace:
