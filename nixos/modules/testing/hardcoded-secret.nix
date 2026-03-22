@@ -1,4 +1,5 @@
 {
+  options,
   config,
   lib,
   pkgs,
@@ -95,19 +96,30 @@ in
 
   config = {
     contracts.fileSecrets = {
-      providers = {
+      providerOptions = {
+        inherit (options.testing) hardcoded-secret;
+      };
+      providerConfigs = {
         inherit (config.testing) hardcoded-secret;
       };
+      providerPaths.hardcoded-secret = [ "secrets" ];
       defaultProvider = lib.mkDefault {
         hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
         };
       };
-      provider = config.testing.hardcoded-secret.secrets;
     };
-    testing.hardcoded-secret.secrets = lib.mapAttrs (
-      _: lib.mapAttrs (_: instance: { inherit (instance) input; })
-    ) config.contracts.fileSecrets.requests;
+    testing.hardcoded-secret =
+      let
+        provider = config.contracts.fileSecrets.defaultProvider;
+        tag = lib.head (lib.attrNames provider);
+      in
+      provider.${tag}
+      // {
+        secrets = lib.mapAttrs (
+          _: lib.mapAttrs (_: instance: { inherit (instance) input; })
+        ) config.contracts.fileSecrets.requests;
+      };
 
     system.activationScripts = lib.concatMapAttrs (
       namespace:
