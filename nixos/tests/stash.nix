@@ -61,10 +61,12 @@ import ./make-test-python.nix (
             stash = [ { path = "/srv"; } ];
           };
         };
-        testing.hardcoded-secret.stash = {
-          passwordFile.content = "MyPassword";
-          jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-          sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        testing.hardcoded-secret = {
+          secrets.stash = {
+            passwordFile.content = "MyPassword";
+            jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+          };
         };
       };
 
