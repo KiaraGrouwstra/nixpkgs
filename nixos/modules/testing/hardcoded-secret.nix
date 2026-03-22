@@ -32,7 +32,7 @@ in
           directory = mkOption {
             type = str;
           };
-          secrets = mkOption {
+          instances = mkOption {
             default = { };
             description = ''
               Hardcoded file secrets. These should only be used in tests.
@@ -102,14 +102,14 @@ in
       in
       provider.${tag}
       // {
-        secrets = lib.mapAttrs (
+        instances = lib.mapAttrs (
           _: lib.mapAttrs (_: instance: { inherit (instance) input; })
         ) config.contracts.fileSecrets.requests;
       };
     contracts.fileSecrets = {
       providerOptions = { inherit (options.testing) hardcoded-secret; };
       providerConfigs = { inherit (config.testing) hardcoded-secret; };
-      providerPaths.hardcoded-secret = [ "secrets" ];
+      providerPaths.hardcoded-secret = [ "instances" ];
       # only one provider per contract can be the default provider
       defaultProvider = lib.mkDefault {
         hardcoded-secret = {
@@ -135,6 +135,6 @@ in
           cp ${source} "${output.path}"
         ''
       )
-    ) cfg.secrets;
+    ) cfg.instances;
   };
 }
