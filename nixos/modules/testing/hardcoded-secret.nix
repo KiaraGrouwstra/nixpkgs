@@ -24,8 +24,12 @@ in
 {
   options.testing.hardcoded-secret = mkOption {
     default = { };
-    type = submodule {
+    type = submodule ({ config, ... }: {
       options = {
+        directory = mkOption {
+          type = str;
+          default = "/run/hardcodedsecrets";
+        };
         secrets = mkOption {
           default = { };
           description = ''
@@ -65,7 +69,7 @@ in
                       description = "Output of the contract for file secrets.";
                       default = { };
                       type = fileSecrets.output {
-                        path.default = "/run/hardcodedsecrets/${name}";
+                        path.default = "${config.directory}/${name}";
                       };
                     };
 
@@ -84,7 +88,7 @@ in
           );
         };
       };
-    };
+    });
   };
 
   config = {
