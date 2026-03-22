@@ -19,8 +19,12 @@
     (
       { config, ... }:
       {
+        contracts.fileSecrets.defaultProvider = {
+          hardcoded-secret = {
+            directory = "/run/hardcodedsecrets";
+          };
+        };
         testing.hardcoded-secret = {
-          directory = "/run/hardcodedsecrets";
           instances."testing"."secret".content = config.test.content;
         };
       }

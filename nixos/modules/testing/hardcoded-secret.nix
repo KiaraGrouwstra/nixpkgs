@@ -101,12 +101,6 @@ in
     contracts.fileSecrets = {
       providerOptions = { inherit (options.testing) hardcoded-secret; };
       providerConfigs = { inherit (config.testing) hardcoded-secret; };
-      # only one provider per contract can be the default provider
-      defaultProvider = lib.mkDefault {
-        hardcoded-secret = {
-          directory = "/run/hardcodedsecrets";
-        };
-      };
     };
 
     system.activationScripts = lib.concatMapAttrs (

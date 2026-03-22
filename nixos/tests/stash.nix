@@ -61,6 +61,11 @@ import ./make-test-python.nix (
             stash = [ { path = "/srv"; } ];
           };
         };
+        contracts.fileSecrets.defaultProvider = {
+          hardcoded-secret = {
+            directory = "/run/hardcodedsecrets";
+          };
+        };
         testing.hardcoded-secret.instances.stash = {
           passwordFile.content = "MyPassword";
           jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
