@@ -81,8 +81,11 @@ in
   };
 
   config = {
-    contracts.fileSecrets.providers = {
-      inherit (config.testing) hardcoded-secret;
+    contracts.fileSecrets = {
+      providers = {
+        inherit (config.testing) hardcoded-secret;
+      };
+      provider = config.testing.hardcoded-secret;
     };
     testing.hardcoded-secret = lib.mapAttrs (
       _: lib.mapAttrs (_: instance: { inherit (instance) input; })

@@ -3,6 +3,7 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrsOf
+    attrTag
     option
     optionType
     submodule
@@ -26,6 +27,8 @@ in
             output = mkOption {
               description = "Output type of the ${name} contract.";
               type = optionType;
+            };
+            provider = mkOption {
             };
             providers = mkOption {
               description = "Providers of the ${name} contract.";
