@@ -62,6 +62,7 @@ import ./make-test-python.nix (
           };
         };
         testing.hardcoded-secret = {
+          directory = "/run/hardcodedsecrets";
           secrets.stash = {
             passwordFile.content = "MyPassword";
             jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
