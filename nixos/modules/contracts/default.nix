@@ -15,6 +15,19 @@ in
 {
   options.contracts = mkOption {
     default = { };
+    description = ''
+      Base option for a contract.
+
+      To create a new contract, add an instance of `config.contracts.<name>`
+      defining `meta` and `interface` options, or when adding to nixpkgs,
+      adding one in `lib/contracts`.
+
+      The `behaviorTest` option is used to ensure all `providers` of a contract
+      behave the same way.
+
+      Note that the split between lib.contracts and config.contracts ensures types
+      would not have to depend on `config`, which would break the build of the manual.
+    '';
     type = types.attrsOf (
       types.submodule (
         { config, ... }:
@@ -25,19 +38,19 @@ in
           options = {
             meta = mkOption {
               description = ''
-                Useful information about contract ${name} and its maintenance.
+                Useful information about the ${name} contract and its maintenance.
               '';
               type = submodule {
                 options = {
                   description = mkOption {
                     description = ''
-                      Description of the contract.
+                      Description of the ${name} contract.
                     '';
                     type = str;
                   };
                   maintainers = mkOption {
                     description = ''
-                      Maintainers of the contract.
+                      Maintainers of the ${name} contract.
                     '';
                     type = listOf str;
                   };
@@ -45,6 +58,7 @@ in
               };
             };
             interface = mkOption {
+              description = "Interface describing the types used in the ${name} contract.";
               default = { };
               type = submodule {
                 options = {
