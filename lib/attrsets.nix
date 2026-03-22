@@ -2245,4 +2245,36 @@ rec {
       ) intersection;
     in
     (x // y) // mask;
+
+  /**
+    Return the components of an attrset consisting of a single name-value pair.
+    This can help destructure `types.attrTag`.
+
+    # Inputs
+
+    `pair`
+
+    : 1\. attrset
+
+    # Type
+
+    ```
+    unPair :: AttrSet -> { name :: String; value :: Any; }
+    ```
+  */
+  unPair =
+    pair:
+    let
+      names = lib.attrNames pair;
+    in
+    assert assertMsg (
+      lib.length names == 1
+    ) "`unPair` takes only singleton attrsets, instead found keys: ${builtins.toJSON names}";
+    let
+      name = lib.head names;
+    in
+    {
+      inherit name;
+      value = pair.${name};
+    };
 }

@@ -118,6 +118,7 @@ let
     toShellVars
     types
     uniqueStrings
+    unPair
     updateManyAttrsByPath
     versions
     xor
@@ -4974,4 +4975,17 @@ runTests {
   testReplaceElemAtOutOfRange = testingThrow (lib.replaceElemAt [ 1 2 3 ] 5 "a");
 
   testReplaceElemAtNegative = testingThrow (lib.replaceElemAt [ 1 2 3 ] (-1) "a");
+
+  testUnPairNone = testingThrow (unPair { });
+  testUnPairOne = {
+    expr = unPair { a = 1; };
+    expected = {
+      name = "a";
+      value = 1;
+    };
+  };
+  testUnPairTwo = testingThrow (unPair {
+    a = 1;
+    b = 2;
+  });
 }

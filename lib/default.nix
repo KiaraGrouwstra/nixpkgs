@@ -256,6 +256,7 @@ let
         isAttrs
         intersectAttrs
         removeAttrs
+        unPair
         ;
       inherit (self.lists)
         singleton
