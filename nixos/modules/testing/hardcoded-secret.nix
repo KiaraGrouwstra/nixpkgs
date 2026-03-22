@@ -35,7 +35,7 @@ in
     '';
     example = lib.literalExpression ''
       {
-        mySecret = {
+        my.secret = {
           input = {
             user = "me";
             mode = "0400";
@@ -45,35 +45,37 @@ in
       }
     '';
     type = attrsOf (
-      submodule (
-        { name, ... }:
-        {
-          options = {
-            input = mkOption {
-              description = "Input of the contract for file secrets.";
-              type = fileSecrets.input {
-                owner.default = "root";
-                group.default = "root";
+      attrsOf (
+        submodule (
+          { name, ... }:
+          {
+            options = {
+              input = mkOption {
+                description = "Input of the contract for file secrets.";
+                type = fileSecrets.input {
+                  owner.default = "root";
+                  group.default = "root";
+                };
+              };
+              output = mkOption {
+                description = "Output of the contract for file secrets.";
+                default = { };
+                type = fileSecrets.output {
+                  path.default = "/run/hardcodedsecrets/${name}";
+                };
+              };
+
+              content = mkOption {
+                type = str;
+                description = ''
+                  Content of the secret as a string.
+
+                  This will be stored in the nix store and should only be used for testing or maybe in dev.
+                '';
               };
             };
-            output = mkOption {
-              description = "Output of the contract for file secrets.";
-              default = { };
-              type = fileSecrets.output {
-                path.default = "/run/hardcodedsecrets/${name}";
-              };
-            };
-
-            content = mkOption {
-              type = str;
-              description = ''
-                Content of the secret as a string.
-
-                This will be stored in the nix store and should only be used for testing or maybe in dev.
-              '';
-            };
-          };
-        }
+          }
+        )
       )
     );
   };
@@ -82,24 +84,27 @@ in
     contracts.fileSecrets.providers = {
       inherit (config.testing) hardcoded-secret;
     };
-    testing.hardcoded-secret = lib.concatMapAttrs (
-      service: lib.mapAttrs' (k: instance: lib.nameValuePair "${service}-${k}" { inherit (instance) input; })
+    testing.hardcoded-secret = lib.mapAttrs (
+      _: lib.mapAttrs (_: instance: { inherit (instance) input; })
     ) config.contracts.fileSecrets.requests;
 
-    system.activationScripts = mapAttrs' (
-      n: cfg':
-      let
-        source = writeText "hardcodedsecret_${n}_content" cfg'.content;
+    system.activationScripts = lib.concatMapAttrs (
+      namespace:
+      mapAttrs' (
+        n: cfg':
+        let
+          source = writeText "hardcodedsecret_${namespace}_${n}_content" cfg'.content;
 
-        inherit (cfg') input output;
-      in
-      nameValuePair "hardcodedsecret_${n}" ''
-        mkdir -p "$(dirname "${output.path}")"
-        touch "${output.path}"
-        chmod ${input.mode} "${output.path}"
-        chown ${input.owner}:${input.group} "${output.path}"
-        cp ${source} "${output.path}"
-      ''
+          inherit (cfg') input output;
+        in
+        nameValuePair "hardcodedsecret_${namespace}_${n}" ''
+          mkdir -p "$(dirname "${output.path}")"
+          touch "${output.path}"
+          chmod ${input.mode} "${output.path}"
+          chown ${input.owner}:${input.group} "${output.path}"
+          cp ${source} "${output.path}"
+        ''
+      )
     ) cfg;
   };
 }
