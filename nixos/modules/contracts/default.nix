@@ -39,7 +39,7 @@ in
               };
             };
             defaultProvider = mkOption {
-              type = attrTag config.providerOptions;
+              type = attrTag (lib.mapAttrs (_: provider: provider.options) config.providers);
             };
             # FIXME figure out how to use these namespaces with modular services' multiple instantiations
             instances = mkOption {
@@ -47,24 +47,29 @@ in
               default =
                 let
                   tag = (lib.unPair config.defaultProvider).name;
+                  inherit (config.providers.${tag}) path configuration;
                 in
-                lib.getAttrFromPath (config.providerPaths.${tag} or [ "instances" ]) config.providerConfigs.${tag};
+                lib.getAttrFromPath path configuration;
             };
-            providerPaths = mkOption {
-              default = { };
-              type = attrsOf (listOf str);
-            };
-            providerOptions = mkOption {
+            providers = mkOption {
               description = "Providers of the ${name} contract.";
-              type = attrsOf option;
               default = { };
-            };
-            providerConfigs = mkOption {
-              description = "Providers of the ${name} contract.";
-              type = submodule {
-                options = config.providerOptions;
-              };
-              default = { };
+              type = attrsOf (
+                submodule (provider: {
+                  options = {
+                    path = mkOption {
+                      type = listOf str;
+                      default = [ "instances" ];
+                    };
+                    options = mkOption {
+                      type = option;
+                    };
+                    configuration = mkOption {
+                      inherit (provider.config.options) type default;
+                    };
+                  };
+                })
+              );
             };
             requests = mkOption {
               default = { };

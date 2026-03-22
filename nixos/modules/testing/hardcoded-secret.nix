@@ -99,9 +99,9 @@ in
     testing.hardcoded-secret = (lib.unPair config.contracts.${contract}.defaultProvider).value // {
       instances = lib.contract.getInputs config.contracts.${contract};
     };
-    contracts.fileSecrets = {
-      providerOptions = { inherit (options.testing) hardcoded-secret; };
-      providerConfigs = { inherit (config.testing) hardcoded-secret; };
+    contracts.${contract}.providers.hardcoded-secret = {
+      options = options.testing.hardcoded-secret;
+      configuration = config.testing.hardcoded-secret;
     };
 
     system.activationScripts = lib.concatMapAttrs (
