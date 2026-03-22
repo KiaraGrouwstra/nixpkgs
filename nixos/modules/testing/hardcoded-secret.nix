@@ -100,8 +100,8 @@ in
       instances = lib.contract.getInputs config.contracts.${contract};
     };
     contracts.${contract}.providers.hardcoded-secret = {
+      inherit cfg;
       options = options.testing.hardcoded-secret;
-      configuration = config.testing.hardcoded-secret;
     };
 
     system.activationScripts = lib.concatMapAttrs (
