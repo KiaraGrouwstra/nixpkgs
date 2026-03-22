@@ -41,6 +41,7 @@ in
             defaultProvider = mkOption {
               type = attrTag config.providerOptions;
             };
+            # FIXME figure out how to use these namespaces with modular services' multiple instantiations
             instances = mkOption {
               type = attrsOf (attrsOf attrs);
               default =
