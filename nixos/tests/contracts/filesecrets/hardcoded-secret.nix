@@ -10,7 +10,7 @@
   providerRoot = [
     "testing"
     "hardcoded-secret"
-    "secrets"
+    "instances"
     "my"
     "secret"
   ];
@@ -21,7 +21,7 @@
       {
         testing.hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
-          secrets.my.secret.content = config.test.content;
+          instances.my.secret.content = config.test.content;
         };
       }
     )
