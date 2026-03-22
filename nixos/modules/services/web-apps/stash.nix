@@ -20,6 +20,7 @@ let
   inherit (contracts) fileSecrets;
 
   cfg = config.services.stash;
+  fileSecretsProvider = config.contracts.fileSecrets.provider.stash;
 
   stashType = types.submodule {
     options = {
@@ -446,7 +447,7 @@ in
 
       passwordFile = mkOption {
         type = types.nullOr secretOptionType;
-        default = null;
+        default = { inherit (fileSecretsProvider.passwordFile) output; };
         example = "/path/to/password/file";
         description = ''
           Path to file containing password for login.
@@ -461,10 +462,12 @@ in
       jwtSecretKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret used to sign JWT tokens.";
+        default = { inherit (fileSecretsProvider.jwtSecretKey) output; };
       };
       sessionStoreKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret for session store.";
+        default = { inherit (fileSecretsProvider.sessionStoreKey) output; };
       };
 
       mutableSettings = mkOption {
@@ -504,15 +507,10 @@ in
       inherit (cfg) passwordFile jwtSecretKey sessionStoreKey;
     };
 
-    services.stash = {
-      settings = {
-        username = mkIf (cfg.username != null) cfg.username;
-        plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
-        scrapers_path = mkIf (!cfg.mutableScrapers) cfg.scrapers;
-      };
-      passwordFile.output = config.testing.hardcoded-secret.stash.passwordFile.output;
-      jwtSecretKey.output = config.testing.hardcoded-secret.stash.jwtSecretKey.output;
-      sessionStoreKey.output = config.testing.hardcoded-secret.stash.sessionStoreKey.output;
+    services.stash.settings = {
+      username = mkIf (cfg.username != null) cfg.username;
+      plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
+      scrapers_path = mkIf (!cfg.mutableScrapers) cfg.scrapers;
     };
 
     networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [ cfg.settings.port ];
