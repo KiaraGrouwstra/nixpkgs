@@ -23,6 +23,27 @@ in
         in
         {
           options = {
+            meta = mkOption {
+              description = ''
+                Useful information about contract ${name} and its maintenance.
+              '';
+              type = submodule {
+                options = {
+                  description = mkOption {
+                    description = ''
+                      Description of the contract.
+                    '';
+                    type = str;
+                  };
+                  maintainers = mkOption {
+                    description = ''
+                      Maintainers of the contract.
+                    '';
+                    type = listOf str;
+                  };
+                };
+              };
+            };
             interface = mkOption {
               default = { };
               type = submodule {
@@ -93,8 +114,9 @@ in
   };
   config.contracts = lib.mapAttrs (
     _:
-    { input, output, ... }:
+    { meta, input, output, ... }:
     {
+      inherit meta;
       interface = {
         input = input { };
         output = output { };

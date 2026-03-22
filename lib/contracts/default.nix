@@ -31,6 +31,7 @@ let
               };
             };
           };
+          default = { };
         };
         input = mkOption {
           description = ''
