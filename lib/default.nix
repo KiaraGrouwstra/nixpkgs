@@ -73,6 +73,7 @@ let
       types = callLibs ./types.nix;
 
       # contracts
+      contract = callLibs ./contracts/lib.nix;
       contracts = callLibs ./contracts;
 
       # constants

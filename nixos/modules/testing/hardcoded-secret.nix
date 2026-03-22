@@ -102,9 +102,7 @@ in
       in
       provider.${tag}
       // {
-        instances = lib.mapAttrs (
-          _: lib.mapAttrs (_: instance: { inherit (instance) input; })
-        ) config.contracts.fileSecrets.requests;
+        instances = lib.contract.getInputs config.contracts.fileSecrets;
       };
     contracts.fileSecrets = {
       providerOptions = { inherit (options.testing) hardcoded-secret; };
