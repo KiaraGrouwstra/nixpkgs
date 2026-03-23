@@ -86,13 +86,9 @@ in
               description = ''
                 The default provider for the contract, alongside its configuration.
               '';
-              type = attrTag (lib.mapAttrs (_: provider: provider.opts) contract.config.providers);
+              type = types.enum (lib.attrNames contract.config.providers);
               example = ''
-                {
-                  hardcoded-secret = {
-                    directory = "/run/hardcodedsecrets";
-                  };
-                }
+                "hardcoded-secret"
               '';
             };
             # FIXME figure out how to use these namespaces with modular services' multiple instantiations
@@ -107,7 +103,7 @@ in
 
                 ```nix
                   let
-                    tag = lib.head (lib.attrNames contract.config.defaultProvider);
+                    tag = contract.config.defaultProvider;
                   in
                   lib.getAttrFromPath contract.config.providerPaths.''${tag} contract.config.providerOptions.''${tag};
                 ````
@@ -115,15 +111,12 @@ in
               type = attrsOf (attrsOf attrs);
               default =
                 let
-                  tag = (lib.unPair contract.config.defaultProvider).name;
-                  inherit (contract.config.providers.${tag}) path cfg;
+                  inherit (contract.config.providers.${contract.config.defaultProvider}) path cfg;
                 in
                 lib.getAttrFromPath path cfg;
               defaultText = ''
                 let
-                  contract = config.contracts."<contract>";
-                  tag = (lib.unPair contract.defaultProvider).name;
-                  inherit (contract.config.providers.''${tag}) path cfg;
+                  inherit (contract.config.providers.''${config.contracts."<contract>".defaultProvider}) path cfg;
                 in
                 lib.getAttrFromPath path cfg;
               '';

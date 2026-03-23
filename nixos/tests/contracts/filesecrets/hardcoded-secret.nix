@@ -19,14 +19,9 @@
     (
       { config, ... }:
       {
-        # is it even desirable to allow configuring things from multiple places?
-        contracts.fileSecrets.defaultProvider = {
-          # FIXME ensure such configuration can still be set from testing.hardcoded-secret directly as well
-          hardcoded-secret = {
-            directory = "/run/hardcodedsecrets";
-          };
-        };
+        contracts.fileSecrets.defaultProvider = "hardcoded-secret";
         testing.hardcoded-secret = {
+          directory = "/run/hardcodedsecrets";
           instances."testing"."secret".content = config.test.content;
         };
       }
