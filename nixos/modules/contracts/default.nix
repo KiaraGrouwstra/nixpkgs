@@ -33,9 +33,9 @@ in
     '';
     type = types.attrsOf (
       types.submodule (
-        { config, ... }:
+        contract:
         let
-          inherit (config._module.args) name;
+          inherit (contract.config._module.args) name;
         in
         {
           options = {
@@ -86,7 +86,7 @@ in
               description = ''
                 The default provider for the contract, alongside its configuration.
               '';
-              type = attrTag (lib.mapAttrs (_: provider: provider.opts) config.providers);
+              type = attrTag (lib.mapAttrs (_: provider: provider.opts) contract.config.providers);
               example = ''
                 {
                   hardcoded-secret = {
@@ -106,15 +106,15 @@ in
               type = attrsOf (attrsOf attrs);
               default =
                 let
-                  tag = (lib.unPair config.defaultProvider).name;
-                  inherit (config.providers.${tag}) path cfg;
+                  tag = (lib.unPair contract.config.defaultProvider).name;
+                  inherit (contract.config.providers.${tag}) path cfg;
                 in
                 lib.getAttrFromPath path cfg;
               defaultText = ''
                 let
                   contract = config.contracts."<contract>";
                   tag = (lib.unPair contract.defaultProvider).name;
-                  inherit (config.providers.''${tag}) path cfg;
+                  inherit (contract.config.providers.''${tag}) path cfg;
                 in
                 lib.getAttrFromPath path cfg;
               '';
@@ -170,14 +170,14 @@ in
                         The request's input parameters.
                         Must match the ${name} contract interface's input type.
                       '';
-                      type = config.interface.input;
+                      type = contract.config.interface.input;
                     };
                     output = mkOption {
                       description = ''
                         Output returned to the request by the provider's side of the contract.
                         Must match the ${name} contract interface's output type.
                       '';
-                      type = config.interface.output;
+                      type = contract.config.interface.output;
                     };
                   };
                 })
