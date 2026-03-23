@@ -25,25 +25,30 @@ let
 in
 {
   options.testing.hardcoded-secret = mkOption {
+    description = ''
+      Hardcoded file secrets. These should only be used in tests.
+
+      They aim to replace the usage of pkgs.writeText in NixOS VM tests
+      as those make the file world readable
+      while this module set runtime permissions on the file.
+      This makes the tests more accurate, ensuring the permissions
+      set by the contract consumer are correct.
+    '';
     default = { };
     type = submodule (
       { config, ... }:
       {
         options = {
           directory = mkOption {
+            description = "The directory to store the secrets at.";
             type = str;
+            default = "/run/hardcodedsecrets";
           };
           instances = mkOption {
-            default = { };
             description = ''
-              Hardcoded file secrets. These should only be used in tests.
-
-              They aim to replace the usage of pkgs.writeText in NixOS VM tests
-              as those make the file world readable
-              while this module set runtime permissions on the file.
-              This makes the tests more accurate, ensuring the permissions
-              set by the contract consumer are correct.
+              Instances of the contract, including secret content and contract input/output.
             '';
+            default = { };
             example = lib.literalExpression ''
               {
                 my.secret = {

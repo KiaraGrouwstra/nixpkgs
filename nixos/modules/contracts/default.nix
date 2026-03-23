@@ -18,7 +18,7 @@ in
     description = ''
       Base option for a contract.
 
-      To create a new contract, add an instance of `config.contracts.<name>`
+      To create a new contract, add an instance of `config.contracts."<name>"`
       defining `meta` and `interface` options, or when adding to nixpkgs,
       adding one in `lib/contracts`.
 
@@ -80,10 +80,26 @@ in
               };
             };
             defaultProvider = mkOption {
+              description = ''
+                The default provider for the contract, alongside its configuration.
+              '';
               type = attrTag (lib.mapAttrs (_: provider: provider.options) config.providers);
+              example = ''
+                {
+                  hardcoded-secret = {
+                    directory = "/run/hardcodedsecrets";
+                  };
+                }
+              '';
             };
             # FIXME figure out how to use these namespaces with modular services' multiple instantiations
             instances = mkOption {
+              description = ''
+                Instances of the contract.
+                Structured like `."<service>"."<instance">.{ input; output; }`.
+                Definition located at the provider's option navigated to according to
+                `config.contracts."<contract>".providers."<provider>".path`.
+              '';
               type = attrsOf (attrsOf attrs);
               default =
                 let
@@ -93,7 +109,7 @@ in
                 lib.getAttrFromPath path cfg;
               defaultText = ''
                 let
-                  contract = config.contracts.<contract>;
+                  contract = config.contracts."<contract>";
                   tag = (lib.unPair contract.defaultProvider).name;
                   inherit (config.providers.''${tag}) path cfg;
                 in
@@ -101,16 +117,24 @@ in
               '';
             };
             providers = mkOption {
-              description = "Providers of the ${name} contract.";
+              description = ''
+                Providers of the ${name} contract that can take request inputs to return outputs.
+              '';
               default = { };
               type = attrsOf (
                 submodule (provider: {
                   options = {
                     path = mkOption {
+                      description = ''
+                        A path to navigate from the provider to its instances of the contract.
+                      '';
                       type = listOf str;
                       default = [ "instances" ];
                     };
                     options = mkOption {
+                      description = ''
+                        The `options` of the provider.
+                      '';
                       type = option;
                       default = mkOption {
                         type = submodule {
@@ -120,6 +144,9 @@ in
                       };
                     };
                     cfg = mkOption {
+                      description = ''
+                        The `config` of the provider, often denoted by `cfg`.
+                      '';
                       inherit (provider.config.options) type default;
                     };
                   };
@@ -127,14 +154,25 @@ in
               );
             };
             requests = mkOption {
+              description = ''
+                Requests made by consumers of the contract, consisting of request inputs then the provider's returned outputs.
+              '';
               default = { };
               type = attrsOf (
                 attrsOf (submodule {
                   options = {
                     input = mkOption {
+                      description = ''
+                        The request's input parameters.
+                        Must match the ${name} contract interface's input type.
+                      '';
                       type = config.interface.input;
                     };
                     output = mkOption {
+                      description = ''
+                        Output returned to the request by the provider's side of the contract.
+                        Must match the ${name} contract interface's output type.
+                      '';
                       type = config.interface.output;
                     };
                   };
