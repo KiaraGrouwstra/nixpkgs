@@ -82,7 +82,7 @@ in
               description = ''
                 The default provider for the contract, alongside its configuration.
               '';
-              type = attrTag (lib.mapAttrs (_: provider: provider.options) config.providers);
+              type = attrTag (lib.mapAttrs (_: provider: provider.opts) config.providers);
               example = ''
                 {
                   hardcoded-secret = {
@@ -130,9 +130,11 @@ in
                       type = listOf str;
                       default = [ "instances" ];
                     };
-                    options = mkOption {
+                    opts = mkOption {
                       description = ''
                         The `options` of the provider.
+
+                        To avoid confusion, the name used here is made distinct from `options`.
                       '';
                       type = option;
                       default = mkOption {
@@ -144,7 +146,7 @@ in
                       description = ''
                         The `config` of the provider, often denoted by `cfg`.
                       '';
-                      inherit (provider.config.options) type default;
+                      inherit (provider.config.opts) type default;
                     };
                   };
                 })
