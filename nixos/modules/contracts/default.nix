@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ lib, ... }:
 let
   inherit (lib) mkOption types;
   inherit (types)
@@ -6,6 +6,7 @@ let
     attrsOf
     listOf
     optionType
+    raw
     str
     submodule
     ;
@@ -107,10 +108,9 @@ in
                 ````
               '';
               type = attrsOf (attrsOf attrs);
-              default =
-                lib.getAttrFromPath contract.config.providers.${contract.config.defaultProvider} config;
+              default = contract.config.providers.${contract.config.defaultProvider};
               defaultText = ''
-                lib.getAttrFromPath contract.config.providers.''${contract.config.defaultProvider} config;
+                contract.config.providers.''${contract.config.defaultProvider}
               '';
             };
             providers = mkOption {
@@ -118,7 +118,7 @@ in
                 Where to find instances of a provider of the ${name} contract that can take request inputs to return outputs.
               '';
               default = { };
-              type = attrsOf (listOf str);
+              type = attrsOf raw;
             };
             requests = mkOption {
               description = ''
