@@ -106,7 +106,7 @@ in
     };
     contracts.${contract}.providers.hardcoded-secret = {
       inherit cfg;
-      options = options.testing.hardcoded-secret;
+      opts = options.testing.hardcoded-secret;
     };
 
     system.activationScripts = lib.concatMapAttrs (
