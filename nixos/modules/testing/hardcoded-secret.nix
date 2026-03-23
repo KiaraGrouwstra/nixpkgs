@@ -111,9 +111,7 @@ in
   };
 
   config = {
-    testing.hardcoded-secret = (lib.unPair config.contracts.${contract}.defaultProvider).value // {
-      instances = lib.contract.getInputs config.contracts.${contract};
-    };
+    testing.hardcoded-secret.instances = lib.contract.getInputs config.contracts.${contract};
     # FIXME here we manually assign a contract's provider a name.
     # could it make sense to instead just communicate path `[ "testing" "hardcoded-secret" ]`,
     # potentially short-cutting having to still pass `options.testing.hardcoded-secret`

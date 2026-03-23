@@ -61,15 +61,14 @@ import ./make-test-python.nix (
             stash = [ { path = "/srv"; } ];
           };
         };
-        contracts.fileSecrets.defaultProvider = {
-          hardcoded-secret = {
-            directory = "/run/hardcodedsecrets";
+        contracts.fileSecrets.defaultProvider = "hardcoded-secret";
+        testing.hardcoded-secret = {
+          directory = "/run/hardcodedsecrets";
+          instances.stash = {
+            passwordFile.content = "MyPassword";
+            jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
           };
-        };
-        testing.hardcoded-secret.instances.stash = {
-          passwordFile.content = "MyPassword";
-          jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-          sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         };
       };
 
