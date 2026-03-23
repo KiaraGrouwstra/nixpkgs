@@ -36,13 +36,13 @@ in
     '';
     default = { };
     type = submodule (
-      { config, ... }:
+      hardcoded-secret:
       {
         options = {
           directory = mkOption {
             description = "The directory to store the secrets at.";
             type = str;
-            default = "/run/hardcodedsecrets";
+            example = "/run/hardcodedsecrets";
           };
           # FIXME if a service handling e.g. back-ups could act as a provider for multiple contracts,
           # how should that affect names of options like this? should they instead be named after the contract?
@@ -82,7 +82,12 @@ in
                         description = "Output of the contract for file secrets.";
                         default = { };
                         type = interface.output {
-                          path.default = "${config.directory}/${name}";
+                          path = {
+                            default = "${hardcoded-secret.config.directory}/${name}";
+                            defaultText = ''
+                              "''${hardcoded-secret.config.directory}/''${name}"
+                            '';
+                          };
                         };
                       };
 
