@@ -44,9 +44,14 @@ in
             type = str;
             default = "/run/hardcodedsecrets";
           };
+          # FIXME if a service handling e.g. back-ups could act as a provider for multiple contracts,
+          # how should that affect names of options like this? should they instead be named after the contract?
           instances = mkOption {
             description = ''
               Instances of the contract, including secret content and contract input/output.
+
+              Matches the name of option `contracts."<contract>".instances`,
+              which ends up referring to providers' options like this one.
             '';
             default = { };
             example = lib.literalExpression ''
@@ -104,6 +109,10 @@ in
     testing.hardcoded-secret = (lib.unPair config.contracts.${contract}.defaultProvider).value // {
       instances = lib.contract.getInputs config.contracts.${contract};
     };
+    # FIXME here we manually assign a contract's provider a name.
+    # could it make sense to instead just communicate path `[ "testing" "hardcoded-secret" ]`,
+    # potentially short-cutting having to still pass `options.testing.hardcoded-secret`
+    # and `config.testing.hardcoded-secret` as well?
     contracts.${contract}.providers.hardcoded-secret = {
       inherit cfg;
       opts = options.testing.hardcoded-secret;

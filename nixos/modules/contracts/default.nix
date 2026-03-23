@@ -42,6 +42,9 @@ in
             meta = mkOption {
               description = ''
                 Useful information about the ${name} contract and its maintenance.
+
+                Note that, while `meta` is already a valid module attribute next to `config` and `options`,
+                it is added as an explicit configuration option here to facilitate transferring this info from `lib.contracts`.
               '';
               type = submodule {
                 options = {
@@ -78,6 +81,7 @@ in
                 };
               };
             };
+            # TODO explore design considerations of this API, including schema/UI generation for `types.attrTag`.
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
@@ -123,6 +127,7 @@ in
               type = attrsOf (
                 submodule (provider: {
                   options = {
+                    # FIXME could we settle for a static path? if so, could we ditch this support for these custom option paths?
                     path = mkOption {
                       description = ''
                         A path to navigate from the provider to its instances of the contract.
