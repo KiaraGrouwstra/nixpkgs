@@ -5,6 +5,7 @@ let
     attrs
     attrsOf
     listOf
+    nullOr
     optionType
     raw
     str
@@ -80,12 +81,12 @@ in
                 };
               };
             };
-            # FIXME how to override this for specific instances of the contract?
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
               '';
-              type = types.enum (lib.attrNames contract.config.providers);
+              type = nullOr (types.enum (lib.attrNames contract.config.providers));
+              default = null;
               example = ''
                 "hardcoded-secret"
               '';
@@ -99,7 +100,14 @@ in
                 `config.contracts."<contract>".providers."<provider>"`.
               '';
               type = attrsOf (attrsOf attrs);
-              default = contract.config.providers.${contract.config.defaultProvider};
+              default =
+                let
+                  defaultProvider =
+                    assert lib.assertMsg (contract.config.defaultProvider != null)
+                      "contracts.${name}.defaultProvider is unset! it must be one of: ${lib.concatStringsSep " " (lib.attrNames contract.config.providers)}";
+                    contract.config.defaultProvider;
+                in
+                contract.config.providers.${defaultProvider};
               defaultText = ''
                 contract.config.providers.''${contract.config.defaultProvider}
               '';
