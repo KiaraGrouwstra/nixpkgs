@@ -11,6 +11,9 @@ let
     str
     submodule
     ;
+  empty = submodule {
+    options = { };
+  };
 in
 {
   options.contracts = mkOption {
@@ -65,16 +68,12 @@ in
                   input = mkOption {
                     description = "Input type of the ${name} contract.";
                     type = optionType;
-                    default = submodule {
-                      options = { };
-                    };
+                    default = empty;
                   };
                   output = mkOption {
                     description = "Output type of the ${name} contract.";
                     type = optionType;
-                    default = submodule {
-                      options = { };
-                    };
+                    default = empty;
                   };
                 };
               };
@@ -137,9 +136,7 @@ in
                       '';
                       type = option;
                       default = mkOption {
-                        type = submodule {
-                          options = { };
-                        };
+                        type = empty;
                         default = { };
                       };
                     };
