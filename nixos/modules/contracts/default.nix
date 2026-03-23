@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 let
   inherit (lib) mkOption types;
   inherit (types)
@@ -110,14 +110,14 @@ in
               type = attrsOf (attrsOf attrs);
               default =
                 let
-                  inherit (contract.config.providers.${contract.config.defaultProvider}) path cfg;
+                  inherit (contract.config.providers.${contract.config.defaultProvider}) path space;
                 in
-                lib.getAttrFromPath path cfg;
+                lib.getAttrFromPath (space ++ path) config;
               defaultText = ''
                 let
-                  inherit (contract.config.providers.''${config.contracts."<contract>".defaultProvider}) path cfg;
+                  inherit (contract.config.providers.''${contract.config.defaultProvider}) path space;
                 in
-                lib.getAttrFromPath path cfg;
+                lib.getAttrFromPath (space ++ path) config;
               '';
             };
             providers = mkOption {
@@ -136,23 +136,12 @@ in
                       type = listOf str;
                       default = [ "instances" ];
                     };
-                    opts = mkOption {
+                    space = mkOption {
                       description = ''
-                        The `options` of the provider.
-
-                        To avoid confusion, the name used here is made distinct from `options`.
+                        Where to find the module.
                       '';
-                      type = option;
-                      default = mkOption {
-                        type = empty;
-                        default = { };
-                      };
-                    };
-                    cfg = mkOption {
-                      description = ''
-                        The `config` of the provider, often denoted by `cfg`.
-                      '';
-                      inherit (provider.config.opts) type default;
+                      type = listOf str;
+                      default = [ ];
                     };
                   };
                 })

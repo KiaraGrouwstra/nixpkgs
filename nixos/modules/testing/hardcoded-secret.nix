@@ -1,5 +1,4 @@
 {
-  options,
   config,
   lib,
   pkgs,
@@ -112,14 +111,7 @@ in
 
   config = {
     testing.hardcoded-secret.instances = lib.contract.getInputs config.contracts.${contract};
-    # FIXME here we manually assign a contract's provider a name.
-    # could it make sense to instead just communicate path `[ "testing" "hardcoded-secret" ]`,
-    # potentially short-cutting having to still pass `options.testing.hardcoded-secret`
-    # and `config.testing.hardcoded-secret` as well?
-    contracts.${contract}.providers.hardcoded-secret = {
-      inherit cfg;
-      opts = options.testing.hardcoded-secret;
-    };
+    contracts.${contract}.providers.hardcoded-secret.space = [ "testing" "hardcoded-secret" ];
 
     system.activationScripts = lib.concatMapAttrs (
       namespace:
