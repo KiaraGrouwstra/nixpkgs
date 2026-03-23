@@ -85,6 +85,7 @@ in
               description = ''
                 The default provider for the contract, alongside its configuration.
               '';
+              # TODO consider non-string enums?
               type = nullOr (types.enum (lib.attrNames contract.config.providers));
               default = null;
               example = ''
