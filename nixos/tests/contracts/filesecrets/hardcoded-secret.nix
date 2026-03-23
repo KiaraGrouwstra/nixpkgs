@@ -10,7 +10,7 @@
   providerRoot = [
     "testing"
     "hardcoded-secret"
-    "instances"
+    "fileSecrets"
     "testing"
     "secret"
   ];
@@ -22,7 +22,7 @@
         contracts.fileSecrets.defaultProvider = "hardcoded-secret";
         testing.hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
-          instances."testing"."secret".content = config.test.content;
+          fileSecrets."testing"."secret".content = config.test.content;
         };
       }
     )

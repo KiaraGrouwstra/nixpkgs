@@ -43,11 +43,9 @@ in
             type = str;
             example = "/run/hardcodedsecrets";
           };
-          # FIXME if a service handling e.g. back-ups could act as a provider for multiple contracts,
-          # how should that affect names of options like this? should they instead be named after the contract?
-          instances = mkOption {
+          fileSecrets = mkOption {
             description = ''
-              Instances of the contract, including secret content and contract input/output.
+              Instances of the fileSecrets contract, including secret content and contract input/output.
 
               Matches the name of option `contracts."<contract>".instances`,
               which ends up referring to providers' options like this one.
@@ -110,8 +108,8 @@ in
   };
 
   config = {
-    testing.hardcoded-secret.instances = lib.contract.getInputs config.contracts.${contract};
-    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.instances;
+    testing.hardcoded-secret.fileSecrets = lib.contract.getInputs config.contracts.${contract};
+    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.fileSecrets;
 
     system.activationScripts = lib.concatMapAttrs (
       namespace:
@@ -130,6 +128,6 @@ in
           cp ${source} "${output.path}"
         ''
       )
-    ) cfg.instances;
+    ) cfg.fileSecrets;
   };
 }

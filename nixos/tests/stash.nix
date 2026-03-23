@@ -64,7 +64,7 @@ import ./make-test-python.nix (
         contracts.fileSecrets.defaultProvider = "hardcoded-secret";
         testing.hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
-          instances.stash = {
+          fileSecrets.stash = {
             passwordFile.content = "MyPassword";
             jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
             sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
