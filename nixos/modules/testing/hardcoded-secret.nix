@@ -25,6 +25,7 @@ let
 in
 {
   options.testing.hardcoded-secret = mkOption {
+    default = { };
     description = ''
       Hardcoded file secrets. These should only be used in tests.
 
@@ -34,7 +35,6 @@ in
       This makes the tests more accurate, ensuring the permissions
       set by the contract consumer are correct.
     '';
-    default = { };
     type = submodule (
       hardcoded-secret:
       {
