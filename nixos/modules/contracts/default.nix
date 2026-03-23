@@ -4,7 +4,6 @@ let
   inherit (types)
     attrs
     attrsOf
-    attrTag
     listOf
     option
     optionType
@@ -81,7 +80,6 @@ in
                 };
               };
             };
-            # TODO explore design considerations of this API, including schema/UI generation for `types.attrTag`.
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
