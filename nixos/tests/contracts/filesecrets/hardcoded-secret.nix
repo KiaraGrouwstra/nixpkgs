@@ -19,7 +19,8 @@
     (
       { config, ... }:
       {
-        contracts.fileSecrets.defaultProvider = "hardcoded-secret";
+        # setting by defaultProvider is easier, but let's set it manually here
+        contracts.fileSecrets.instances."testing"."secret" = config.contracts.fileSecrets.config.providers.hardcoded-secret;
         testing.hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
           fileSecrets."testing"."secret".content = config.test.content;
