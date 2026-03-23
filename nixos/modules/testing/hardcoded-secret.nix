@@ -19,8 +19,8 @@ let
     submodule
     ;
   inherit (pkgs) writeText;
-  inherit (contracts.fileSecrets) interface;
   contract = "fileSecrets";
+  inherit (contracts.${contract}) interface;
 in
 {
   options.testing.hardcoded-secret = mkOption {
@@ -43,7 +43,7 @@ in
             type = str;
             example = "/run/hardcodedsecrets";
           };
-          fileSecrets = mkOption {
+          ${contract} = mkOption {
             description = ''
               Instances of the fileSecrets contract, including secret content and contract input/output.
 
@@ -108,8 +108,8 @@ in
   };
 
   config = {
-    testing.hardcoded-secret.fileSecrets = lib.contract.getInputs config.contracts.${contract};
-    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.fileSecrets;
+    testing.hardcoded-secret.${contract} = lib.contract.getInputs config.contracts.${contract};
+    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.${contract};
 
     system.activationScripts = lib.concatMapAttrs (
       namespace:
@@ -128,6 +128,6 @@ in
           cp ${source} "${output.path}"
         ''
       )
-    ) cfg.fileSecrets;
+    ) cfg.${contract};
   };
 }
