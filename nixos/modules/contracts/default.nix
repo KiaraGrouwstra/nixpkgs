@@ -80,6 +80,7 @@ in
                 };
               };
             };
+            # FIXME how to override this for specific instances of the contract?
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
