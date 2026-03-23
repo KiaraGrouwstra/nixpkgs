@@ -5,7 +5,6 @@ let
     attrs
     attrsOf
     listOf
-    option
     optionType
     str
     submodule
@@ -96,7 +95,7 @@ in
                 Instances of the contract.
                 Structured like `."<service>"."<instance">.{ input; output; }`.
                 Definition located at the provider's option navigated to according to
-                `config.contracts."<contract>".providers."<provider>".path`.
+                `config.contracts."<contract>".providers."<provider>"`.
 
                 As such, a dependent type here, unfortunately breaking docs, would be:
 
@@ -109,43 +108,17 @@ in
               '';
               type = attrsOf (attrsOf attrs);
               default =
-                let
-                  inherit (contract.config.providers.${contract.config.defaultProvider}) path space;
-                in
-                lib.getAttrFromPath (space ++ path) config;
+                lib.getAttrFromPath contract.config.providers.${contract.config.defaultProvider} config;
               defaultText = ''
-                let
-                  inherit (contract.config.providers.''${contract.config.defaultProvider}) path space;
-                in
-                lib.getAttrFromPath (space ++ path) config;
+                lib.getAttrFromPath contract.config.providers.''${contract.config.defaultProvider} config;
               '';
             };
             providers = mkOption {
               description = ''
-                Providers of the ${name} contract that can take request inputs to return outputs.
+                Where to find instances of a provider of the ${name} contract that can take request inputs to return outputs.
               '';
               default = { };
-              type = attrsOf (
-                submodule (provider: {
-                  options = {
-                    # FIXME could we settle for a static path? if so, could we ditch this support for these custom option paths?
-                    path = mkOption {
-                      description = ''
-                        A path to navigate from the provider to its instances of the contract.
-                      '';
-                      type = listOf str;
-                      default = [ "instances" ];
-                    };
-                    space = mkOption {
-                      description = ''
-                        Where to find the module.
-                      '';
-                      type = listOf str;
-                      default = [ ];
-                    };
-                  };
-                })
-              );
+              type = attrsOf (listOf str);
             };
             requests = mkOption {
               description = ''

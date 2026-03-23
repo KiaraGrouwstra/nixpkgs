@@ -111,7 +111,7 @@ in
 
   config = {
     testing.hardcoded-secret.instances = lib.contract.getInputs config.contracts.${contract};
-    contracts.${contract}.providers.hardcoded-secret.space = [ "testing" "hardcoded-secret" ];
+    contracts.${contract}.providers.hardcoded-secret = [ "testing" "hardcoded-secret" "instances" ];
 
     system.activationScripts = lib.concatMapAttrs (
       namespace:
