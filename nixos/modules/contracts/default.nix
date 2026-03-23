@@ -102,6 +102,15 @@ in
                 Structured like `."<service>"."<instance">.{ input; output; }`.
                 Definition located at the provider's option navigated to according to
                 `config.contracts."<contract>".providers."<provider>".path`.
+
+                As such, a dependent type here, unfortunately breaking docs, would be:
+
+                ```nix
+                  let
+                    tag = lib.head (lib.attrNames contract.config.defaultProvider);
+                  in
+                  lib.getAttrFromPath contract.config.providerPaths.''${tag} contract.config.providerOptions.''${tag};
+                ````
               '';
               type = attrsOf (attrsOf attrs);
               default =
