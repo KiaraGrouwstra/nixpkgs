@@ -19,6 +19,7 @@
     (
       { config, ... }:
       {
+        # is it even desirable to allow configuring things from multiple places?
         contracts.fileSecrets.defaultProvider = {
           # FIXME ensure such configuration can still be set from testing.hardcoded-secret directly as well
           hardcoded-secret = {
