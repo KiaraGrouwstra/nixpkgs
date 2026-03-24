@@ -89,7 +89,14 @@ in
             instances = mkOption {
               description = ''
                 Instances of the contract.
-                Structured like `."<service>"."<instance">.{ input; output; }`.
+                By default returns `defaultProvider`, if set,
+                but may be overridden per instance like:
+
+                ```nix
+                contracts.fileSecrets.instances."testing"."mysecret" = config.contracts.fileSecrets.providers.hardcoded-secret;
+                ```
+
+                Content is structured like `."<service>"."<instance">.{ input; output; }`.
                 Definition located at the provider's option navigated to according to
                 `config.contracts."<contract>".providers."<provider>"`.
               '';
