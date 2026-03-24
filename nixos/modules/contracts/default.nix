@@ -75,6 +75,39 @@ in
                 };
               };
             };
+            requests = mkOption {
+              description = ''
+                Requests made by consumers of the contract, consisting of request inputs and the provider's returned outputs.
+              '';
+              default = { };
+              type = attrsOf (
+                attrsOf (submodule {
+                  options = {
+                    input = mkOption {
+                      description = ''
+                        The request's input parameters.
+                        Must match the ${name} contract interface's input type.
+                      '';
+                      type = contract.config.interface.input;
+                    };
+                    output = mkOption {
+                      description = ''
+                        Output returned to the request by the provider's side of the contract.
+                        Must match the ${name} contract interface's output type.
+                      '';
+                      type = contract.config.interface.output;
+                    };
+                  };
+                })
+              );
+            };
+            providers = mkOption {
+              description = ''
+                Where to find instances of a provider of the ${name} contract that can take request inputs to return outputs.
+              '';
+              default = { };
+              type = attrsOf raw;
+            };
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
@@ -110,39 +143,6 @@ in
               defaultText = ''
                 contract.config.providers.''${contract.config.defaultProvider}
               '';
-            };
-            providers = mkOption {
-              description = ''
-                Where to find instances of a provider of the ${name} contract that can take request inputs to return outputs.
-              '';
-              default = { };
-              type = attrsOf raw;
-            };
-            requests = mkOption {
-              description = ''
-                Requests made by consumers of the contract, consisting of request inputs and the provider's returned outputs.
-              '';
-              default = { };
-              type = attrsOf (
-                attrsOf (submodule {
-                  options = {
-                    input = mkOption {
-                      description = ''
-                        The request's input parameters.
-                        Must match the ${name} contract interface's input type.
-                      '';
-                      type = contract.config.interface.input;
-                    };
-                    output = mkOption {
-                      description = ''
-                        Output returned to the request by the provider's side of the contract.
-                        Must match the ${name} contract interface's output type.
-                      '';
-                      type = contract.config.interface.output;
-                    };
-                  };
-                })
-              );
             };
           };
         }
