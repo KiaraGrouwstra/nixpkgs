@@ -12,7 +12,7 @@
     "hardcoded-secret"
     "fileSecrets"
     "testing"
-    "secret"
+    "mysecret"
   ];
   extraModules = [
     ../../../modules/testing/hardcoded-secret.nix
@@ -20,10 +20,10 @@
       { config, ... }:
       {
         # setting by defaultProvider is easier, but let's set it manually here
-        contracts.fileSecrets.instances."testing"."secret" = config.contracts.fileSecrets.config.providers.hardcoded-secret;
+        contracts.fileSecrets.instances."testing"."mysecret" = config.contracts.fileSecrets.config.providers.hardcoded-secret;
         testing.hardcoded-secret = {
           directory = "/run/hardcodedsecrets";
-          fileSecrets."testing"."secret".content = config.test.content;
+          fileSecrets."testing"."mysecret".content = config.test.content;
         };
       }
     )
