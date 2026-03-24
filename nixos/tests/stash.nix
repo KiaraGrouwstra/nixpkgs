@@ -10,7 +10,7 @@ import ./make-test-python.nix (
     meta.maintainers = pkgs.stash.meta.maintainers;
 
     nodes.machine =
-      { ... }:
+      { config, ... }:
       {
         services.stash = {
           inherit dataDir;
@@ -62,13 +62,10 @@ import ./make-test-python.nix (
           };
         };
         contracts.fileSecrets.defaultProvider = "hardcoded-secret";
-        testing.hardcoded-secret = {
-          directory = "/run/hardcodedsecrets";
-          fileSecrets.stash = {
-            passwordFile.content = "MyPassword";
-            jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-          };
+        testing.hardcoded-secret.fileSecrets.stash = {
+          passwordFile.content = "MyPassword";
+          jwtSecretKey.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+          sessionStoreKey.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         };
       };
 
