@@ -41,7 +41,7 @@ in
           directory = mkOption {
             description = "The directory to store the secrets at.";
             type = str;
-            example = "/run/hardcodedsecrets";
+            default = "/run/hardcodedsecrets";
           };
           ${contract} = mkOption {
             description = ''
