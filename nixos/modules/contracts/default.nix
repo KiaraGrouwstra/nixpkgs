@@ -154,15 +154,10 @@ in
   config.contracts = lib.mapAttrs (
     _:
     { meta, interface, ... }:
-    let
-      inherit (interface) input output;
-    in
     {
       inherit meta;
-      interface = {
-        input = input { };
-        output = output { };
-      };
+      # get plain types here, so pass just `{ }` to `mkContract`
+      interface = lib.mapAttrs (_: fn: fn { }) interface;
     }
   ) lib.contracts;
 }
