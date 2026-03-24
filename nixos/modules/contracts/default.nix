@@ -97,12 +97,12 @@ in
               type = attrsOf (attrsOf attrs);
               default =
                 let
-                  defaultProvider =
+                  provider =
                     assert lib.assertMsg (contract.config.defaultProvider != null)
                       "contracts.${name}.defaultProvider is unset! it must be one of: ${lib.concatStringsSep " " (lib.attrNames contract.config.providers)}";
                     contract.config.defaultProvider;
                 in
-                contract.config.providers.${defaultProvider};
+                contract.config.providers.${provider};
               defaultText = ''
                 contract.config.providers.''${contract.config.defaultProvider}
               '';
