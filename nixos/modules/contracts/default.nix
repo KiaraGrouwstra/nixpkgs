@@ -79,11 +79,10 @@ in
               description = ''
                 The default provider for the contract, alongside its configuration.
               '';
-              # TODO consider non-string enums?
-              type = nullOr (types.enum (lib.attrNames contract.config.providers));
+              type = nullOr raw;
               default = null;
               example = ''
-                "hardcoded-secret"
+                contract.config.providers."hardcoded-secret"
               '';
             };
             # FIXME figure out how to use these namespaces with modular services' multiple instantiations
@@ -99,9 +98,8 @@ in
                 let
                   provider = contract.config.defaultProvider;
                 in
-                assert lib.assertMsg (contract.config.defaultProvider != null)
-                  "contracts.${name}.defaultProvider is unset! it must be one of: ${lib.concatStringsSep " " (lib.attrNames contract.config.providers)}";
-                contract.config.providers.${provider};
+                assert lib.assertMsg (provider != null) "contracts.${name}.defaultProvider is unset!";
+                provider;
               defaultText = ''
                 contract.config.providers.''${contract.config.defaultProvider}
               '';
