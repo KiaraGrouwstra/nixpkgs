@@ -27,9 +27,6 @@ in
 
       The `behaviorTest` option is used to ensure all `providers` of a contract
       behave the same way.
-
-      Note that the split between lib.contracts and config.contracts ensures types
-      would not have to depend on `config`, which would break the build of the manual.
     '';
     type = types.attrsOf (
       types.submodule (
@@ -42,9 +39,6 @@ in
             meta = mkOption {
               description = ''
                 Useful information about the ${name} contract and its maintenance.
-
-                Note that, while `meta` is already a valid module attribute next to `config` and `options`,
-                it is added as an explicit configuration option here to facilitate transferring this info from `lib.contracts`.
               '';
               type = submodule {
                 options = {
@@ -122,7 +116,7 @@ in
             };
             requests = mkOption {
               description = ''
-                Requests made by consumers of the contract, consisting of request inputs then the provider's returned outputs.
+                Requests made by consumers of the contract, consisting of request inputs and the provider's returned outputs.
               '';
               default = { };
               type = attrsOf (
