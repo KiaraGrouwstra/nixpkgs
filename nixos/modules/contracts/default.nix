@@ -40,6 +40,7 @@ in
             meta = mkOption {
               description = ''
                 Useful information about the contract and its maintenance.
+                Any defined in `lib.contracts` will be imported here.
               '';
               type = submodule {
                 options = {
@@ -61,6 +62,7 @@ in
             interface = mkOption {
               description = ''
                 Interface describing the types used in the contract.
+                Any defined in `lib.contracts` will be imported here.
               '';
               default = { };
               type = submodule {
@@ -80,7 +82,23 @@ in
             };
             requests = mkOption {
               description = ''
-                Requests made by consumers of the contract, consisting of request inputs and the provider's returned outputs.
+                Requests made by consumers of the contract, consisting of
+                request inputs and (once propagated back) the provider's returned outputs.
+
+                This should be set in the consumer module:
+
+                ```nix
+                contracts.<contract>.requests.<consumer> = {
+                  inherit (cfg) <request>;
+                };
+                ```
+
+                A provider may use `lib.contract.getInputs to grab a contract's request inputs`
+                to assign to its contract instances:
+
+                ```nix
+                services.<provider>.<contract> = lib.contract.getInputs config.contracts.<contract>;
+                ```
               '';
               default = { };
               type = attrsOf (
@@ -107,6 +125,20 @@ in
             providers = mkOption {
               description = ''
                 Where to find instances of a provider of the contract that can take request inputs to return outputs.
+
+                It is set in the provider:
+
+                ```nix
+                contracts."<contract>".providers."<provider>" = config.services."<provider>"."<contract>";
+                ```
+
+                It may then be used where you configure the service consuming the contract to manually set a provider:
+
+                ```nix
+                contracts."<contract>".instances."<consumer>"."<instance>" = config.contracts."<contract>".providers."<provider>";
+                ```
+
+                For an easier way to set providers, consider setting `defaultProviderName` or `defaultProvider`.
               '';
               default = { };
               type = attrsOf raw;
@@ -133,6 +165,12 @@ in
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
+
+                Setting this for a contract means you no longer need to set providers for individual `instances`:
+
+                ```nix
+                contracts."<contract>".defaultProvider = config.contracts."<contract>".providers."<provider>";
+                ```
 
                 For an alternate way to set a default provider, consider `defaultProviderName`.
               '';
@@ -161,7 +199,50 @@ in
                 but may be overridden per instance like:
 
                 ```nix
-                contracts.fileSecrets.instances."testing"."mysecret" = config.contracts.fileSecrets.providers.hardcoded-secret;
+                contracts."<contract>".instances."<consumer>"."<instance>" = config.contracts."<contract>".providers."<provider>";
+                ```
+
+                Used in the consumer like:
+
+                ```nix
+                let
+                  inherit (contracts."<contract>") interface;
+                  inherit (config.contracts."<contract>".instances."<consumer>") <instance>;
+                in
+                {
+                  options = {
+                    "<instance>" = lib.mkOption {
+                      description = \'\'
+                        My contract instance.
+                        Attributes of the contract's output type may be accessed in its `.output` attribute.
+                        Information specific to the provider may be set like:
+
+                        ```nix
+                        services."<provider>"."<contract>"."<consumer>"."<instance>"."<attr>" = ...;
+                        ```
+                      \'\';
+                      default = { inherit (<instance>) output; };
+                      defaultText = \'\'
+                        { inherit (config.contracts."<contract>".instances."<consumer>"."<instance>") output; }
+                      \'\';
+                      type = lib.types.submodule {
+                        options = {
+                          input = lib.mkOption {
+                            description = "Input of the contract.";
+                            default = { };
+                            type = interface.input {
+                              # "<attr>".default = ...;
+                            };
+                          };
+                          output = lib.mkOption {
+                            description = "Output of the contract.";
+                            type = interface.output { };
+                          };
+                        };
+                      };
+                    };
+                  };
+                }
                 ```
 
                 Content is structured like `."<service>"."<instance">.{ input; output; }`.
