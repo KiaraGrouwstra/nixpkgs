@@ -4,6 +4,7 @@ let
   inherit (types)
     attrs
     attrsOf
+    enum
     listOf
     nullOr
     optionType
@@ -108,12 +109,44 @@ in
               default = { };
               type = attrsOf raw;
             };
+            defaultProviderName = mkOption {
+              description = ''
+                Select the name of the default provider to use for the contract.
+                Useful as a way to configure `defaultProvider` more amenable to UI generation.
+
+                Setting this for a contract means you no longer need to set providers for individual `instances`:
+
+                ```nix
+                contracts."<contract>".defaultProviderName = "<provider>";
+                ```
+
+                For an alternate way to set a default provider, consider `defaultProvider`.
+              '';
+              type = nullOr (enum (lib.attrNames contract.config.providers));
+              default = null;
+              example = ''
+                "hardcoded-secret"
+              '';
+            };
             defaultProvider = mkOption {
               description = ''
                 The default provider for the contract, alongside its configuration.
+
+                For an alternate way to set a default provider, consider `defaultProviderName`.
               '';
               type = nullOr raw;
-              default = null;
+              default =
+                let
+                  inherit (contract.config) defaultProviderName;
+                in
+                if defaultProviderName == null then null else contract.config.providers.${defaultProviderName};
+              defaultText = ''
+                let
+                  contract = config.contracts."<contract>";
+                  inherit (contract) defaultProviderName;
+                in
+                if defaultProviderName == null then null else contract.providers.''${defaultProviderName}
+              '';
               example = ''
                 contract.config.providers."hardcoded-secret"
               '';
@@ -122,7 +155,7 @@ in
             instances = mkOption {
               description = ''
                 Instances of the contract.
-                By default returns `defaultProvider`, if set,
+                By default returns `defaultProvider`, if set (potentially by `defaultProviderName`),
                 but may be overridden per instance like:
 
                 ```nix
