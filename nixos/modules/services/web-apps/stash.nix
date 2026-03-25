@@ -372,6 +372,7 @@ let
 
   secretOptionType =
     let
+      # FIXME use `mkContract` at this level to prevent having to redefine this module
       contractSecretsType = types.submodule {
         options = {
           input = mkOption {
