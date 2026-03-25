@@ -41,10 +41,6 @@
 
 - [ ] test contract arithmetic provider increment (this might not generate configuration, but that might be fine for the scope of such a test)
 - [ ] `nspawn` test
-- [ ] unify `config.contracts`' `instances` with `requests`?
-  - `requests` in fact gets populated from `instances`' `output`s, yet we use only its `input`s?!
-  - [ ] try and replace all `requests` with `instances`
-  <!-- - [ ] try and replace all `instances` with `requests` -->
 - [ ] unify in what name space we should put stuff in our tests
 - [ ] is contract name reused between provider and consumer, making for potential clashes for services doing both for the same contract
 - [ ] ways to set default values for args.name for generated documentation
