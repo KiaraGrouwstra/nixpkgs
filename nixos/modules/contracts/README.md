@@ -39,7 +39,6 @@
 
 ## TODO
 
-- [ ] try rm secret options in consumer
 - [ ] try rm `getInputs`?
 - [ ] test contract arithmetic provider increment (this might not generate configuration, but that might be fine for the scope of such a test)
 - [ ] `nspawn` test
@@ -54,6 +53,8 @@
 - [ ] confirm how to handle overrides on both sides, and whether this may be simplified
 - [ ] variable number of layers to address modular services' multiple instantiations without nesting it for everywhere else?
 - [ ] document implementing the provider option
+- [ ] document implementing the consumer option
+  - removing triggers: option `nodes.machine.contracts.fileSecrets.requests.stash.sessionStoreKey.input' was accessed but has no value defined
 - [ ] check if cross-node could still work now that I make it error on missing `defaultProvider`?
 - [ ] default(Provider) -> default
 - [ ] reconsider `default` changes for `services.stash` passwords
