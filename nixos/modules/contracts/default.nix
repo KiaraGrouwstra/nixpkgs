@@ -250,20 +250,7 @@ in
                 `config.contracts."<contract>".providers."<provider>"`.
               '';
               # `type = attrsOf (attrsOf contract.config.interface);` breaks the docs build
-              type = attrsOf (
-                attrsOf (submodule {
-                  options = {
-                    input = mkOption {
-                      description = "dummy input";
-                      type = attrs;
-                    };
-                    output = mkOption {
-                      description = "dummy output";
-                      type = attrs;
-                    };
-                  };
-                })
-              );
+              type = attrsOf (attrsOf attrs);
               default =
                 let
                   provider = contract.config.defaultProvider;
