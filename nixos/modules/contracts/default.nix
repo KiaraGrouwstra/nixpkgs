@@ -133,7 +133,21 @@ in
                 Definition located at the provider's option navigated to according to
                 `config.contracts."<contract>".providers."<provider>"`.
               '';
-              type = attrsOf (attrsOf attrs);
+              # `type = attrsOf (attrsOf contract.config.interface);` breaks the docs build
+              type = attrsOf (
+                attrsOf (submodule {
+                  options = {
+                    input = mkOption {
+                      description = "dummy input";
+                      type = attrs;
+                    };
+                    output = mkOption {
+                      description = "dummy output";
+                      type = attrs;
+                    };
+                  };
+                })
+              );
               default =
                 let
                   provider = contract.config.defaultProvider;
