@@ -39,19 +39,19 @@ in
           options = {
             meta = mkOption {
               description = ''
-                Useful information about the ${name} contract and its maintenance.
+                Useful information about the contract and its maintenance.
               '';
               type = submodule {
                 options = {
                   description = mkOption {
                     description = ''
-                      Description of the ${name} contract.
+                      Description of the contract.
                     '';
                     type = str;
                   };
                   maintainers = mkOption {
                     description = ''
-                      Maintainers of the ${name} contract.
+                      Maintainers of the contract.
                     '';
                     type = listOf str;
                   };
@@ -59,17 +59,19 @@ in
               };
             };
             interface = mkOption {
-              description = "Interface describing the types used in the ${name} contract.";
+              description = ''
+                Interface describing the types used in the contract.
+              '';
               default = { };
               type = submodule {
                 options = {
                   input = mkOption {
-                    description = "Input type of the ${name} contract.";
+                    description = "Input type of the contract.";
                     type = optionType;
                     default = empty;
                   };
                   output = mkOption {
-                    description = "Output type of the ${name} contract.";
+                    description = "Output type of the contract.";
                     type = optionType;
                     default = empty;
                   };
@@ -87,14 +89,14 @@ in
                     input = mkOption {
                       description = ''
                         The request's input parameters.
-                        Must match the ${name} contract interface's input type.
+                        Must match the contract interface's input type.
                       '';
                       type = contract.config.interface.input;
                     };
                     output = mkOption {
                       description = ''
                         Output returned to the request by the provider's side of the contract.
-                        Must match the ${name} contract interface's output type.
+                        Must match the contract interface's output type.
                       '';
                       type = contract.config.interface.output;
                     };
@@ -104,7 +106,7 @@ in
             };
             providers = mkOption {
               description = ''
-                Where to find instances of a provider of the ${name} contract that can take request inputs to return outputs.
+                Where to find instances of a provider of the contract that can take request inputs to return outputs.
               '';
               default = { };
               type = attrsOf raw;
