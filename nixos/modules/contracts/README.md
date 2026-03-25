@@ -39,7 +39,6 @@
 
 ## TODO
 
-- [ ] try rm `getInputs`?
 - [ ] test contract arithmetic provider increment (this might not generate configuration, but that might be fine for the scope of such a test)
 - [ ] `nspawn` test
 - [ ] unify `config.contracts`' `instances` with `requests`?
