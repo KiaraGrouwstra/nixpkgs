@@ -31,11 +31,9 @@ let
               };
             };
           };
-          default = { };
         };
         interface = mkOption {
           description = "Interface describing the types used in the contract.";
-          default = { };
           type = submodule {
             options = {
               input = mkOption {

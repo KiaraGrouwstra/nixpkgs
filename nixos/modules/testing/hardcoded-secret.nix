@@ -24,7 +24,6 @@ let
 in
 {
   options.testing.hardcoded-secret = mkOption {
-    default = { };
     description = ''
       Hardcoded file secrets. These should only be used in tests.
 
@@ -50,7 +49,6 @@ in
               Matches the name of option `contracts."<contract>".instances`,
               which ends up referring to providers' options like this one.
             '';
-            default = { };
             example = lib.literalExpression ''
               {
                 my.secret = {

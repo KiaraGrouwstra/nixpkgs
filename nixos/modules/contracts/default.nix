@@ -12,13 +12,9 @@ let
     str
     submodule
     ;
-  empty = submodule {
-    options = { };
-  };
 in
 {
   options.contracts = mkOption {
-    default = { };
     description = ''
       Base option for a contract.
 
@@ -65,17 +61,20 @@ in
                 Any defined in `lib.contracts` will be imported here.
               '';
               default = { };
-              type = submodule {
+              type = let
+                type = optionType;
+                default = submodule {
+                  options = { };
+                };
+              in submodule {
                 options = {
                   input = mkOption {
                     description = "Input type of the contract.";
-                    type = optionType;
-                    default = empty;
+                    inherit type default;
                   };
                   output = mkOption {
                     description = "Output type of the contract.";
-                    type = optionType;
-                    default = empty;
+                    inherit type default;
                   };
                 };
               };
@@ -100,7 +99,6 @@ in
                 services.<provider>.<contract> = lib.contract.getInputs config.contracts.<contract>;
                 ```
               '';
-              default = { };
               type = attrsOf (
                 attrsOf (submodule {
                   options = {
@@ -140,7 +138,6 @@ in
 
                 For an easier way to set providers, consider setting `defaultProviderName` or `defaultProvider`.
               '';
-              default = { };
               type = attrsOf raw;
             };
             defaultProviderName = mkOption {
@@ -157,7 +154,7 @@ in
                 For an alternate way to set a default provider, consider `defaultProvider`.
               '';
               type = nullOr (enum (lib.attrNames contract.config.providers));
-              default = null;
+              # default = null;
               example = ''
                 "hardcoded-secret"
               '';

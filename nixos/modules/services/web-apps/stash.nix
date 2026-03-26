@@ -128,7 +128,6 @@ let
       };
       stash_boxes = mkOption {
         type = types.listOf stashBoxType;
-        default = [ ];
         description = "Stash-box facilitates automated tagging of scenes and performers based on fingerprints and filenames";
         example = literalExpression ''
           {
@@ -321,7 +320,6 @@ let
     kind:
     mkOption {
       type = types.listOf types.package;
-      default = [ ];
       description = ''
         The ${kind} Stash should be started with.
       '';
