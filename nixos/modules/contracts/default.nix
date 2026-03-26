@@ -213,7 +213,7 @@ in
                   options = {
                     "<instance>" = lib.mkOption {
                       description = \'\'
-                        My contract instance.
+                        An instance of contract <contract>.
                         Attributes of the contract's output type may be accessed in its `.output` attribute.
                         Information specific to the provider may be set like:
 
@@ -244,6 +244,8 @@ in
                   };
                 }
                 ```
+
+                Using the `instances` through such options ensures request input propagation.
 
                 Content is structured like `."<service>"."<instance">.{ input; output; }`.
                 Definition located at the provider's option navigated to according to
