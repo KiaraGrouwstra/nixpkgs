@@ -2,51 +2,39 @@
 let
   inherit (lib) mkOption modules types;
   inherit (types)
+    attrs
     attrsOf
     listOf
     option
     submodule
     str
     ;
+  # used to type-check contracts defined in `lib/contracts`.
+  # type extracted from `contractTypes` to prevent dependency on `config`.
+  # for human-oriented documentation, see `contractTypes` defined at `nixos/modules/contracts/default.nix`.
   contractModule = mkOption {
     type = submodule {
       options = {
         meta = mkOption {
-          description = ''
-            Useful information about the contract and its maintenance.
-          '';
           type = submodule {
             options = {
               description = mkOption {
-                description = ''
-                  Description of the contract.
-                '';
                 type = str;
               };
               maintainers = mkOption {
-                description = ''
-                  Maintainers of the contract.
-                '';
-                type = listOf str;
+                type = listOf attrs;
               };
             };
           };
         };
         interface = mkOption {
-          description = "Interface describing the types used in the contract.";
           type = submodule {
             options = {
               input = mkOption {
-                description = ''
-                  Input type of a contract.
-                '';
                 type = attrsOf option;
                 apply = modules.mkContract;
               };
               output = mkOption {
-                description = ''
-                  Output type of a contract.
-                '';
                 type = attrsOf option;
                 apply = modules.mkContract;
               };
@@ -54,10 +42,24 @@ let
           };
         };
         behaviorTest = mkOption {
-          # The type should be more precise of course.
-          # There should actually be a NixOSTest type.
-          # And we can probably do something fancy with the `input` and `output` modules.
           type = types.functionTo types.attrs;
+          default = {
+            name,
+            extraModules ? [ ],
+          }:
+          {
+            name = "contracts_<contract>_${name}";
+            containers.machine =
+              { ... }:
+              {
+                imports = extraModules;
+              };
+            testScript =
+              { ... }:
+              ''
+                machine.succeed("echo 'please define a test!' >&2; exit 1")
+              '';
+          };
         };
       };
     };
