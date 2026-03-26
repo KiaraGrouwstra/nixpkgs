@@ -45,7 +45,6 @@
 - [ ] try using `mkContract` at the level of the consumer's option type to prevent having to essentially redefine the interface
 - [ ] confirm how to handle overrides on both sides, and whether this may be simplified
 - [ ] variable number of layers to address modular services' multiple instantiations without nesting it for everywhere else?
-- [ ] check if cross-node could still work now that I make it error on missing `defaultProvider`?
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
 - make branches for any optional API changes to separate choices
@@ -64,6 +63,7 @@
     - seem already handled with secrets?
   - [ ] [services consuming contracts they also provide for]()
   - [ ] [cross-node use of contracts](https://github.com/ibizaman/selfhostblocks/issues/541)
+    - could still work now that I make it error on missing `defaultProvider`?
   - [ ] [contracts combining multiple existing contracts](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-4063155555)
   - [ ] breaking changes to contract interfaces - could `mkAliasOptionModule` work with this weird `lib` / `config` dichotomy?
   - [ ] gracefully handling changes to contract names (see above?)
