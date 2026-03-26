@@ -206,7 +206,7 @@ in
 
                 ```nix
                 let
-                  inherit (contracts."<contract>") interface;
+                  inherit (contracts) <contract>;
                   inherit (config.contracts."<contract>".instances."<consumer>") <instance>;
                 in
                 {
@@ -230,13 +230,13 @@ in
                           input = lib.mkOption {
                             description = "Input of the contract.";
                             default = { };
-                            type = interface.input {
+                            type = <contract>.interface.input {
                               # "<attr>".default = ...;
                             };
                           };
                           output = lib.mkOption {
                             description = "Output of the contract.";
-                            type = interface.output { };
+                            type = <contract>.interface.output { };
                           };
                         };
                       };
