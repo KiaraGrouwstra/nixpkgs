@@ -52,7 +52,6 @@
 - [ ] default(Provider) -> default
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
-- [ ] re-test performance
 - make branches for any optional API changes to separate choices
   - [ ] wrap types with `interface`
   - [ ] split namespace into two layers to disambiguate contract instances between services
