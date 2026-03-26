@@ -88,7 +88,6 @@ in
                                 #   description = ${"''"}
                                 #     A provider-specific option.
                                 #   ${"''"};
-;
                                 # };
                               };
                             }
