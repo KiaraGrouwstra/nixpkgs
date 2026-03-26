@@ -23,6 +23,6 @@
     ```
   */
   getInputs = contract: lib.mapAttrs (
-    _: lib.mapAttrs (_: instance: { inherit (instance) input; })
+    _: lib.mapAttrs (_: lib.getAttrs [ "input" ])
   ) contract.requests;
 }
