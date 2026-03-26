@@ -89,23 +89,24 @@ in
             # There should actually be a NixOSTest type.
             # And we can probably do something fancy with the `input` and `output` modules.
             type = functionTo attrs;
-            default = {
-              name,
-              extraModules ? [ ],
-            }:
-            {
-              name = "contracts_<contract>_${name}";
-              containers.machine =
-                { ... }:
-                {
-                  imports = extraModules;
-                };
-              testScript =
-                { ... }:
-                ''
-                  machine.succeed("echo 'please define a test!' >&2; exit 1")
-                '';
-            };
+            default =
+              {
+                name,
+                extraModules ? [ ],
+              }:
+              {
+                name = "contracts_<contract>_${name}";
+                containers.machine =
+                  { ... }:
+                  {
+                    imports = extraModules;
+                  };
+                testScript =
+                  { ... }:
+                  ''
+                    machine.succeed("echo 'please define a test!' >&2; exit 1")
+                  '';
+              };
             defaultText = ''
               {
                 name,
