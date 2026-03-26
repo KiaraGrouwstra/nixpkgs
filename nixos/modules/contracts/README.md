@@ -42,7 +42,6 @@
 - [ ] test contract arithmetic provider increment (this might not generate configuration, but that might be fine for the scope of such a test)
 - [ ] `nspawn` test
 - [ ] unify in what name space we should put stuff in our tests
-- [ ] is contract name reused between provider and consumer, making for potential clashes for services doing both for the same contract
 - [ ] ways to set default values for `_module.args.name` for generated documentation
 - [ ] try using `mkContract` at the level of the consumer's option type to prevent having to essentially redefine the interface
 - [ ] confirm how to handle overrides on both sides, and whether this may be simplified
