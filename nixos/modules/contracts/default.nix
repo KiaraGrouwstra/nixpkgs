@@ -47,12 +47,12 @@ in
                 {
                   options = {
                     "<contract>" = lib.mkOption {
-                      description = \'\'
+                      description = ${"''"}
                         Instances of contract <contract>, including contract input/output and provider-specific options.
 
                         Option `config.contracts."<contract>".instances` refers to providers' options like this one.
-                      \'\';
-                      example = lib.literalExpression \'\'
+                      ${"''"};
+                      example = lib.literalExpression ${"''"}
                         {
                           "<consumer>"."<instance>" = {
                             input = {
@@ -63,7 +63,7 @@ in
                             # "<opt>" = ...;
                           };
                         }
-                      \'\';
+                      ${"''"};
                       type = lib.types.attrsOf (
                         lib.types.attrsOf (
                           lib.types.submodule (
@@ -85,9 +85,10 @@ in
                                 # provider-specific options:
                                 # "<opt>" = lib.mkOption {
                                 #   type = lib.types."<type>";
-                                #   description = \'\'
+                                #   description = ${"''"}
                                 #     A provider-specific option.
-                                #   \'\';
+                                #   ${"''"};
+;
                                 # };
                               };
                             }
@@ -96,9 +97,8 @@ in
                       );
                     };
                   };
-                };
-              }
-              ```
+                }
+                ```
               '';
               type = submodule {
                 options = {
@@ -128,15 +128,18 @@ in
                 default = submodule {
                   options = { };
                 };
+                defaultText = ''
+                  submodule { options = { }; }
+                '';
               in submodule {
                 options = {
                   input = mkOption {
                     description = "Input type of the contract.";
-                    inherit type default;
+                    inherit type default defaultText;
                   };
                   output = mkOption {
                     description = "Output type of the contract.";
-                    inherit type default;
+                    inherit type default defaultText;
                   };
                 };
               };
@@ -247,7 +250,7 @@ in
                 if defaultProviderName == null then null else contract.providers.''${defaultProviderName}
               '';
               example = ''
-                contract.config.providers."hardcoded-secret"
+                config.contracts.fileSecrets.providers.hardcoded-secret
               '';
             };
             # FIXME figure out how to use these namespaces with modular services' multiple instantiations
@@ -271,7 +274,7 @@ in
                 {
                   options = {
                     "<instance>" = lib.mkOption {
-                      description = \'\'
+                      description = ${"''"}
                         An instance of contract <contract>.
                         Attributes of the contract's output type may be accessed in its `.output` attribute.
                         Information specific to the provider may be set like:
@@ -279,11 +282,11 @@ in
                         ```nix
                         services."<provider>"."<contract>"."<consumer>"."<instance>"."<attr>" = ...;
                         ```
-                      \'\';
+                      ${"''"};
                       default = { inherit (<instance>) output; };
-                      defaultText = \'\'
+                      defaultText = ${"''"}
                         { inherit (config.contracts."<contract>".instances."<consumer>"."<instance>") output; }
-                      \'\';
+                      ${"''"};
                       type = lib.types.submodule {
                         options = {
                           input = lib.mkOption {
@@ -319,7 +322,7 @@ in
                 assert lib.assertMsg (provider != null) "contracts.${name}.defaultProvider is unset!";
                 provider;
               defaultText = ''
-                contract.config.providers.''${contract.config.defaultProvider}
+                config.contracts."<contract>".defaultProvider
               '';
             };
           };
