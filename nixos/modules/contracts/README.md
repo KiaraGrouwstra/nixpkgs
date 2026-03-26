@@ -46,7 +46,6 @@
 - [ ] confirm how to handle overrides on both sides, and whether this may be simplified
 - [ ] variable number of layers to address modular services' multiple instantiations without nesting it for everywhere else?
 - [ ] check if cross-node could still work now that I make it error on missing `defaultProvider`?
-- [ ] default(Provider) -> default
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
 - make branches for any optional API changes to separate choices
