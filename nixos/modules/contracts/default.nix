@@ -381,7 +381,7 @@ in
                   Definition located at the provider's option navigated to according to
                   `config.contracts.${contractName}.providers."<provider>"`.
                 '';
-                # `type = attrsOf (attrsOf contract.config.interface);` breaks the docs build
+                # `type = attrsOf (attrsOf interface);` breaks the docs build
                 type = attrsOf (attrsOf attrs);
                 default =
                   let
