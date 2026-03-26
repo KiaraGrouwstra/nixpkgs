@@ -36,7 +36,69 @@ in
             meta = mkOption {
               description = ''
                 Useful information about the contract and its maintenance.
-                Any defined in `lib.contracts` will be imported here.
+                Any `meta` defined in `lib.contracts` will be imported here.
+
+                This may be used to define options in the provider:
+
+                ```nix
+                let
+                  inherit (contracts) <contract>;
+                in
+                {
+                  options = {
+                    "<contract>" = lib.mkOption {
+                      description = \'\'
+                        Instances of contract <contract>, including contract input/output and provider-specific options.
+
+                        Option `config.contracts."<contract>".instances` refers to providers' options like this one.
+                      \'\';
+                      example = lib.literalExpression \'\'
+                        {
+                          "<consumer>"."<instance>" = {
+                            input = {
+                              # options shared between any provider of the contract
+                              # "<attr>" = ...;
+                            };
+                            # provider-specific options:
+                            # "<opt>" = ...;
+                          };
+                        }
+                      \'\';
+                      type = lib.types.attrsOf (
+                        lib.types.attrsOf (
+                          lib.types.submodule (
+                            { ... }:
+                            {
+                              options = {
+                                input = lib.mkOption {
+                                  description = "Input of the contract.";
+                                  type = <contract>.interface.input {
+                                    # "<attr>".default = ...;
+                                  };
+                                };
+                                output = lib.mkOption {
+                                  description = "Output of the contract.";
+                                  type = <contract>.interface.output {
+                                    # "<attr>".default = ...;
+                                  };
+                                };
+                                # provider-specific options:
+                                # "<opt>" = lib.mkOption {
+                                #   type = lib.types."<type>";
+                                #   description = \'\'
+                                #     A provider-specific option.
+                                #   \'\';
+                                # };
+                              };
+                            }
+                          )
+                        )
+                      );
+                    };
+                  };
+                };
+              }
+              ```
               '';
               type = submodule {
                 options = {

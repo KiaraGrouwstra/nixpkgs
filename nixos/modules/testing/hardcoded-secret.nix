@@ -45,9 +45,6 @@ in
           ${contract} = mkOption {
             description = ''
               Instances of the fileSecrets contract, including secret content and contract input/output.
-
-              Matches the name of option `contracts."<contract>".instances`,
-              which ends up referring to providers' options like this one.
             '';
             example = lib.literalExpression ''
               {
