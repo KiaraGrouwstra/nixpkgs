@@ -61,7 +61,7 @@ in
     }:
     {
       name = "contracts_filesecrets_${name}";
-      nodes.machine =
+      containers.machine =
         { config, ... }:
         {
           imports = extraModules;
@@ -104,10 +104,10 @@ in
         };
 
       testScript =
-        { nodes, ... }:
+        { containers, ... }:
         let
-          cfg = nodes.machine;
-          inherit (lib.getAttrFromPath providerRoot nodes.machine) output;
+          cfg = containers.machine;
+          inherit (lib.getAttrFromPath providerRoot containers.machine) output;
         in
         ''
           owner = machine.succeed("stat -c '%U' ${output.path}").strip()
