@@ -22,7 +22,6 @@ let
   cfg = config.ghostunnel;
 
   inherit (lib.contracts.fileSecrets) interface;
-  inherit (contracts.fileSecrets.instances.ghostunnel) dummySecret;
 in
 {
   # https://nixos.org/manual/nixos/unstable/#modular-services
@@ -175,12 +174,12 @@ in
     };
   };
 
-  config = {
-    contractRequests.fileSecrets.ghostunnel = {
-      inherit (cfg) dummySecret;
-    };
-
-    ghostunnel.dummySecret.output = lib.attrByPath ["fileSecrets" "instances" "ghostunnel" "dummySecret" "output"] { } contracts;
+  config = let
+    contractOptions.fileSecrets = [ "dummySecret" ];
+  in {
+    contractRequests.fileSecrets.ghostunnel = lib.genAttrs contractOptions.fileSecrets (
+      name: cfg.${name}
+    );
 
     assertions = [
       {
@@ -209,7 +208,15 @@ in
       # (afaict, it doesn't make sense), so we only provide that default when
       # client cert auth is disabled.
       cacert = mkIf cfg.disableAuthentication (mkDefault null);
-    };
+    }
+    // lib.genAttrs contractOptions.fileSecrets (
+      name: {
+        output = lib.attrByPath
+          [ "fileSecrets" "instances" "ghostunnel" name "output" ]
+          { }
+          contracts;
+      }
+    );
 
     # TODO assertions
 
