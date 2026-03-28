@@ -6,6 +6,7 @@
   lib,
   config,
   options,
+  contracts ? { },
   ...
 }:
 let
@@ -20,6 +21,8 @@ let
     ;
   cfg = config.ghostunnel;
 
+  inherit (lib.contracts.fileSecrets) interface;
+  inherit (contracts.fileSecrets.instances.ghostunnel) dummySecret;
 in
 {
   # https://nixos.org/manual/nixos/unstable/#modular-services
@@ -149,10 +152,34 @@ in
         type = types.bool;
         default = false;
       };
+      dummySecret = lib.mkOption {
+        description = "dummy secret";
+        default = { inherit (dummySecret) output; };
+        type = lib.types.submodule {
+          options = {
+            input = lib.mkOption {
+              description = "Input of the contract for file secrets.";
+              default = { };
+              type = interface.input {
+                owner.default = "root";
+                group.default = "root";
+              };
+            };
+            output = lib.mkOption {
+              description = "Output of the contract for file secrets.";
+              type = interface.output { };
+            };
+          };
+        };
+      };
     };
   };
 
   config = {
+    contractRequests.fileSecrets.ghostunnel = {
+      inherit (cfg) dummySecret;
+    };
+
     assertions = [
       {
         message = ''
