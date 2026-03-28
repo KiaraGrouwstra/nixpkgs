@@ -512,7 +512,9 @@ in
     ];
 
     contracts.fileSecrets.requests.stash = {
-      inherit (cfg) passwordFile jwtSecretKey sessionStoreKey;
+      passwordFile = if lib.isPath cfg.passwordFile then { } else cfg.passwordFile;
+      jwtSecretKey = if lib.isPath cfg.jwtSecretKey then { } else cfg.jwtSecretKey;
+      sessionStoreKey = if lib.isPath cfg.sessionStoreKey then { } else cfg.sessionStoreKey;
     };
 
     services.stash.settings = {
