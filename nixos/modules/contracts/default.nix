@@ -427,7 +427,6 @@ in
                   { lib, ... }:
                   let
                     inherit (lib.contracts) ${contractName};
-                    inherit (config.contracts.${contractName}.instances."<consumer>") <instance>;
                   in
                   {
                     options = {
@@ -442,9 +441,11 @@ in
                           services."<provider>".${contractName}."<consumer>"."<instance>"."<attr>" = ...;
                           ```
                         ${"'"}';
-                        default = { inherit (<instance>) result; };
+                        default = {
+                          result = config.contracts.${contractName}.results."<consumer>"."<instance>";
+                        };
                         defaultText = ${"'"}'
-                          { inherit (config.contracts.${contractName}.instances."<consumer>"."<instance>") result; }
+                          { result = config.contracts.${contractName}.results."<consumer>"."<instance>"; }
                         ${"'"}';
                         type = lib.types.submodule {
                           options = {
@@ -466,7 +467,7 @@ in
                   }
                   ```
 
-                  Using the `instances` through such options ensures request input propagation.
+                  Using `results` through such options ensures request input propagation.
 
                   **Modular Services:**
 
@@ -498,10 +499,10 @@ in
                   }
                   ```
 
-                  The helper will automatically populate the `output` attribute of each
+                  The helper will automatically populate the `result` attribute of each
                   contract option from the fulfilled contract instances.
 
-                  Content in `contracts` is structured like `."<service>"."<instance">.{ input; output; }`.
+                  Content in `contracts` is structured like `."<service>"."<instance">.{ request; result; }`.
                   Definition located at the provider's option navigated to according to
                   `config.contracts.${contractName}.providers."<provider>"`.
                 '';
@@ -516,6 +517,30 @@ in
                 defaultText = ''
                   config.contracts.${contractName}.defaultProvider
                 '';
+              };
+              results = mkOption {
+                description = ''
+                  Result data for the `${contractName}` contract, with `request` attributes filtered out.
+
+                  This is a read-only calculated option that extracts just the result values from fulfilled contracts.
+                  It mirrors `inputs` which filters to just request data for providers.
+
+                  Used in the consumer like:
+
+                  ```nix
+                  cfg."<instance>".result = config.contracts.${contractName}.results."<consumer>"."<instance>";
+                  ```
+                '';
+                type = attrsOf (attrsOf attrs);
+                default = lib.mapAttrs (
+                  _: lib.mapAttrs (_: v: v.result)
+                ) contract.config.instances;
+                defaultText = ''
+                  lib.mapAttrs (
+                    _: lib.mapAttrs (_: v: v.result)
+                  ) config.contracts.${contractName}.instances
+                '';
+                readOnly = true;
               };
             };
           });
