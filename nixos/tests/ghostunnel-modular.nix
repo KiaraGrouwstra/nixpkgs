@@ -62,7 +62,7 @@
   testScript =
     { nodes, ... }:
     let
-      secret = nodes.service.system.services."ghostunnel-plain-old".ghostunnel.dummySecret.output.path;
+      secret = nodes.service.contracts.fileSecrets.instances.ghostunnel.dummySecret.output.path;
     in
     ''
 
