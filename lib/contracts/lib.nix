@@ -37,14 +37,14 @@
     ) contractOptions;
 
   /**
-    Generate contract output injections for a service.
+    Generate contract result injections for a service.
 
     This creates configuration that automatically injects fulfilled contract
-    outputs into the service's options.
+    results into the service's options.
 
     ```nix
     myService = { }
-      // lib.contract.mkOutputs "myService" contractOptions contracts;
+      // lib.contract.mkResults "myService" contractOptions contracts;
     ```
 
     # Inputs
@@ -64,10 +64,10 @@
     # Type
 
     ```
-    lib.contract.mkOutputs :: String -> AttrsOf (ListOf String) -> Attrs -> Attrs
+    lib.contract.mkResults :: String -> AttrsOf (ListOf String) -> Attrs -> Attrs
     ```
   */
-  mkOutputs = serviceName: contractOptions: contracts:
+  mkResults = serviceName: contractOptions: contracts:
     lib.mkMerge (
       lib.mapAttrsToList (
         contractType: optionNames:
