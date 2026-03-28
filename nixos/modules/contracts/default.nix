@@ -205,16 +205,16 @@ in
           '';
           type = submodule (contract: {
             options = {
-              requests = mkOption {
+              invoke = mkOption {
                 description = ''
-                  Requests made by consumers of the `${contractName}` contract, consisting of
+                  Invocations made by consumers of the `${contractName}` contract, consisting of
                   request inputs and (once propagated back) the provider's returned results.
 
                   This should be set in the consumer module.
 
                   **Regular NixOS Modules:**
 
-                  If the consumer is a regular NixOS module, set requests directly:
+                  If the consumer is a regular NixOS module, set invoke directly:
 
                   ```nix
                   let
@@ -222,7 +222,7 @@ in
                   in
                   # options.services.<consumer> = ...;
                   config = {
-                    contracts.${contractName}.requests."<consumer>" = {
+                    contracts.${contractName}.invoke."<consumer>" = {
                       inherit (cfg) <request>;
                     };
                   };
@@ -297,11 +297,11 @@ in
 
                   **Providers:**
 
-                  A provider module uses `contracts.${contractName}.inputs` to grab
-                  the contract's request `input`s (with `output`s filtered out):
+                  A provider module uses `contracts.${contractName}.requests` to grab
+                  the contract's request data (with `result`s filtered out):
 
                   ```nix
-                  services."<provider>".${contractName} = config.contracts.${contractName}.inputs;
+                  services."<provider>".${contractName} = config.contracts.${contractName}.requests;
                   ```
                 '';
                 type = attrsOf (
@@ -334,11 +334,11 @@ in
                 type = attrsOf (attrsOf attrs);
                 default = lib.mapAttrs (
                   _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
-                ) contract.config.requests;
+                ) contract.config.invoke;
                 defaultText = ''
                   lib.mapAttrs (
                     _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
-                  ) contract.config.requests
+                  ) contract.config.invoke
                 '';
                 readOnly = true;
               };
@@ -433,7 +433,7 @@ in
                       "<instance>" = lib.mkOption {
                         description = ${"'"}'
                           An instance of contract `${contractName}`.
-                          See `contracts.${contractName}.requests.<name>.<name>.result`
+                          See `contracts.${contractName}.invoke.<name>.<name>.result`
                           for documentation on the type of its `.result` attribute.
                           Information specific to the provider may be set like:
 
