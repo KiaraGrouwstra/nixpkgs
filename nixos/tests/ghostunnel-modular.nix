@@ -14,8 +14,14 @@
         networking.firewall.allowedTCPPorts = [ 80 ];
       };
     service =
-      { pkgs, ... }:
+      { config, pkgs, ... }:
       {
+        imports = [
+          ../modules/testing/hardcoded-secret.nix
+        ];
+        contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
+        testing.hardcoded-secret.fileSecrets.ghostunnel.dummySecret.content = "dummy";
+
         system.services."ghostunnel-plain-old" = {
           imports = [ pkgs.ghostunnel.services.default ];
           ghostunnel = {
@@ -53,7 +59,12 @@
       };
   };
 
-  testScript = ''
+  testScript =
+    { nodes, ... }:
+    let
+      secret = nodes.service.system.services."ghostunnel-plain-old".ghostunnel.dummySecret.output.path;
+    in
+    ''
 
     # prepare certificates
 
@@ -85,6 +96,7 @@
     start_all()
 
     # Configuration
+    service.succeed("set -x; ls ${secret} >&2; cat ${secret} >&2")
     service.copy_from_host("ca.pem", "/root/ca.pem")
     service.copy_from_host("service-cert.pem", "/root/service-cert.pem")
     service.copy_from_host("service-key.pem", "/root/service-key.pem")
