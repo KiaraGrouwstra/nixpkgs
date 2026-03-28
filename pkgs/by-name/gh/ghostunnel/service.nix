@@ -177,9 +177,7 @@ in
   config = let
     contractOptions.fileSecrets = [ "dummySecret" ];
   in {
-    contractRequests.fileSecrets.ghostunnel = lib.genAttrs contractOptions.fileSecrets (
-      name: cfg.${name}
-    );
+    contractRequests = lib.contract.mkRequests "ghostunnel" contractOptions config;
 
     assertions = [
       {
@@ -209,14 +207,8 @@ in
       # client cert auth is disabled.
       cacert = mkIf cfg.disableAuthentication (mkDefault null);
     }
-    // lib.genAttrs contractOptions.fileSecrets (
-      name: {
-        output = lib.attrByPath
-          [ "fileSecrets" "instances" "ghostunnel" name "output" ]
-          { }
-          contracts;
-      }
-    );
+    # Automatically inject contract outputs
+    // lib.contract.mkOutputs "ghostunnel" contractOptions contracts;
 
     # TODO assertions
 
