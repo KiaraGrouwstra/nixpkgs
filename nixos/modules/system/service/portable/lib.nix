@@ -60,6 +60,7 @@ rec {
       serviceManagerPkgs,
       extraRootModules ? [ ],
       extraRootSpecialArgs ? { },
+      contracts ? { },
     }:
     let
       modules = [
@@ -68,7 +69,9 @@ rec {
       serviceSubmodule = types.submoduleWith {
         class = "service";
         modules = modules ++ extraRootModules;
-        specialArgs = extraRootSpecialArgs;
+        specialArgs = extraRootSpecialArgs // {
+          inherit contracts;
+        };
       };
     in
     {

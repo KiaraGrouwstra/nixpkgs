@@ -210,7 +210,9 @@ in
                   Requests made by consumers of the `${contractName}` contract, consisting of
                   request inputs and (once propagated back) the provider's returned outputs.
 
-                  This should be set in the consumer module:
+                  This should be set in the consumer module.
+
+                  If the consumer is a NixOS service, this looks as follows:
 
                   ```nix
                   let
@@ -219,6 +221,20 @@ in
                   # options.services.<consumer> = ...;
                   config = {
                     contracts.${contractName}.requests."<consumer>" = {
+                      inherit (cfg) <request>;
+                    };
+                  };
+                  ```
+
+                  If the consumer is a [modular service](#modular-services), this instead looks like:
+
+                  ```nix
+                  let
+                    cfg = services."<consumer>";
+                  in
+                  # options.services.<consumer> = ...;
+                  config = {
+                    contractRequests.${contractName}."<consumer>" = {
                       inherit (cfg) <request>;
                     };
                   };
@@ -377,6 +393,19 @@ in
                   ```
 
                   Using the `instances` through such options ensures request input propagation.
+
+                  Note that in [](#modular-services), `config.contracts` is not available.
+                  Instead, one may use `contracts` from the service module parameters:
+
+                  ```nix
+                  {
+                    lib,
+                    config,
+                    options,
+                    contracts ? { },
+                    ...
+                  }:
+                  ```
 
                   Content is structured like `."<service>"."<instance">.{ input; output; }`.
                   Definition located at the provider's option navigated to according to
