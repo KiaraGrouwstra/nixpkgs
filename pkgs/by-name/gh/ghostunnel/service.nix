@@ -207,8 +207,8 @@ in
       # client cert auth is disabled.
       cacert = mkIf cfg.disableAuthentication (mkDefault null);
     }
-    # Automatically inject contract outputs
-    // lib.contract.mkOutputs "ghostunnel" contractOptions contracts;
+    # Automatically inject contract results
+    // lib.contract.mkResults "ghostunnel" contractOptions contracts;
 
     # TODO assertions
 

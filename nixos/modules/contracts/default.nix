@@ -208,7 +208,7 @@ in
               requests = mkOption {
                 description = ''
                   Requests made by consumers of the `${contractName}` contract, consisting of
-                  request inputs and (once propagated back) the provider's returned outputs.
+                  request inputs and (once propagated back) the provider's returned results.
 
                   This should be set in the consumer module.
 
@@ -228,7 +228,7 @@ in
                   };
                   ```
 
-                  Then consume the outputs in your service options:
+                  Then consume the results in your service options:
 
                   ```nix
                   options.services."<consumer>" = {
@@ -287,12 +287,12 @@ in
                     config = {
                       contractRequests = lib.contract.mkRequests "<consumer>" contractOptions config;
                       "<consumer>" = { }
-                        // lib.contract.mkOutputs "<consumer>" contractOptions contracts;
+                        // lib.contract.mkResults "<consumer>" contractOptions contracts;
                     };
                   }
                   ```
 
-                  The helpers `lib.contract.mkRequests` and `lib.contract.mkOutputs` automatically
+                  The helpers `lib.contract.mkRequests` and `lib.contract.mkResults` automatically
                   handle the wiring for all contract options listed in `contractOptions`.
 
                   **Providers:**
@@ -344,7 +344,7 @@ in
               };
               providers = mkOption {
                 description = ''
-                  Where to find instances of a provider of the `${contractName}` contract that can take request inputs to return outputs.
+                  Where to find instances of a provider of the `${contractName}` contract that can take request inputs to return results.
 
                   It is set in the provider:
 
@@ -484,8 +484,8 @@ in
                   }:
                   ```
 
-                  Use the `lib.contract.mkOutputs` helper to automatically inject contract
-                  outputs into your service options:
+                  Use the `lib.contract.mkResults` helper to automatically inject contract
+                  results into your service options:
 
                   ```nix
                   let
@@ -494,7 +494,7 @@ in
                   {
                     config = {
                       "<service>" = { }
-                        // lib.contract.mkOutputs "<service>" contractOptions contracts;
+                        // lib.contract.mkResults "<service>" contractOptions contracts;
                     };
                   }
                   ```
