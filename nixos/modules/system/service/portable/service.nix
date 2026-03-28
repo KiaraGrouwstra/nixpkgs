@@ -50,5 +50,12 @@ in
         '';
       };
     };
+    contractRequests = lib.mkOption {
+      type = types.attrsOf (types.attrsOf (types.attrsOf types.attrs));
+      description = ''
+        Contract requests made by this service.
+        Organized by contract type (e.g., `fileSecrets`).
+      '';
+    };
   };
 }
