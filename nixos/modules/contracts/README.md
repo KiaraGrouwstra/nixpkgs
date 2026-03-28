@@ -40,6 +40,8 @@
 ## TODO
 
 - [ ] isolate provider rather than consumer
+- [ ] eliminate API differences for modular services
+- [ ] test contracts not part of `lib` with NixOS and modular services
 - [ ] replace function `getInputs` with calculated module system option
 - [ ] replace function `mkContract` with calculated module system option
 - [ ] try using `mkContract` at the level of the consumer's option type to prevent having to essentially redefine the interface
