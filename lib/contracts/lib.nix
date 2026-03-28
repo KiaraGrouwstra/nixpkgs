@@ -73,8 +73,8 @@
         contractType: optionNames:
           lib.genAttrs optionNames (
             name: {
-              output = lib.attrByPath
-                [ contractType "instances" serviceName name "output" ]
+              result = lib.attrByPath
+                [ contractType "instances" serviceName name "result" ]
                 { }
                 contracts;
             }

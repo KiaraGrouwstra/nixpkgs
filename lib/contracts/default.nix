@@ -30,11 +30,11 @@ let
         interface = mkOption {
           type = submodule {
             options = {
-              input = mkOption {
+              request = mkOption {
                 type = attrsOf option;
                 apply = modules.mkContract;
               };
-              output = mkOption {
+              result = mkOption {
                 type = attrsOf option;
                 apply = modules.mkContract;
               };

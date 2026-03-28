@@ -156,17 +156,17 @@ in
         default = { };
         type = lib.types.submodule {
           options = {
-            input = lib.mkOption {
-              description = "Input of the contract for file secrets.";
+            request = lib.mkOption {
+              description = "Request of the contract for file secrets.";
               default = { };
-              type = interface.input {
+              type = interface.request {
                 owner.default = "root";
                 group.default = "root";
               };
             };
-            output = lib.mkOption {
-              description = "Output of the contract for file secrets.";
-              type = interface.output { };
+            result = lib.mkOption {
+              description = "Result of the contract for file secrets.";
+              type = interface.result { };
             };
           };
         };

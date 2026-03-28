@@ -63,17 +63,17 @@ in
                   { name, ... }:
                   {
                     options = {
-                      input = mkOption {
-                        description = "Input of the contract for file secrets.";
-                        type = interface.input {
+                      request = mkOption {
+                        description = "Request of the contract for file secrets.";
+                        type = interface.request {
                           owner.default = "root";
                           group.default = "root";
                         };
                       };
-                      output = mkOption {
-                        description = "Output of the contract for file secrets.";
+                      result = mkOption {
+                        description = "Result of the contract for file secrets.";
                         default = { };
-                        type = interface.output {
+                        type = interface.result {
                           path = {
                             default = "${hardcoded-secret.config.directory}/${name}";
                             defaultText = ''
@@ -113,14 +113,14 @@ in
         let
           source = writeText "hardcodedsecret_${namespace}_${n}_content" cfg'.content;
 
-          inherit (cfg') input output;
+          inherit (cfg') request result;
         in
         nameValuePair "hardcodedsecret_${namespace}_${n}" ''
-          mkdir -p "$(dirname "${output.path}")"
-          touch "${output.path}"
-          chmod ${input.mode} "${output.path}"
-          chown ${input.owner}:${input.group} "${output.path}"
-          cp ${source} "${output.path}"
+          mkdir -p "$(dirname "${result.path}")"
+          touch "${result.path}"
+          chmod ${request.mode} "${result.path}"
+          chown ${request.owner}:${request.group} "${result.path}"
+          cp ${source} "${result.path}"
         ''
       )
     ) cfg.${contract};

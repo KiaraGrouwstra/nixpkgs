@@ -67,12 +67,12 @@ in
               in
               submodule {
                 options = {
-                  input = mkOption {
-                    description = "Input type of the contract.";
+                  request = mkOption {
+                    description = "Request type of the contract.";
                     inherit type default defaultText;
                   };
-                  output = mkOption {
-                    description = "Output type of the contract.";
+                  result = mkOption {
+                    description = "Result type of the contract.";
                     inherit type default defaultText;
                   };
                 };
@@ -174,15 +174,15 @@ in
                         { ... }:
                         {
                           options = {
-                            input = lib.mkOption {
-                              description = "Input of the `${contractName}` instance.";
-                              type = ${contractName}.interface.input {
+                            request = lib.mkOption {
+                              description = "Request of the `${contractName}` instance.";
+                              type = ${contractName}.interface.request {
                                 # "<attr>".default = ...;
                               };
                             };
-                            output = lib.mkOption {
-                              description = "Output of the `${contractName}` instance.";
-                              type = ${contractName}.interface.output {
+                            result = lib.mkOption {
+                              description = "Result of the `${contractName}` instance.";
+                              type = ${contractName}.interface.result {
                                 # "<attr>".default = ...;
                               };
                             };
@@ -237,11 +237,11 @@ in
                       default = { };
                       type = lib.types.submodule {
                         options = {
-                          input = lib.mkOption {
-                            type = ${contractName}.interface.input { };
+                          request = lib.mkOption {
+                            type = ${contractName}.interface.request { };
                           };
-                          output = lib.mkOption {
-                            type = ${contractName}.interface.output { };
+                          result = lib.mkOption {
+                            type = ${contractName}.interface.result { };
                           };
                         };
                       };
@@ -273,11 +273,11 @@ in
                         default = { };
                         type = lib.types.submodule {
                           options = {
-                            input = lib.mkOption {
-                              type = ${contractName}.interface.input { };
+                            request = lib.mkOption {
+                              type = ${contractName}.interface.request { };
                             };
-                            output = lib.mkOption {
-                              type = ${contractName}.interface.output { };
+                            result = lib.mkOption {
+                              type = ${contractName}.interface.result { };
                             };
                           };
                         };
@@ -307,19 +307,19 @@ in
                 type = attrsOf (
                   attrsOf (submodule {
                     options = {
-                      input = mkOption {
+                      request = mkOption {
                         description = ''
-                          The request's input parameters.
-                          Must match the `${contractName}` contract interface's input type.
+                          The request parameters.
+                          Must match the `${contractName}` contract interface's request type.
                         '';
-                        type = interface.input;
+                        type = interface.request;
                       };
-                      output = mkOption {
+                      result = mkOption {
                         description = ''
-                          Output returned to the request by the provider's side of the `${contractName}` contract.
-                          Must match the `${contractName}` contract interface's output type.
+                          Result returned to the request by the provider's side of the `${contractName}` contract.
+                          Must match the `${contractName}` contract interface's result type.
                         '';
-                        type = interface.output;
+                        type = interface.result;
                       };
                     };
                   })
@@ -327,7 +327,7 @@ in
               };
               inputs = mkOption {
                 description = ''
-                  Request inputs for the `${contractName}` contract, with `output` attributes filtered out.
+                  Request data for the `${contractName}` contract, with `result` attributes filtered out.
 
                   This is a calculated option that providers can use directly instead of calling `lib.contract.getInputs`:
 
@@ -345,11 +345,11 @@ in
                 '';
                 type = attrsOf (attrsOf attrs);
                 default = lib.mapAttrs (
-                  _: lib.mapAttrs (_: lib.getAttrs [ "input" ])
+                  _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
                 ) contract.config.requests;
                 defaultText = ''
                   lib.mapAttrs (
-                    _: lib.mapAttrs (_: lib.getAttrs [ "input" ])
+                    _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
                   ) contract.config.requests
                 '';
                 readOnly = true;
@@ -446,30 +446,30 @@ in
                       "<instance>" = lib.mkOption {
                         description = ${"'"}'
                           An instance of contract `${contractName}`.
-                          See `contracts.${contractName}.requests.<name>.<name>.output`
-                          for documentation on the type of its `.output` attribute.
+                          See `contracts.${contractName}.requests.<name>.<name>.result`
+                          for documentation on the type of its `.result` attribute.
                           Information specific to the provider may be set like:
 
                           ```nix
                           services."<provider>".${contractName}."<consumer>"."<instance>"."<attr>" = ...;
                           ```
                         ${"'"}';
-                        default = { inherit (<instance>) output; };
+                        default = { inherit (<instance>) result; };
                         defaultText = ${"'"}'
-                          { inherit (config.contracts.${contractName}.instances."<consumer>"."<instance>") output; }
+                          { inherit (config.contracts.${contractName}.instances."<consumer>"."<instance>") result; }
                         ${"'"}';
                         type = lib.types.submodule {
                           options = {
-                            input = lib.mkOption {
-                              description = "Input of the `${contractName}` instance.";
+                            request = lib.mkOption {
+                              description = "Request of the `${contractName}` instance.";
                               default = { };
-                              type = ${contractName}.interface.input {
+                              type = ${contractName}.interface.request {
                                 # "<attr>".default = ...;
                               };
                             };
-                            output = lib.mkOption {
-                              description = "Output of the `${contractName}` instance.";
-                              type = ${contractName}.interface.output { };
+                            result = lib.mkOption {
+                              description = "Result of the `${contractName}` instance.";
+                              type = ${contractName}.interface.result { };
                             };
                           };
                         };
