@@ -87,7 +87,7 @@ in
             '';
             # The type should be more precise of course.
             # There should actually be a NixOSTest type.
-            # And we can probably do something fancy with the `input` and `output` modules.
+            # And we can probably do something fancy with the `request` and `result` modules.
             type = functionTo attrs;
             default =
               {
@@ -152,7 +152,7 @@ in
               options = {
                 ${contractName} = lib.mkOption {
                   description = ${"'"}'
-                    Instances of contract `${contractName}`, including contract input/output and provider-specific options.
+                    Instances of contract `${contractName}`, including contract request/result and provider-specific options.
 
                     Option `config.contracts.${contractName}.instances` refers to providers' options like this one.
                   ${"'"}';
@@ -325,7 +325,7 @@ in
                   })
                 );
               };
-              inputs = mkOption {
+              requests = mkOption {
                 description = ''
                   Request data for the `${contractName}` contract, with `result` attributes filtered out.
 
