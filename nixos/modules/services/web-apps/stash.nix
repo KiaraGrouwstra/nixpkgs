@@ -18,7 +18,7 @@ let
     types
     ;
   inherit (contracts.fileSecrets) interface;
-  inherit (config.contracts.fileSecrets.instances.stash) passwordFile jwtSecretKey sessionStoreKey;
+  inherit (config.contracts.fileSecrets.outputs.stash) passwordFile jwtSecretKey sessionStoreKey;
 
   cfg = config.services.stash;
 
@@ -448,7 +448,7 @@ in
         type = types.nullOr secretOptionType;
         default = { inherit (passwordFile) result; };
         defaultText = ''
-          { inherit (config.contracts.fileSecrets.instances.stash.passwordFile) result; }
+          { result = config.contracts.fileSecrets.results.stash.passwordFile; }
         '';
         example = "/path/to/password/file";
         description = ''
@@ -466,7 +466,7 @@ in
         description = "Path to file containing a secret used to sign JWT tokens.";
         default = { inherit (jwtSecretKey) result; };
         defaultText = ''
-          { inherit (config.contracts.fileSecrets.instances.stash.jwtSecretKey) result; }
+          { result = config.contracts.fileSecrets.results.stash.jwtSecretKey; }
         '';
       };
       sessionStoreKey = mkOption {
@@ -474,7 +474,7 @@ in
         description = "Path to file containing a secret for session store.";
         default = { inherit (sessionStoreKey) result; };
         defaultText = ''
-          { inherit (config.contracts.fileSecrets.instances.stash.sessionStoreKey) result; }
+          { result = config.contracts.fileSecrets.results.stash.sessionStoreKey; }
         '';
       };
 
