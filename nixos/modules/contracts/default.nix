@@ -212,11 +212,13 @@ in
 
                   This should be set in the consumer module.
 
-                  If the consumer is a NixOS service, this looks as follows:
+                  **Regular NixOS Modules:**
+
+                  If the consumer is a regular NixOS module, set requests directly:
 
                   ```nix
                   let
-                    cfg = services."<consumer>";
+                    cfg = config.services."<consumer>";
                   in
                   # options.services.<consumer> = ...;
                   config = {
@@ -226,19 +228,74 @@ in
                   };
                   ```
 
-                  If the consumer is a [modular service](#modular-services), this instead looks like:
+                  Then consume the outputs in your service options:
 
                   ```nix
-                  let
-                    cfg = services."<consumer>";
-                  in
-                  # options.services.<consumer> = ...;
-                  config = {
-                    contractRequests.${contractName}."<consumer>" = {
-                      inherit (cfg) <request>;
+                  options.services."<consumer>" = {
+                    "<request>" = lib.mkOption {
+                      description = "...";
+                      default = { };
+                      type = lib.types.submodule {
+                        options = {
+                          input = lib.mkOption {
+                            type = ${contractName}.interface.input { };
+                          };
+                          output = lib.mkOption {
+                            type = ${contractName}.interface.output { };
+                          };
+                        };
+                      };
                     };
                   };
                   ```
+
+                  **Modular Services:**
+
+                  If the consumer is a [modular service](#modular-services), use `contractRequests`
+                  and the helper functions from `lib.contract`:
+
+                  ```nix
+                  {
+                    lib,
+                    config,
+                    contracts ? { },
+                    ...
+                  }:
+                  let
+                    cfg = config."<consumer>";
+                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
+                  in
+                  {
+                    # Define contract option in your service options
+                    options."<consumer>" = {
+                      "<request>" = lib.mkOption {
+                        description = "...";
+                        default = { };
+                        type = lib.types.submodule {
+                          options = {
+                            input = lib.mkOption {
+                              type = ${contractName}.interface.input { };
+                            };
+                            output = lib.mkOption {
+                              type = ${contractName}.interface.output { };
+                            };
+                          };
+                        };
+                      };
+                    };
+
+                    config = {
+                      contractRequests = lib.contract.mkRequests "<consumer>" contractOptions config;
+                      "<consumer>" = { }
+                        // lib.contract.mkOutputs "<consumer>" contractOptions contracts;
+                    };
+                  }
+                  ```
+
+                  The helpers `lib.contract.mkRequests` and `lib.contract.mkOutputs` automatically
+                  handle the wiring for all contract options listed in `contractOptions`.
+
+                  **Providers:**
 
                   A provider module may use `lib.contract.getInputs` to grab a
                   contract's request `input`s to assign to its contract instances:
@@ -394,8 +451,10 @@ in
 
                   Using the `instances` through such options ensures request input propagation.
 
-                  Note that in [](#modular-services), `config.contracts` is not available.
-                  Instead, one may use `contracts` from the service module parameters:
+                  **Modular Services:**
+
+                  In [modular services](#modular-services), `config.contracts` is not available.
+                  Instead, access the `contracts` specialArg from the service module parameters:
 
                   ```nix
                   {
@@ -407,7 +466,25 @@ in
                   }:
                   ```
 
-                  Content is structured like `."<service>"."<instance">.{ input; output; }`.
+                  Use the `lib.contract.mkOutputs` helper to automatically inject contract
+                  outputs into your service options:
+
+                  ```nix
+                  let
+                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
+                  in
+                  {
+                    config = {
+                      "<service>" = { }
+                        // lib.contract.mkOutputs "<service>" contractOptions contracts;
+                    };
+                  }
+                  ```
+
+                  The helper will automatically populate the `output` attribute of each
+                  contract option from the fulfilled contract instances.
+
+                  Content in `contracts` is structured like `."<service>"."<instance">.{ input; output; }`.
                   Definition located at the provider's option navigated to according to
                   `config.contracts.${contractName}.providers."<provider>"`.
                 '';
