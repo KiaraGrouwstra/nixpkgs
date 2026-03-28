@@ -103,7 +103,7 @@ in
   };
 
   config = {
-    testing.hardcoded-secret.${contract} = lib.contract.getInputs config.contracts.${contract};
+    testing.hardcoded-secret.${contract} = config.contracts.${contract}.inputs;
     contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.${contract};
 
     system.activationScripts = lib.concatMapAttrs (
