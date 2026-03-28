@@ -329,19 +329,7 @@ in
                 description = ''
                   Request data for the `${contractName}` contract, with `result` attributes filtered out.
 
-                  This is a calculated option that providers can use directly instead of calling `lib.contract.getInputs`:
-
-                  ```nix
-                  services."<provider>".${contractName} = config.contracts.${contractName}.inputs;
-                  ```
-
-                  This is equivalent to:
-
-                  ```nix
-                  services."<provider>".${contractName} = lib.contract.getInputs config.contracts.${contractName};
-                  ```
-
-                  But eliminates the need for the function call, making provider modules more DRY.
+                  Providers read from this option to get consumer requests.
                 '';
                 type = attrsOf (attrsOf attrs);
                 default = lib.mapAttrs (
