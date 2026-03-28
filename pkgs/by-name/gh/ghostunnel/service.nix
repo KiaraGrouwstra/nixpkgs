@@ -154,7 +154,7 @@ in
       };
       dummySecret = lib.mkOption {
         description = "dummy secret";
-        default = { inherit (dummySecret) output; };
+        default = { };
         type = lib.types.submodule {
           options = {
             input = lib.mkOption {
@@ -179,6 +179,8 @@ in
     contractRequests.fileSecrets.ghostunnel = {
       inherit (cfg) dummySecret;
     };
+
+    ghostunnel.dummySecret.output = lib.attrByPath ["fileSecrets" "instances" "ghostunnel" "dummySecret" "output"] { } contracts;
 
     assertions = [
       {
