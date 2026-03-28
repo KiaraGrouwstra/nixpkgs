@@ -297,11 +297,11 @@ in
 
                   **Providers:**
 
-                  A provider module may use `lib.contract.getInputs` to grab a
-                  contract's request `input`s to assign to its contract instances:
+                  A provider module uses `contracts.${contractName}.inputs` to grab
+                  the contract's request `input`s (with `output`s filtered out):
 
                   ```nix
-                  services."<provider>".${contractName} = lib.contract.getInputs config.contracts.${contractName};
+                  services."<provider>".${contractName} = config.contracts.${contractName}.inputs;
                   ```
                 '';
                 type = attrsOf (
@@ -324,6 +324,35 @@ in
                     };
                   })
                 );
+              };
+              inputs = mkOption {
+                description = ''
+                  Request inputs for the `${contractName}` contract, with `output` attributes filtered out.
+
+                  This is a calculated option that providers can use directly instead of calling `lib.contract.getInputs`:
+
+                  ```nix
+                  services."<provider>".${contractName} = config.contracts.${contractName}.inputs;
+                  ```
+
+                  This is equivalent to:
+
+                  ```nix
+                  services."<provider>".${contractName} = lib.contract.getInputs config.contracts.${contractName};
+                  ```
+
+                  But eliminates the need for the function call, making provider modules more DRY.
+                '';
+                type = attrsOf (attrsOf attrs);
+                default = lib.mapAttrs (
+                  _: lib.mapAttrs (_: lib.getAttrs [ "input" ])
+                ) contract.config.requests;
+                defaultText = ''
+                  lib.mapAttrs (
+                    _: lib.mapAttrs (_: lib.getAttrs [ "input" ])
+                  ) contract.config.requests
+                '';
+                readOnly = true;
               };
               providers = mkOption {
                 description = ''
