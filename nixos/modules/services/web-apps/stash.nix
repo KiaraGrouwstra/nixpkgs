@@ -373,18 +373,18 @@ let
       # FIXME use `mkContract` at this level to prevent having to redefine this module
       contractSecretsType = types.submodule {
         options = {
-          input = mkOption {
-            description = "Input of the contract for file secrets.";
+          request = mkOption {
+            description = "Request of the contract for file secrets.";
             default = { };
-            type = interface.input {
+            type = interface.request {
               owner.default = cfg.user;
               group.default = cfg.group;
             };
           };
 
-          output = mkOption {
-            description = "Output of the contract for file secrets.";
-            type = interface.output { };
+          result = mkOption {
+            description = "Result of the contract for file secrets.";
+            type = interface.result { };
           };
         };
       };
@@ -446,9 +446,9 @@ in
 
       passwordFile = mkOption {
         type = types.nullOr secretOptionType;
-        default = { inherit (passwordFile) output; };
+        default = { inherit (passwordFile) result; };
         defaultText = ''
-          { inherit (config.contracts.fileSecrets.instances.stash.passwordFile) output; }
+          { inherit (config.contracts.fileSecrets.instances.stash.passwordFile) result; }
         '';
         example = "/path/to/password/file";
         description = ''
@@ -464,17 +464,17 @@ in
       jwtSecretKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret used to sign JWT tokens.";
-        default = { inherit (jwtSecretKey) output; };
+        default = { inherit (jwtSecretKey) result; };
         defaultText = ''
-          { inherit (config.contracts.fileSecrets.instances.stash.jwtSecretKey) output; }
+          { inherit (config.contracts.fileSecrets.instances.stash.jwtSecretKey) result; }
         '';
       };
       sessionStoreKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret for session store.";
-        default = { inherit (sessionStoreKey) output; };
+        default = { inherit (sessionStoreKey) result; };
         defaultText = ''
-          { inherit (config.contracts.fileSecrets.instances.stash.sessionStoreKey) output; }
+          { inherit (config.contracts.fileSecrets.instances.stash.sessionStoreKey) result; }
         '';
       };
 
@@ -559,13 +559,13 @@ in
               if [[ -z "${toString cfg.mutableSettings}" || ! -f ${cfg.dataDir}/config.yml ]]; then
                 env \
                   password=$(< ${
-                    if lib.isPath cfg.passwordFile then cfg.passwordFile else cfg.passwordFile.output.path
+                    if lib.isPath cfg.passwordFile then cfg.passwordFile else cfg.passwordFile.result.path
                   }) \
                   jwtSecretKeyFile=$(< ${
-                    if lib.isPath cfg.jwtSecretKey then cfg.jwtSecretKey else cfg.jwtSecretKey.output.path
+                    if lib.isPath cfg.jwtSecretKey then cfg.jwtSecretKey else cfg.jwtSecretKey.result.path
                   }) \
                   sessionStoreKeyFile=$(< ${
-                    if lib.isPath cfg.sessionStoreKey then cfg.sessionStoreKey else cfg.sessionStoreKey.output.path
+                    if lib.isPath cfg.sessionStoreKey then cfg.sessionStoreKey else cfg.sessionStoreKey.result.path
                   }) \
                   ${lib.getExe pkgs.yq-go} '
                     .jwt_secret_key = strenv(jwtSecretKeyFile) |
