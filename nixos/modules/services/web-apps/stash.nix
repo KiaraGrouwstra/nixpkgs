@@ -511,7 +511,7 @@ in
       }
     ];
 
-    contracts.fileSecrets.invoke.stash = {
+    contracts.fileSecrets.want.stash = {
       passwordFile = if lib.isPath cfg.passwordFile then { } else cfg.passwordFile;
       jwtSecretKey = if lib.isPath cfg.jwtSecretKey then { } else cfg.jwtSecretKey;
       sessionStoreKey = if lib.isPath cfg.sessionStoreKey then { } else cfg.sessionStoreKey;
