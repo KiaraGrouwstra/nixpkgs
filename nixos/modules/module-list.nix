@@ -413,6 +413,7 @@
   ./security/tpm2.nix
   ./security/wrappers/default.nix
   ./services/accessibility/orca.nix
+  ./services/accessibility/spiel.nix
   ./services/accessibility/speechd.nix
   ./services/admin/docuum.nix
   ./services/admin/komodo-periphery.nix
