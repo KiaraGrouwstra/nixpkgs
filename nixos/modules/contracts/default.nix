@@ -205,16 +205,16 @@ in
           '';
           type = submodule (contract: {
             options = {
-              invoke = mkOption {
+              want = mkOption {
                 description = ''
-                  Invocations made by consumers of the `${contractName}` contract, consisting of
+                  Request declared by consumers of the `${contractName}` contract, consisting of
                   request inputs and (once propagated back) the provider's returned results.
 
                   This should be set in the consumer module.
 
                   **Regular NixOS Modules:**
 
-                  If the consumer is a regular NixOS module, set invoke directly:
+                  If the consumer is a regular NixOS module, set `want` directly:
 
                   ```nix
                   let
@@ -222,7 +222,7 @@ in
                   in
                   # options.services.<consumer> = ...;
                   config = {
-                    contracts.${contractName}.invoke."<consumer>" = {
+                    contracts.${contractName}.want."<consumer>" = {
                       inherit (cfg) <request>;
                     };
                   };
@@ -334,11 +334,11 @@ in
                 type = attrsOf (attrsOf attrs);
                 default = lib.mapAttrs (
                   _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
-                ) contract.config.invoke;
+                ) contract.config.want;
                 defaultText = ''
                   lib.mapAttrs (
                     _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
-                  ) contract.config.invoke
+                  ) contract.config.want
                 '';
                 readOnly = true;
               };
@@ -433,7 +433,7 @@ in
                       "<instance>" = lib.mkOption {
                         description = ${"'"}'
                           An instance of contract `${contractName}`.
-                          See `contracts.${contractName}.invoke.<name>.<name>.result`
+                          See `contracts.${contractName}.want.<name>.<name>.result`
                           for documentation on the type of its `.result` attribute.
                           Information specific to the provider may be set like:
 
