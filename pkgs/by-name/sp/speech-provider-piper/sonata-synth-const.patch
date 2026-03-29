@@ -1,0 +1,11 @@
+--- a/sonata-synth-0.2.0/src/lib.rs
++++ b/sonata-synth-0.2.0/src/lib.rs
+@@ -83,7 +83,7 @@
+                     utils::percent_to_param(pitch, PITCH_RANGE.0, PITCH_RANGE.1),
+                 );
+             }
+-            sonic_sys::sonicWriteFloatToStream(stream, samples.as_ptr(), input_len as i32);
++            sonic_sys::sonicWriteFloatToStream(stream, samples.as_ptr() as *mut f32, input_len as i32);
+             sonic_sys::sonicFlushStream(stream);
+             let num_samples = sonic_sys::sonicSamplesAvailable(stream);
+             if num_samples <= 0 {
