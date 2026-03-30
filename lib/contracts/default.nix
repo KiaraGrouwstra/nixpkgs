@@ -3,8 +3,10 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrs
+    attrsOf
     functionTo
     listOf
+    option
     optionType
     submodule
     str
@@ -31,10 +33,10 @@ let
           type = submodule {
             options = {
               request = mkOption {
-                type = optionType;
+                type = attrsOf option;
               };
               result = mkOption {
-                type = optionType;
+                type = attrsOf option;
               };
             };
           };
@@ -45,7 +47,7 @@ let
           default =
             overrides:
             lib.contract.extendSubmodule overrides (submodule {
-              options = lib.mapAttrs (_: type: mkOption { inherit type; }) contract.config.interface;
+              options = lib.mapAttrs (_: options: mkOption { type = submodule { inherit options; }; }) contract.config.interface;
             });
         };
         behaviorTest = mkOption {

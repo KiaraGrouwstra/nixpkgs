@@ -284,8 +284,8 @@ let
     ```
   */
   mkContract =
-    # options: overrides: extendSubmodule overrides (lib.types.submodule { inherit options; });
-    lib.flip extendSubmodule;
+    options: overrides:
+    extendSubmodule overrides (lib.types.submodule { inherit options; });
   in
 {
   inherit

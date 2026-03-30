@@ -8,6 +8,7 @@ let
     functionTo
     listOf
     nullOr
+    option
     optionType
     raw
     str
@@ -57,23 +58,18 @@ in
             default = { };
             type =
               let
-                type = optionType;
-                default = submodule {
-                  options = { };
-                };
-                defaultText = ''
-                  submodule { options = { }; }
-                '';
+                type = attrsOf option;
+                default = { };
               in
               submodule {
                 options = {
                   request = mkOption {
                     description = "Request type of the contract.";
-                    inherit type default defaultText;
+                    inherit type default;
                   };
                   result = mkOption {
                     description = "Result type of the contract.";
-                    inherit type default defaultText;
+                    inherit type default;
                   };
                 };
               };
@@ -116,7 +112,7 @@ in
             default =
               overrides:
               lib.contract.extendSubmodule overrides (submodule {
-                options = lib.mapAttrs (_: type: mkOption { inherit type; }) contract.config.interface;
+                options = lib.mapAttrs (_: options: mkOption { type = submodule { inherit options; }; }) contract.config.interface;
               });
           };
           behaviorTest = mkOption {
@@ -353,14 +349,14 @@ in
                           The request parameters.
                           Must match the `${contractName}` contract interface's request type.
                         '';
-                        type = interface.request;
+                        type = submodule { options = interface.request; };
                       };
                       result = mkOption {
                         description = ''
                           Result returned to the request by the provider's side of the `${contractName}` contract.
                           Must match the `${contractName}` contract interface's result type.
                         '';
-                        type = interface.result;
+                        type = submodule { options = interface.result; };
                       };
                     };
                   })
