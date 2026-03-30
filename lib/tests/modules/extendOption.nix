@@ -1,15 +1,20 @@
 { lib, ... }:
 {
   options.foo =
-    lib.modules.extendOption
+    lib.contract.extendOption
       {
-        bar.default = "baz";
+        boo.bar.default = "baz";
       }
       (
         lib.mkOption {
           default = { };
           type = lib.types.submodule {
-            options.bar = lib.mkOption { type = lib.types.int; };
+            options.boo = lib.mkOption {
+              default = { };
+              type = lib.types.submodule {
+                options.bar = lib.mkOption { type = lib.types.int; };
+              };
+            };
           };
         }
       );

@@ -1,5 +1,5 @@
 { lib, ... }:
-{
+let
   /**
     Generate contract requests for a service.
 
@@ -81,4 +81,219 @@
           )
       ) contractOptions
     );
+
+  /**
+    Evaluate a configuration in the context of a corresponding module system option.
+
+    contract.evalOption :: option -> attrs -> attrs
+
+    # Inputs
+
+    `option`
+
+    : 1\. Module system option in which to evaluate the configuration
+
+    `conf`
+
+    : 2\. Configuration to evaluate within the option
+  */
+  evalOption =
+    option: conf:
+    (lib.evalModules {
+      modules = [
+        {
+          options.opt = option;
+          config.opt = conf;
+        }
+      ];
+    }).config.opt;
+
+  /**
+    Extend a (sub-)module option with a set of overrides.
+
+    contract.extendOption :: attrs -> option -> option
+
+    # Inputs
+
+    `overrides`
+
+    : 1\. A (recursive) attrset of fields to add to the option
+
+    `opt`
+
+    : 2\. Option to extend with `overrides`
+
+    Example:
+
+    ```nix
+    { config, lib, ... }:
+    let
+      inherit (lib) mkOption contract types;
+    in
+    {
+      options.foo = contract.extendOption
+        {
+          bar = {
+            default = 10;
+            defaultText = "10";
+          };
+        }
+        (mkOption {
+          type = types.submodule {
+            options.bar = mkOption {
+              type = types.int;
+            };
+          };
+        })
+    }
+    ```
+  */
+  extendOption =
+    overrides: opt:
+    let
+      inherit (opt) type;
+      isSubmodule = lib.isOptionType type && type.name == "submodule";
+      # (deduplicated) keys from submodules to iterate over
+      # we don't need the values, but attrset offers O(1) containment checks
+      subOptions = lib.optionalAttrs isSubmodule (
+        lib.attrsets.mergeAttrsList (lib.lists.map (mod: mod.options or { }) type.getSubModules)
+      );
+      subOverrides = lib.filterAttrs (k: _: subOptions ? ${k}) overrides;
+      directOverrides = lib.filterAttrs (k: _: !(subOptions ? ${k})) overrides;
+    in
+    lib.mkOption (
+      # re-wrap existing option attributes
+      (removeAttrs opt [ "_type" ])
+      # if we are annotating something that isn't a sub-module,
+      # just override relevant attributes on the option
+      // directOverrides
+      # to annotate a sub-module, presume we should just annotate its sub-options,
+      # which we iterate over to reconstruct with relevant annotations.
+      // lib.optionalAttrs isSubmodule {
+        default = { };
+        type = lib.types.submoduleWith (
+          # meta we will not change
+          type.functor.payload
+          # modules are the parameter that will change as per our overrides
+          // {
+            modules = [
+              {
+                options = lib.mapAttrs (
+                  k: _:
+                  let
+                    # option for the attribute in question: for now presume just one sub-module had it
+                    attrOpt = (lib.head (lib.filter (m: (m.options or { }) ? ${k}) type.getSubModules)).options.${k};
+                    # any overrides for the attribute in question
+                    attrOverrides = subOverrides.${k} or { };
+                  in
+                  # recurse until we have no more overrides to annotate the option with
+                  if attrOverrides != { } then extendOption attrOverrides attrOpt else attrOpt
+                ) subOptions;
+              }
+            ];
+          }
+        );
+      }
+    );
+
+  /**
+    Extend a (sub-)module type with a set of overrides.
+
+    contract.extendSubmodule :: attrs -> optionType -> optionType
+
+    # Inputs
+
+    `overrides`
+
+    : 1\. A (recursive) attrset of fields to add to the option
+
+    `mod`
+
+    : 2\. A (sub-)module type to extend with `overrides`
+
+    Example:
+
+    ```nix
+    { config, lib, ... }:
+    let
+      inherit (lib) mkOption contract types;
+    in
+    {
+      options.foo = mkOption {
+        default = { };
+        type = contract.extendSubmodule
+          bar = {
+            default = 10;
+            defaultText = "10";
+          };
+          (types.submodule {
+            options.bar = mkOption {
+              type = types.int;
+            };
+          });
+      };
+    }
+    ```
+  */
+  extendSubmodule =
+    overrides: mod:
+    (extendOption overrides (
+      lib.mkOption {
+        default = { };
+        type = mod;
+      }
+    )).type;
+
+  /**
+    Construct a (sub-)module type from options and a set of overrides.
+
+    contract.mkContract :: attrsOf option -> attrs -> optionType
+
+    # Inputs
+
+    `options`
+
+    : 1\. An attrset of module options from which to construct the submodule type
+
+    `overrides`
+
+    : 2\. A (recursive) attrset of fields to add to the submodule type
+
+    Example:
+
+    ```nix
+    { config, lib, ... }:
+    let
+      inherit (lib) mkOption contract types;
+    in
+    {
+      options.foo = mkOption {
+        default = { };
+        type = contract.mkContract
+          {
+            bar = mkOption {
+              type = types.int;
+            };
+          }
+          bar = {
+            default = 10;
+            defaultText = "10";
+          };
+      };
+    }
+    ```
+  */
+  mkContract =
+    # options: overrides: extendSubmodule overrides (lib.types.submodule { inherit options; });
+    lib.flip extendSubmodule;
+  in
+{
+  inherit
+    mkRequests
+    mkResults
+    evalOption
+    extendOption
+    extendSubmodule
+    mkContract
+    ;
 }

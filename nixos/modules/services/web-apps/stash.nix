@@ -17,7 +17,7 @@ let
     toUpper
     types
     ;
-  inherit (contracts.fileSecrets) interface;
+  inherit (contracts.fileSecrets) mkContract;
   inherit (config.contracts.fileSecrets.results.stash) passwordFile jwtSecretKey sessionStoreKey;
 
   cfg = config.services.stash;
@@ -370,22 +370,10 @@ let
 
   secretOptionType =
     let
-      # FIXME use `mkContract` at this level to prevent having to redefine this module
-      contractSecretsType = types.submodule {
-        options = {
-          request = mkOption {
-            description = "Request of the contract for file secrets.";
-            default = { };
-            type = interface.request {
-              owner.default = cfg.user;
-              group.default = cfg.group;
-            };
-          };
-
-          result = mkOption {
-            description = "Result of the contract for file secrets.";
-            type = interface.result { };
-          };
+      contractSecretsType = mkContract {
+        request = {
+          owner.default = cfg.user;
+          group.default = cfg.group;
         };
       };
     in

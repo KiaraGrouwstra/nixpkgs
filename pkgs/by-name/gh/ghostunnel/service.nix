@@ -21,7 +21,7 @@ let
     ;
   cfg = config.ghostunnel;
 
-  inherit (lib.contracts.fileSecrets) interface;
+  inherit (lib.contracts.fileSecrets) mkContract;
 in
 {
   # https://nixos.org/manual/nixos/unstable/#modular-services
@@ -154,20 +154,10 @@ in
       dummySecret = lib.mkOption {
         description = "dummy secret";
         default = { };
-        type = lib.types.submodule {
-          options = {
-            request = lib.mkOption {
-              description = "Request of the contract for file secrets.";
-              default = { };
-              type = interface.request {
-                owner.default = "root";
-                group.default = "root";
-              };
-            };
-            result = lib.mkOption {
-              description = "Result of the contract for file secrets.";
-              type = interface.result { };
-            };
+        type = mkContract {
+          request = {
+            owner.default = "root";
+            group.default = "root";
           };
         };
       };

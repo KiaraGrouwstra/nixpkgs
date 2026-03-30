@@ -78,6 +78,47 @@ in
                 };
               };
           };
+          mkContract = mkOption {
+            description = ''
+              Augment the contract interface's type using a set of overrides.
+
+              contract.mkContract :: attrs -> optionType
+
+              # Inputs
+
+              `overrides`
+
+              : 1\. A (recursive) attrset of fields to add to the contract interface submodule type
+
+              Example:
+
+              ```nix
+              { config, lib, ... }:
+              let
+                inherit (lib) mkOption contract types;
+              in
+              {
+                options.foo = mkOption {
+                  default = { };
+                  type = config.contractType."<contract>".mkContract
+                    {
+                      bar = {
+                        default = 10;
+                        defaultText = "10";
+                      };
+                    }
+                };
+              }
+              ```
+            '';
+            type = functionTo optionType;
+            readOnly = true;
+            default =
+              overrides:
+              lib.contract.extendSubmodule overrides (submodule {
+                options = lib.mapAttrs (_: type: mkOption { inherit type; }) contract.config.interface;
+              });
+          };
           behaviorTest = mkOption {
             description = ''
               Test used to ensure all `providers` of the contract behave the same way.
@@ -548,18 +589,5 @@ in
       ) config.contractTypes;
     };
   };
-  config.contractTypes = lib.mapAttrs (
-    _:
-    {
-      meta,
-      interface,
-      behaviorTest,
-      ...
-    }:
-    {
-      inherit meta behaviorTest;
-      # get plain types here, so pass just `{ }` to `mkContract`
-      interface = lib.mapAttrs (_: fn: fn { }) interface;
-    }
-  ) lib.contracts;
+  config.contractTypes = lib.contracts;
 }
