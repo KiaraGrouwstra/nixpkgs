@@ -477,6 +477,9 @@ let
         ;
       inherit (self.modules)
         evalModules
+        evalOption
+        extendOption
+        extendSubmodule
         setDefaultModuleLocation
         unifyModuleSyntax
         applyModuleArgsIfFunction

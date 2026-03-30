@@ -111,7 +111,7 @@ in
             readOnly = true;
             default =
               overrides:
-              lib.contract.extendSubmodule overrides (submodule {
+              lib.extendSubmodule overrides (submodule {
                 options = lib.mapAttrs (
                   _: options: mkOption { type = submodule { inherit options; }; }
                 ) contract.config.interface;
@@ -127,7 +127,7 @@ in
             readOnly = true;
             default = lib.mapAttrs (
               _: options: overrides:
-              lib.contract.extendSubmodule overrides (lib.types.submodule { inherit options; })
+              lib.extendSubmodule overrides (lib.types.submodule { inherit options; })
             ) contract.config.interface;
 
           };

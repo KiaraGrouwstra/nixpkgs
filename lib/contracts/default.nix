@@ -46,7 +46,7 @@ let
           readOnly = true;
           default = lib.mapAttrs (
             _: options: overrides:
-            lib.contract.extendSubmodule overrides (lib.types.submodule { inherit options; })
+            lib.extendSubmodule overrides (lib.types.submodule { inherit options; })
           ) contract.config.interface;
         };
         mkContract = mkOption {
@@ -54,7 +54,7 @@ let
           readOnly = true;
           default =
             overrides:
-            lib.contract.extendSubmodule overrides (submodule {
+            lib.extendSubmodule overrides (submodule {
               options = lib.mapAttrs (
                 _: options: mkOption { type = submodule { inherit options; }; }
               ) contract.config.interface;
@@ -86,6 +86,6 @@ let
   };
 in
 # yields: attrsOf contractModule
-lib.mapAttrs (_: path: lib.contract.evalOption contractModule (import path { inherit lib; })) {
+lib.mapAttrs (_: path: lib.evalOption contractModule (import path { inherit lib; })) {
   fileSecrets = ./file-secrets.nix;
 }

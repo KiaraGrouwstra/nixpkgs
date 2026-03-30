@@ -1,7 +1,7 @@
 { lib, ... }:
 {
   options.foo =
-    lib.contract.extendOption
+    lib.extendOption
       {
         boo.bar.default = "baz";
       }

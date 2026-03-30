@@ -3,7 +3,7 @@
   options.foo = lib.mkOption {
     default = { };
     type =
-      lib.contract.extendSubmodule
+      lib.extendSubmodule
         {
           boo.bar.default = "baz";
         }

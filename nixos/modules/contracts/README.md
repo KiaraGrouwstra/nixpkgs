@@ -39,7 +39,6 @@
 
 ## TODO
 
-- [ ] move functions `evalOption`, `extendOption`, `extendSubmodule` back to `modules.nix`, updating their invocations accordingly
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
 - [ ] test contracts not part of `lib` with NixOS and modular services
