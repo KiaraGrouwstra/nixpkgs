@@ -93,14 +93,12 @@ in
                           options = {
                             request = lib.mkOption {
                               description = "Request of the `${contractName}` instance.";
-                              default = { };
                               type = extend.request {
                                 # "<attr>".default = ...;
                               };
                             };
                             result = lib.mkOption {
                               description = "Result of the `${contractName}` instance.";
-                              default = { };
                               type = extend.result {
                                 # "<attr>".default = ...;
                               };
