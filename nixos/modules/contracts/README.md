@@ -42,7 +42,6 @@
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
 - [ ] test contracts not part of `lib` with NixOS and modular services
-- [ ] variable number of layers to address modular services' multiple instantiations without nesting it for everywhere else?
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
 - make branches for any optional API changes to separate choices

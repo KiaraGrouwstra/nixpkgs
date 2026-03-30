@@ -2245,4 +2245,77 @@ rec {
       ) intersection;
     in
     (x // y) // mask;
+
+  mapNestedType =
+    let
+      recurse =
+        mapper: type: fn: value:
+        if type.check value then fn value else mapper (recurse mapper type fn) value;
+    in
+    recurse;
+
+  mapNestedAttrs = mapNestedType (fn: mapAttrs (_: fn));
+
+  /**
+    Like `concatMapAttrs`, but recurses into nested attribute sets, calling `fn`
+    only at leaves as determined by the element type of the given `nestedAttrsOf` type.
+
+    The function `fn` receives the full path (as a list of strings) to the leaf
+    and the leaf value, and must return an attribute set to be merged into the result.
+
+    Leaf detection mirrors `nestedAttrsOf.merge`: for simple element types (e.g. `int`)
+    `elemType.check` is used directly; for submodule element types (whose `check = isAttrs`
+    cannot distinguish leaves from intermediate nodes) a value is treated as a leaf when
+    all of its keys are declared options of the element type.
+
+    `concatMapNestedAttrs :: nestedAttrsOf elemType -> ([String] -> elemType -> AttrSet b) -> nestedAttrsOf elemType -> AttrSet b`
+
+    # Inputs
+
+    `type`
+
+    : 1\. A `nestedAttrsOf` option type whose element type identifies leaves
+
+    `fn`
+
+    : 2\. Function called at each leaf: receives the path (list of strings) and leaf value, returns an attrset
+
+    `attrs`
+
+    : 3\. The nested attribute set to traverse
+
+    # Example
+
+    ```nix
+    concatMapNestedAttrs (nestedAttrsOf (submodule { options.result = mkOption { type = int; }; }))
+      (path: v: { ${concatStringsSep "." path} = v.result; })
+      { a.b = { result = 1; }; a.c = { result = 2; }; }
+    # => { "a.b" = 1; "a.c" = 2; }
+    ```
+  */
+  concatMapNestedAttrs =
+    type: fn:
+    let
+      elemType = type.nestedTypes.elemType;
+      # Top-level option names of the element type, used to detect leaves.
+      # Mirrors the heuristic in `nestedAttrsOf.merge`.
+      elemOptAttrs = elemType.getSubOptions [ ];
+      # For scalar types, `elemOptAttrs` is empty and `elemType.check`
+      # correctly distinguishes leaves from attrsets.  For submodule types
+      # (check = isAttrs), we use key-presence instead so intermediate namespace
+      # attrsets are not mistaken for leaves.
+      isLeaf =
+        v:
+        if elemOptAttrs == { } then
+          elemType.check v
+        else
+          lib.isAttrs v && lib.all (k: elemOptAttrs ? ${k}) (lib.attrNames v);
+      recurse =
+        path: attrs:
+        lib.concatMapAttrs (
+          name: v:
+          if isLeaf v then fn (path ++ [ name ]) v else recurse (path ++ [ name ]) v
+        ) attrs;
+    in
+    recurse [ ];
 }

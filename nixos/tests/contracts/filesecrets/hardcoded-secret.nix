@@ -11,7 +11,6 @@
     "testing"
     "hardcoded-secret"
     "fileSecrets"
-    "testing"
     "mysecret"
   ];
   extraModules = [
@@ -20,8 +19,8 @@
       { config, ... }:
       {
         # setting by defaultProvider is easier, but let's set it manually here
-        contracts.fileSecrets.instances."testing"."mysecret" = config.contracts.fileSecrets.providers.hardcoded-secret;
-        testing.hardcoded-secret.fileSecrets."testing"."mysecret".content = config.test.content;
+        contracts.fileSecrets.instances."mysecret" = config.contracts.fileSecrets.providers.hardcoded-secret;
+        testing.hardcoded-secret.fileSecrets."mysecret".content = config.test.content;
       }
     )
   ];

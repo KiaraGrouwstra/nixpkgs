@@ -5,6 +5,7 @@ let
     attrs
     attrsOf
     enum
+    nestedAttrsOf
     nullOr
     raw
     submodule
@@ -190,26 +191,24 @@ in
                   services."<provider>".${contractName} = config.contracts.${contractName}.requests;
                   ```
                 '';
-                type = attrsOf (
-                  attrsOf (submodule {
-                    options = {
-                      request = mkOption {
-                        description = ''
-                          The request parameters.
-                          Must match the `${contractName}` contract interface's request type.
-                        '';
-                        type = submodule { options = interface.request; };
-                      };
-                      result = mkOption {
-                        description = ''
-                          Result returned to the request by the provider's side of the `${contractName}` contract.
-                          Must match the `${contractName}` contract interface's result type.
-                        '';
-                        type = submodule { options = interface.result; };
-                      };
+                type = nestedAttrsOf (submodule {
+                  options = {
+                    request = mkOption {
+                      description = ''
+                        The request parameters.
+                        Must match the `${contractName}` contract interface's request type.
+                      '';
+                      type = submodule { options = interface.request; };
                     };
-                  })
-                );
+                    result = mkOption {
+                      description = ''
+                        Result returned to the request by the provider's side of the `${contractName}` contract.
+                        Must match the `${contractName}` contract interface's result type.
+                      '';
+                      type = submodule { options = interface.result; };
+                    };
+                  };
+                });
               };
               requests = mkOption {
                 description = ''
