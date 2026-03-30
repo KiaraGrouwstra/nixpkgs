@@ -301,15 +301,15 @@ let
         description = ''
           Augment the contract interface's type using a set of overrides.
 
-          contract.mkContract :: attrs -> optionType
+          `contract.mkContract :: attrs -> optionType`
 
-          # Inputs
+          **Inputs:**
 
           `overrides`
 
           : 1\. A (recursive) attrset of fields to add to the contract interface submodule type
 
-          Example:
+          **Example:**
 
           ```nix
           { config, lib, ... }:
