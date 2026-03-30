@@ -44,7 +44,7 @@ in
             ```nix
             { lib, ... }:
             let
-              inherit (lib.contracts) ${contractName};
+              inherit (lib.contracts.${contractName}) extend;
             in
             {
               options = {
@@ -57,7 +57,7 @@ in
                   example = ${"'"}'
                     {
                       "<consumer>"."<instance>" = {
-                        input = {
+                        request = {
                           # options shared between any provider of the `${contractName}` contract
                           # "<attr>" = ...;
                         };
@@ -74,13 +74,13 @@ in
                           options = {
                             request = lib.mkOption {
                               description = "Request of the `${contractName}` instance.";
-                              type = ${contractName}.interface.request {
+                              type = extend.request {
                                 # "<attr>".default = ...;
                               };
                             };
                             result = lib.mkOption {
                               description = "Result of the `${contractName}` instance.";
-                              type = ${contractName}.interface.result {
+                              type = extend.result {
                                 # "<attr>".default = ...;
                               };
                             };
@@ -132,15 +132,9 @@ in
                   options.services."<consumer>" = {
                     "<request>" = lib.mkOption {
                       description = "...";
-                      default = { };
-                      type = lib.types.submodule {
-                        options = {
-                          request = lib.mkOption {
-                            type = ${contractName}.interface.request { };
-                          };
-                          result = lib.mkOption {
-                            type = ${contractName}.interface.result { };
-                          };
+                      type = lib.contracts.${contractName}.mkContract {
+                        request = {
+                          # "<attr>".default = ...;
                         };
                       };
                     };
@@ -168,15 +162,9 @@ in
                     options."<consumer>" = {
                       "<request>" = lib.mkOption {
                         description = "...";
-                        default = { };
-                        type = lib.types.submodule {
-                          options = {
-                            request = lib.mkOption {
-                              type = ${contractName}.interface.request { };
-                            };
-                            result = lib.mkOption {
-                              type = ${contractName}.interface.result { };
-                            };
+                        type = lib.contracts.${contractName}.mkContract {
+                          request = {
+                            # "<attr>".default = ...;
                           };
                         };
                       };
@@ -343,19 +331,9 @@ in
                         defaultText = ${"'"}'
                           { result = config.contracts.${contractName}.results."<consumer>"."<instance>"; }
                         ${"'"}';
-                        type = lib.types.submodule {
-                          options = {
-                            request = lib.mkOption {
-                              description = "Request of the `${contractName}` instance.";
-                              default = { };
-                              type = ${contractName}.interface.request {
-                                # "<attr>".default = ...;
-                              };
-                            };
-                            result = lib.mkOption {
-                              description = "Result of the `${contractName}` instance.";
-                              type = ${contractName}.interface.result { };
-                            };
+                        type = ${contractName}.mkContract {
+                          request = {
+                            # "<attr>".default = ...;
                           };
                         };
                       };
@@ -419,7 +397,7 @@ in
                   Result data for the `${contractName}` contract, with `request` attributes filtered out.
 
                   This is a read-only calculated option that extracts just the result values from fulfilled contracts.
-                  It mirrors `inputs` which filters to just request data for providers.
+                  It mirrors `requests` which filters to just request data for providers.
 
                   Used in the consumer like:
 
