@@ -1,11 +1,11 @@
 { lib, ... }:
 let
-  inherit (lib) modules mkOption types;
+  inherit (lib) contract mkOption types;
 in
 {
   options.bar = mkOption {
     default =
-      modules.evalOption
+      contract.evalOption
         (mkOption {
           default = { };
           type = types.submodule (

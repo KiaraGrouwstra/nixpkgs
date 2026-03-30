@@ -3,12 +3,19 @@
   options.foo = lib.mkOption {
     default = { };
     type =
-      lib.modules.mkContract
+      lib.contract.mkContract
+        (
+          lib.types.submodule {
+            options.boo = lib.mkOption {
+              default = { };
+              type = lib.types.submodule {
+                options.bar = lib.mkOption { type = lib.types.int; };
+              };
+            };
+          }
+        )
         {
-          bar = lib.mkOption { type = lib.types.int; };
-        }
-        {
-          bar.default = "baz";
+          boo.bar.default = "baz";
         };
   };
 }

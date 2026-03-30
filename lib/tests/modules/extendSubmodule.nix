@@ -3,13 +3,18 @@
   options.foo = lib.mkOption {
     default = { };
     type =
-      lib.modules.extendSubmodule
+      lib.contract.extendSubmodule
         {
-          bar.default = "baz";
+          boo.bar.default = "baz";
         }
         (
           lib.types.submodule {
-            options.bar = lib.mkOption { type = lib.types.int; };
+            options.boo = lib.mkOption {
+              default = { };
+              type = lib.types.submodule {
+                options.bar = lib.mkOption { type = lib.types.int; };
+              };
+            };
           }
         );
   };

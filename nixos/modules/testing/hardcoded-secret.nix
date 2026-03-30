@@ -65,7 +65,7 @@ in
                     options = {
                       request = mkOption {
                         description = "Request of the contract for file secrets.";
-                        type = interface.request {
+                        type = lib.contract.mkContract interface.request {
                           owner.default = "root";
                           group.default = "root";
                         };
@@ -73,7 +73,7 @@ in
                       result = mkOption {
                         description = "Result of the contract for file secrets.";
                         default = { };
-                        type = interface.result {
+                        type = lib.contract.mkContract interface.result {
                           path = {
                             default = "${hardcoded-secret.config.directory}/${name}";
                             defaultText = ''
