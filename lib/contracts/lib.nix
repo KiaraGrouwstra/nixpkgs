@@ -336,7 +336,10 @@ let
           overrides:
           lib.extendSubmodule overrides (submodule {
             options = lib.mapAttrs (
-              _: options: mkOption { type = submodule { inherit options; }; }
+              k: options: mkOption {
+                description = "The ${k} of the contract instance.";
+                type = submodule { inherit options; };
+              }
             ) contract.config.interface;
           });
       };
