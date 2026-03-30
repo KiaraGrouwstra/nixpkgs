@@ -42,7 +42,6 @@
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
 - [ ] test contracts not part of `lib` with NixOS and modular services
-- [ ] try using `mkContract` at the level of the consumer's option type to prevent having to essentially redefine the interface
 - [ ] confirm how to handle overrides on both sides, and whether this may be simplified
 - [ ] variable number of layers to address modular services' multiple instantiations without nesting it for everywhere else?
 - [ ] reconsider `default` changes for `services.stash` passwords
