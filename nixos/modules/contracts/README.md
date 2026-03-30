@@ -39,6 +39,9 @@
 
 ## TODO
 
+- [ ] simplify API of contract declarations again
+- [ ] replace function `mkContract` with calculated module system option for `hardcoded-secret.nix`, rendering `mkContract` function obsolete
+- [ ] move functions `evalOption`, `extendOption`, `extendSubmodule` back to `modules.nix`, updating their invocations accordingly
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
 - [ ] test contracts not part of `lib` with NixOS and modular services
