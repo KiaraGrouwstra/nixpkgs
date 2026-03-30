@@ -112,20 +112,24 @@ in
             default =
               overrides:
               lib.contract.extendSubmodule overrides (submodule {
-                options = lib.mapAttrs (_: options: mkOption { type = submodule { inherit options; }; }) contract.config.interface;
+                options = lib.mapAttrs (
+                  _: options: mkOption { type = submodule { inherit options; }; }
+                ) contract.config.interface;
               });
           };
-          mkRequest = mkOption {
-            description = "Construct a type for the provider's request option, with overrides applied.";
-            type = functionTo optionType;
+          extend = mkOption {
+            description = ''
+              Construct a type for a provider's individual request or result option, with overrides applied.
+
+              `extend.request overrides` and `extend.result overrides` produce types for the respective interface parts.
+            '';
+            type = attrsOf (functionTo optionType);
             readOnly = true;
-            default = overrides: lib.contract.mkContract contract.config.interface.request overrides;
-          };
-          mkResult = mkOption {
-            description = "Construct a type for the provider's result option, with overrides applied.";
-            type = functionTo optionType;
-            readOnly = true;
-            default = overrides: lib.contract.mkContract contract.config.interface.result overrides;
+            default = lib.mapAttrs (
+              _: options: overrides:
+              lib.contract.extendSubmodule overrides (lib.types.submodule { inherit options; })
+            ) contract.config.interface;
+
           };
           behaviorTest = mkOption {
             description = ''
@@ -381,9 +385,7 @@ in
                   Providers read from this option to get consumer requests.
                 '';
                 type = attrsOf (attrsOf attrs);
-                default = lib.mapAttrs (
-                  _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
-                ) contract.config.want;
+                default = lib.mapAttrs (_: lib.mapAttrs (_: lib.getAttrs [ "request" ])) contract.config.want;
                 defaultText = ''
                   lib.mapAttrs (
                     _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
@@ -581,9 +583,7 @@ in
                   ```
                 '';
                 type = attrsOf (attrsOf attrs);
-                default = lib.mapAttrs (
-                  _: lib.mapAttrs (_: v: v.result)
-                ) contract.config.instances;
+                default = lib.mapAttrs (_: lib.mapAttrs (_: v: v.result)) contract.config.instances;
                 defaultText = ''
                   lib.mapAttrs (
                     _: lib.mapAttrs (_: v: v.result)

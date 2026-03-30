@@ -39,7 +39,6 @@
 
 ## TODO
 
-- [ ] generically handle mkRequest/mkResult
 - [ ] move functions `evalOption`, `extendOption`, `extendSubmodule` back to `modules.nix`, updating their invocations accordingly
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
