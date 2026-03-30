@@ -39,7 +39,7 @@
 
 ## TODO
 
-- [ ] replace function `mkContract` with calculated module system option for `hardcoded-secret.nix`, rendering `mkContract` function obsolete
+- [ ] generically handle mkRequest/mkResult
 - [ ] move functions `evalOption`, `extendOption`, `extendSubmodule` back to `modules.nix`, updating their invocations accordingly
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services

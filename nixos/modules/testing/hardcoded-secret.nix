@@ -20,7 +20,7 @@ let
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
-  inherit (contracts.${contract}) interface;
+  inherit (contracts.${contract}) mkRequest mkResult;
 in
 {
   options.testing.hardcoded-secret = mkOption {
@@ -65,7 +65,7 @@ in
                     options = {
                       request = mkOption {
                         description = "Request of the contract for file secrets.";
-                        type = lib.contract.mkContract interface.request {
+                        type = mkRequest {
                           owner.default = "root";
                           group.default = "root";
                         };
@@ -73,7 +73,7 @@ in
                       result = mkOption {
                         description = "Result of the contract for file secrets.";
                         default = { };
-                        type = lib.contract.mkContract interface.result {
+                        type = mkResult {
                           path = {
                             default = "${hardcoded-secret.config.directory}/${name}";
                             defaultText = ''

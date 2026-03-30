@@ -41,6 +41,16 @@ let
             };
           };
         };
+        mkRequest = mkOption {
+          type = functionTo optionType;
+          readOnly = true;
+          default = overrides: lib.contract.mkContract contract.config.interface.request overrides;
+        };
+        mkResult = mkOption {
+          type = functionTo optionType;
+          readOnly = true;
+          default = overrides: lib.contract.mkContract contract.config.interface.result overrides;
+        };
         mkContract = mkOption {
           type = functionTo optionType;
           readOnly = true;

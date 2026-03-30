@@ -115,6 +115,18 @@ in
                 options = lib.mapAttrs (_: options: mkOption { type = submodule { inherit options; }; }) contract.config.interface;
               });
           };
+          mkRequest = mkOption {
+            description = "Construct a type for the provider's request option, with overrides applied.";
+            type = functionTo optionType;
+            readOnly = true;
+            default = overrides: lib.contract.mkContract contract.config.interface.request overrides;
+          };
+          mkResult = mkOption {
+            description = "Construct a type for the provider's result option, with overrides applied.";
+            type = functionTo optionType;
+            readOnly = true;
+            default = overrides: lib.contract.mkContract contract.config.interface.result overrides;
+          };
           behaviorTest = mkOption {
             description = ''
               Test used to ensure all `providers` of the contract behave the same way.
