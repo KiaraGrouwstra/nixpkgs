@@ -5,13 +5,8 @@ let
     attrs
     attrsOf
     enum
-    functionTo
-    listOf
     nullOr
-    option
-    optionType
     raw
-    str
     submodule
     ;
 in
@@ -27,158 +22,8 @@ in
       defining `meta` and `interface` options, or when adding to nixpkgs,
       preferably adding one in `lib/contracts`.
     '';
-    type = attrsOf (
-      submodule (contract: {
-        options = {
-          meta = mkOption {
-            description = ''
-              Useful information about the contract and its maintenance.
-            '';
-            type = submodule {
-              options = {
-                description = mkOption {
-                  description = ''
-                    Description of the contract.
-                  '';
-                  type = str;
-                };
-                maintainers = mkOption {
-                  description = ''
-                    Maintainers of the contract.
-                  '';
-                  type = listOf attrs;
-                };
-              };
-            };
-          };
-          interface = mkOption {
-            description = ''
-              Interface describing the types used in the contract.
-            '';
-            default = { };
-            type =
-              let
-                type = attrsOf option;
-                default = { };
-              in
-              submodule {
-                options = {
-                  request = mkOption {
-                    description = "Request type of the contract.";
-                    inherit type default;
-                  };
-                  result = mkOption {
-                    description = "Result type of the contract.";
-                    inherit type default;
-                  };
-                };
-              };
-          };
-          mkContract = mkOption {
-            description = ''
-              Augment the contract interface's type using a set of overrides.
-
-              contract.mkContract :: attrs -> optionType
-
-              # Inputs
-
-              `overrides`
-
-              : 1\. A (recursive) attrset of fields to add to the contract interface submodule type
-
-              Example:
-
-              ```nix
-              { config, lib, ... }:
-              let
-                inherit (lib) mkOption contract types;
-              in
-              {
-                options.foo = mkOption {
-                  default = { };
-                  type = config.contractType."<contract>".mkContract
-                    {
-                      bar = {
-                        default = 10;
-                        defaultText = "10";
-                      };
-                    }
-                };
-              }
-              ```
-            '';
-            type = functionTo optionType;
-            readOnly = true;
-            default =
-              overrides:
-              lib.extendSubmodule overrides (submodule {
-                options = lib.mapAttrs (
-                  _: options: mkOption { type = submodule { inherit options; }; }
-                ) contract.config.interface;
-              });
-          };
-          extend = mkOption {
-            description = ''
-              Construct a type for a provider's individual request or result option, with overrides applied.
-
-              `extend.request overrides` and `extend.result overrides` produce types for the respective interface parts.
-            '';
-            type = attrsOf (functionTo optionType);
-            readOnly = true;
-            default = lib.mapAttrs (
-              _: options: overrides:
-              lib.extendSubmodule overrides (lib.types.submodule { inherit options; })
-            ) contract.config.interface;
-
-          };
-          behaviorTest = mkOption {
-            description = ''
-              Test used to ensure all `providers` of the contract behave the same way.
-
-              For an example of how to write a test for a contract,
-              see the `behaviorTest` in `lib/contracts/file-secrets.nix`.
-            '';
-            # The type should be more precise of course.
-            # There should actually be a NixOSTest type.
-            # And we can probably do something fancy with the `request` and `result` modules.
-            type = functionTo attrs;
-            default =
-              {
-                name,
-                extraModules ? [ ],
-              }:
-              {
-                name = "contracts_<contract>_${name}";
-                containers.machine =
-                  { ... }:
-                  {
-                    imports = extraModules;
-                  };
-                testScript =
-                  { ... }:
-                  ''
-                    machine.succeed("echo 'please define a test!' >&2; exit 1")
-                  '';
-              };
-            defaultText = ''
-              {
-                name,
-                extraModules ? [ ],
-              }:
-              {
-                name = "contracts_<contract>_''${name}";
-                containers.machine =
-                  { ... }:
-                  {
-                    imports = extraModules;
-                  };
-                testScript = { ... }: "";
-              }
-            '';
-          };
-        };
-      })
-    );
+    # types are in `lib` as the docs build's sandbox has no `config`.
+    type = attrsOf lib.contract.templateType;
   };
   options.contracts = mkOption {
     description = ''
