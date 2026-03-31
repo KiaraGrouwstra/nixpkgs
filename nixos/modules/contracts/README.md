@@ -54,7 +54,6 @@
   - [ ] [side effects](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-3258197623)
     - seem already handled with secrets?
   - [ ] [services consuming contracts they also provide for]()
-  - [ ] [cross-node use of contracts](https://github.com/ibizaman/selfhostblocks/issues/541)
     - could this still work now that I make it error on missing `defaultProvider`?
   - [ ] [contracts combining multiple existing contracts](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-4063155555)
   - [ ] breaking changes to contract interfaces - could `mkAliasOptionModule` work with this weird `lib` / `config` dichotomy?
