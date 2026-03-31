@@ -8,6 +8,7 @@
 { lib, config, ... }:
 let
   inherit (lib) mkOption types;
+  inherit (config.contractTypes.arithmetic) extend;
 in
 {
   imports = [ ./contracts-arithmetic-contract.nix ];
@@ -18,21 +19,12 @@ in
         { config, ... }:
         {
           options = {
-            request = mkOption {
-              type = types.submodule {
-                options.value = mkOption { type = types.int; };
-              };
-            };
-            result = mkOption {
-              default = { };
-              type = types.submodule {
-                options.value = mkOption {
-                  type = types.int;
-                  default = config.request.value + 1;
-                };
-              };
-            };
+            request = mkOption { type = extend.request { }; };
+            result = mkOption { type = extend.result { }; };
           };
+          # dynamic default: result.value depends on the same instance's request.value.
+          # Cannot be expressed as a static override to extend.result, so set here instead.
+          config.result.value = lib.mkDefault (config.request.value + 1);
         }
       )
     );
