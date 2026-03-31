@@ -39,7 +39,6 @@
 
 ## TODO
 
-- [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash

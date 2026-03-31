@@ -1,0 +1,123 @@
+# Tests contracts where both the consumer and provider are modular services.
+#
+# - A consumer modular service declares a request using `mkRequests`.
+# - `nixos-contracts-bridge` automatically wires `contract.requests` → `contracts.<type>.want`.
+# - A provider modular service reads `contracts.arithmetic.requests` via the `contracts` specialArg
+#   and computes results (here: `request.value + 1`).
+# - The provider sets `contract.providers.arithmetic`; `nixos-contracts-bridge` automatically wires
+#   it into `contracts.arithmetic.providers.<serviceName>`.
+{ lib, pkgs, ... }:
+{
+  name = "contracts-modular-services";
+
+  nodes.machine =
+    { config, pkgs, lib, ... }:
+    let
+      inherit (lib) mkOption types;
+      inherit (config.contractTypes.arithmetic) extend;
+
+      # Base options shared by every arithmetic contract instance (request + result).
+      # Reused in both the consumer option type and the provider option type.
+      arithmeticInstanceModule = {
+        options = {
+          request = mkOption { type = extend.request { }; };
+          result = mkOption { default = { }; type = extend.result { }; };
+        };
+      };
+
+      # Consumer service module.
+      # Uses `mkRequests` to register contract requests;
+      # `nixos-contracts-bridge` collects these into `contracts.arithmetic.want` automatically.
+      consumerModule =
+        {
+          lib,
+          config,
+          name,
+          ...
+        }:
+        let
+          contractOptions.arithmetic = [ "operation" ];
+        in
+        {
+          _class = "service";
+          options.consumer.operation = mkOption {
+            default = { };
+            type = types.submodule arithmeticInstanceModule;
+          };
+          config = {
+            consumer.operation.request.value = 5;
+            contract.requests = lib.contract.mkRequests "consumer" name contractOptions config;
+            process.argv = [ "${pkgs.coreutils}/bin/true" ];
+          };
+        };
+
+      # Increment contract provider implemented as a modular service.
+      # Reads consumer requests from the `contracts` specialArg and computes results.
+      incrementProviderModule =
+        {
+          lib,
+          config,
+          contracts ? { },
+          ...
+        }:
+        {
+          _class = "service";
+          options.arithmetic = mkOption {
+            description = "Arithmetic contract instances fulfilled by this increment provider.";
+            type = types.nestedAttrsOf (
+              types.submodule [
+                arithmeticInstanceModule
+                (
+                  { config, ... }:
+                  {
+                    # result.value is a dynamic default that depends on the same instance's request.value.
+                    # Cannot be expressed as a static override to extend.result, so set as module config.
+                    config.result.value = lib.mkDefault (config.request.value + 1);
+                  }
+                )
+              ]
+            );
+          };
+          config = {
+            arithmetic = contracts.arithmetic.requests or { };
+            contract.providers.arithmetic = config.arithmetic;
+            process.argv = [ "${pkgs.coreutils}/bin/true" ];
+          };
+        };
+    in
+    {
+      imports = [
+        # The arithmetic contract type: defined inline (not in `lib/contracts/`) to demonstrate
+        # the downstream user pattern of declaring contracts in `config.contractTypes`.
+        ./arithmetic-contract.nix
+      ];
+
+      # Consumer service: requests an arithmetic operation with `value = 5`.
+      # `nixos-contracts-bridge` wires its `contract.requests` into `contracts.arithmetic.want`.
+      system.services.instance = {
+        imports = [ consumerModule ];
+      };
+
+      # Provider service: fulfills arithmetic requests by incrementing the value.
+      system.services.increment = {
+        imports = [ incrementProviderModule ];
+      };
+
+      # `nixos-contracts-bridge` automatically wires `contract.providers.arithmetic` → `contracts.arithmetic.providers.increment`.
+      contracts.arithmetic.defaultProviderName = "increment";
+
+      assertions = [
+        {
+          assertion = config.contracts.arithmetic.results.consumer.instance.operation.value == 6;
+          message = "arithmetic contract: result.value should equal request.value (5) + 1 = 6";
+        }
+      ];
+    };
+
+  testScript = ''
+    machine.start()
+    machine.wait_for_unit("multi-user.target")
+  '';
+
+  meta.maintainers = [ ];
+}
