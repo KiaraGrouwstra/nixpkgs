@@ -13,6 +13,10 @@ in
 {
   imports = [ ./contracts-arithmetic-contract.nix ];
 
+  # meta is a NixOS-level option; provide a stub so the contracts module's
+  # `meta.buildDocsInSandbox = false` is accepted in this bare evalModules context.
+  options.meta = mkOption { type = types.attrs; default = { }; };
+
   options.services.increment.arithmetic = mkOption {
     type = types.nestedAttrsOf (
       types.submodule (
