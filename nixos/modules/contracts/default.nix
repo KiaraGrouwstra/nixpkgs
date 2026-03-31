@@ -206,27 +206,26 @@ in
                   **Providers (regular NixOS module):**
 
                   A plain NixOS module provider reads `contracts.${contractName}.requests`
-                  and sets `contracts.${contractName}.providers.<name>` directly:
+                  and registers via `contract.providers`:
 
                   ```nix
                   services."<provider>".${contractName} = config.contracts.${contractName}.requests;
-                  contracts.${contractName}.providers."<provider>" = config.services."<provider>".${contractName};
+                  contract.providers.${contractName}."<provider>" = config.services."<provider>".${contractName};
                   ```
 
                   **Providers (modular service):**
 
                   A modular service provider reads `contracts.${contractName}.requests` from
-                  the `contracts` specialArg and sets `contract.providers.${contractName}`.
-                  `nixos-contracts-bridge` automatically wires it into
-                  `contracts.${contractName}.providers.<service>`:
+                  the `contracts` specialArg and registers via `contract.providers`.
+                  The provider name is the service's own instance name:
 
                   ```nix
-                  { lib, config, contracts ? { }, ... }:
+                  { lib, config, contracts ? { }, name, ... }:
                   {
                     _class = "service";
                     config = {
                       "<provider>".${contractName} = contracts.${contractName}.requests or { };
-                      contract.providers.${contractName} = config."<provider>".${contractName};
+                      contract.providers.${contractName}.''${name} = config."<provider>".${contractName};
                     };
                   }
                   ```
@@ -259,19 +258,9 @@ in
                 description = ''
                   Where to find instances of a provider of the `${contractName}` contract that can take request inputs to return results.
 
-                  For a regular NixOS module provider, set it directly:
-
-                  ```nix
-                  contracts.${contractName}.providers."<provider>" = config.services."<provider>".${contractName};
-                  ```
-
-                  For a modular service provider, set `contract.providers.${contractName}` on the service instead;
-                  `nixos-contracts-bridge` will automatically register it here under the service's name:
-
-                  ```nix
-                  # in the service module:
-                  contract.providers.${contractName} = config."<provider>".${contractName};
-                  ```
+                  Populated automatically from `contract.providers.${contractName}` — prefer setting
+                  that option (on either a regular NixOS module or a modular service) over setting
+                  this directly. See `contracts.${contractName}.want` for usage examples.
 
                   It may then be used where you configure the service consuming the `${contractName}` contract to manually set a provider:
 
@@ -502,5 +491,27 @@ in
       ) config.contractTypes;
     };
   };
-  config.contractTypes = lib.contracts;
+  options.contract.providers = mkOption {
+    description = ''
+      Providers for each contract type, keyed by contract type then provider name.
+
+      Both regular NixOS modules and modular services use this option to register
+      as providers. The `nixos-contracts-bridge` collects modular service providers
+      here automatically; regular NixOS modules set it directly:
+
+      ```nix
+      contract.providers."<contractType>"."<providerName>" = config.services."<provider>"."<contractType>";
+      ```
+    '';
+    type = attrsOf (attrsOf raw);
+    default = { };
+  };
+
+  config = {
+    contractTypes = lib.contracts;
+
+    contracts = lib.mapAttrs (contractName: _: {
+      providers = config.contract.providers.${contractName} or { };
+    }) config.contractTypes;
+  };
 }

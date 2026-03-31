@@ -58,6 +58,7 @@
           lib,
           config,
           contracts ? { },
+          name,
           ...
         }:
         {
@@ -80,7 +81,7 @@
           };
           config = {
             arithmetic = contracts.arithmetic.requests or { };
-            contract.providers.arithmetic = config.arithmetic;
+            contract.providers.arithmetic.${name} = config.arithmetic;
             process.argv = [ "${pkgs.coreutils}/bin/true" ];
           };
         };

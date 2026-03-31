@@ -93,7 +93,7 @@ in
       # Provider: a fake database that assigns a UNIX socket path to every
       # requested database and creates the directory at activation time.
       fakedbModule =
-        { lib, config, contracts ? { }, ... }:
+        { lib, config, contracts ? { }, name, ... }:
         {
           _class = "service";
 
@@ -116,7 +116,7 @@ in
           config = {
             fakedb = contracts.database.requests or { };
 
-            contract.providers.database = config.fakedb;
+            contract.providers.database.${name} = config.fakedb;
 
             # Create the socket directories for every provisioned database.
             process.argv = [

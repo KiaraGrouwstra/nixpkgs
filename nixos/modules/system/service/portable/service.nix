@@ -59,11 +59,20 @@ in
         '';
       };
       providers = lib.mkOption {
-        type = types.attrsOf (types.nestedAttrsOf types.raw);
+        type = types.attrsOf (types.attrsOf types.raw);
         description = ''
-          Contract provisions made by this service.
-          Organized by contract type (e.g., `fileSecrets`).
-          The service will be registered as a provider under its own name.
+          Contract provisions made by this service, keyed by contract type then provider name.
+
+          Use the service's own instance `name` as the provider name:
+
+          ```nix
+          { config, contracts ? { }, name, ... }:
+          {
+            config.contract.providers."<contractType>".''${name} = config."<provider>";
+          }
+          ```
+
+          `nixos-contracts-bridge` merges these into `config.contract.providers` at NixOS level.
         '';
       };
     };
