@@ -10,11 +10,7 @@ let
   inherit (lib) mkOption types;
 in
 {
-  imports = [ ../../../nixos/modules/contracts/default.nix ];
-
-  # meta is a NixOS-level option; provide a stub so the contracts module's
-  # `meta.buildDocsInSandbox = false` is accepted in this bare evalModules context.
-  options.meta = mkOption { type = types.attrs; default = { }; };
+  imports = [ ./contracts-arithmetic-contract.nix ];
 
   options.services.increment.arithmetic = mkOption {
     type = types.nestedAttrsOf (
@@ -43,24 +39,6 @@ in
   };
 
   config = {
-    # Define the arithmetic contract inline - not in lib.contracts.
-    contractTypes.arithmetic = {
-      meta = {
-        description = "A contract for arithmetic operations, used for testing.";
-        maintainers = [ ];
-      };
-      interface = {
-        request.value = mkOption {
-          description = "Input value.";
-          type = types.int;
-        };
-        result.value = mkOption {
-          description = "Output value.";
-          type = types.int;
-        };
-      };
-    };
-
     # Consumer: request the arithmetic contract with value = 5.
     contracts.arithmetic.want.consumer.instance.request.value = 5;
 
