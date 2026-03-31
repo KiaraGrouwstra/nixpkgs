@@ -325,7 +325,7 @@ let
                     default = 10;
                     defaultText = "10";
                   };
-                }
+                };
             };
           }
           ```

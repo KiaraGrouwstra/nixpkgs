@@ -75,12 +75,14 @@ in
                           options = {
                             request = lib.mkOption {
                               description = "Request of the `${contractName}` instance.";
+                              default = { };
                               type = extend.request {
                                 # "<attr>".default = ...;
                               };
                             };
                             result = lib.mkOption {
                               description = "Result of the `${contractName}` instance.";
+                              default = { };
                               type = extend.result {
                                 # "<attr>".default = ...;
                               };
@@ -310,6 +312,7 @@ in
                   { lib, ... }:
                   let
                     inherit (lib.contracts) ${contractName};
+                    inherit (config.contracts.${contractName}.results."<consumer>") <instance>;
                   in
                   {
                     options = {
@@ -324,9 +327,7 @@ in
                           services."<provider>".${contractName}."<consumer>"."<instance>"."<attr>" = ...;
                           ```
                         ${"'"}';
-                        default = {
-                          result = config.contracts.${contractName}.results."<consumer>"."<instance>";
-                        };
+                        default.result = <instance>;
                         defaultText = ${"'"}'
                           { result = config.contracts.${contractName}.results."<consumer>"."<instance>"; }
                         ${"'"}';
@@ -339,8 +340,6 @@ in
                     };
                   }
                   ```
-
-                  Using `results` through such options ensures request input propagation.
 
                   **Modular Services:**
 
@@ -401,7 +400,53 @@ in
                   Used in the consumer like:
 
                   ```nix
-                  cfg."<instance>".result = config.contracts.${contractName}.results."<consumer>"."<instance>";
+                  { lib, ... }:
+                  let
+                    inherit (lib.contracts) ${contractName};
+                    inherit (config.contracts.${contractName}.results."<consumer>") <instance>;
+                  in
+                  {
+                    options = {
+                      "<instance>" = lib.mkOption {
+                        description = ${"'"}'
+                          An instance of contract `${contractName}`.
+                          See `contracts.${contractName}.want.<name>.<name>.result`
+                          for documentation on the type of its `.result` attribute.
+                          Information specific to the provider may be set like:
+
+                          ```nix
+                          services."<provider>".${contractName}."<consumer>"."<instance>"."<attr>" = ...;
+                          ```
+                        ${"'"}';
+                        default.result = <instance>;
+                        defaultText = ${"'"}'
+                          { result = config.contracts.${contractName}.results."<consumer>"."<instance>"; }
+                        ${"'"}';
+                        type = ${contractName}.mkContract {
+                          request = {
+                            # "<attr>".default = ...;
+                          };
+                        };
+                      };
+                    };
+                  }
+                  ```
+
+                  **Modular Services:**
+
+                  In [modular services](#modular-services), `config.contracts` is not available.
+                  Instead, we access `results` through the `lib.contract.mkResults` helper:
+
+                  ```nix
+                  let
+                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
+                  in
+                  {
+                    config = {
+                      "<service>" = { }
+                        // lib.contract.mkResults "<service>" contractOptions contracts;
+                    };
+                  }
                   ```
                 '';
                 type = attrsOf (attrsOf attrs);
