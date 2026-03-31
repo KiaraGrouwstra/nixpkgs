@@ -159,7 +159,7 @@ in
 
                   **Modular Services:**
 
-                  If the consumer is a [modular service](#modular-services), use `contractRequests`
+                  If the consumer is a [modular service](#modular-services), use `contract.requests`
                   and the helper functions from `lib.contract`:
 
                   ```nix
@@ -187,7 +187,7 @@ in
                     };
 
                     config = {
-                      contractRequests = lib.contract.mkRequests "<consumer>" name contractOptions config;
+                      contract.requests = lib.contract.mkRequests "<consumer>" name contractOptions config;
                       "<consumer>" = { }
                         // lib.contract.mkResults "<consumer>" name contractOptions contracts;
                     };

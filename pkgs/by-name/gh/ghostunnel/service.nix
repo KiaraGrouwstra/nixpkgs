@@ -168,7 +168,7 @@ in
   config = let
     contractOptions.fileSecrets = [ "dummySecret" ];
   in {
-    contractRequests = lib.contract.mkRequests "ghostunnel" name contractOptions config;
+    contract.requests = lib.contract.mkRequests "ghostunnel" name contractOptions config;
 
     assertions = [
       {

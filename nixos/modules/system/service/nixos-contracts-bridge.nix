@@ -6,14 +6,14 @@ in
   contracts = lib.mapAttrs (contractType: _: {
     want = lib.mkMerge (
       portable-lib.flattenMapServicesConfigToList (
-        _: service: lib.toList (service.contractRequests.${contractType} or { })
+        _: service: lib.toList (service.contract.requests.${contractType} or { })
       ) [ ] config.system
     );
     providers = lib.mkMerge (
       portable-lib.flattenMapServicesConfigToList (
         loc: service:
-          lib.optional (loc != [ ] && service.contractProviders ? ${contractType})
-            { ${lib.last loc} = service.contractProviders.${contractType}; }
+          lib.optional (loc != [ ] && service.contract.providers ? ${contractType})
+            { ${lib.last loc} = service.contract.providers.${contractType}; }
       ) [ ] config.system
     );
   }) config.contractTypes;

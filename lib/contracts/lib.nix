@@ -16,11 +16,11 @@ let
   /**
     Generate contract requests for a service instance.
 
-    This creates the `contractRequests` configuration for a service module,
+    This creates the `contract.requests` configuration for a service module,
     automatically registering all contract options under the service and instance name.
 
     ```nix
-    contractRequests = lib.contract.mkRequests "myService" name contractOptions config;
+    contract.requests = lib.contract.mkRequests "myService" name contractOptions config;
     ```
 
     # Inputs
