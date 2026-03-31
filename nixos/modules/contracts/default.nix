@@ -84,34 +84,32 @@ in
                       };
                     }
                   ${"'"}';
-                  type = lib.types.attrsOf (
-                    lib.types.attrsOf (
-                      lib.types.submodule (
-                        { ... }:
-                        {
-                          options = {
-                            request = lib.mkOption {
-                              description = "Request of the `${contractName}` instance.";
-                              type = extend.request {
-                                # "<attr>".default = ...;
-                              };
+                  type = lib.types.nestedAttrsOf (
+                    lib.types.submodule (
+                      { ... }:
+                      {
+                        options = {
+                          request = lib.mkOption {
+                            description = "Request of the `${contractName}` instance.";
+                            type = extend.request {
+                              # "<attr>".default = ...;
                             };
-                            result = lib.mkOption {
-                              description = "Result of the `${contractName}` instance.";
-                              type = extend.result {
-                                # "<attr>".default = ...;
-                              };
-                            };
-                            # provider-specific options:
-                            # "<opt>" = lib.mkOption {
-                            #   type = lib.types."<type>";
-                            #   description = ${"'"}'
-                            #     A provider-specific option.
-                            #   ${"'"}';
-                            # };
                           };
-                        }
-                      )
+                          result = lib.mkOption {
+                            description = "Result of the `${contractName}` instance.";
+                            type = extend.result {
+                              # "<attr>".default = ...;
+                            };
+                          };
+                          # provider-specific options:
+                          # "<opt>" = lib.mkOption {
+                          #   type = lib.types."<type>";
+                          #   description = ${"'"}'
+                          #     A provider-specific option.
+                          #   ${"'"}';
+                          # };
+                        };
+                      }
                     )
                   );
                 };
