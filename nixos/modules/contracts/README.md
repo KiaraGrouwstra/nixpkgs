@@ -55,6 +55,8 @@
     - seem already handled with secrets?
   - [ ] [services consuming contracts they also provide for]()
     - could this still work now that I make it error on missing `defaultProvider`?
+    - such services might be part of a hierarchy, e.g. file secrets (secret managers), tls certs (nginx, CA)
+    - self-referential case itself probably not real
   - [ ] [contracts combining multiple existing contracts](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-4063155555)
   - [ ] breaking changes to contract interfaces - could `mkAliasOptionModule` work with this weird `lib` / `config` dichotomy?
   - [ ] gracefully handling changes to contract names (see above?)
