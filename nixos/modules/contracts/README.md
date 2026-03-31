@@ -45,7 +45,6 @@
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
 - make branches for any optional API changes to separate choices
-  - [ ] let contract test use nspawn containers
   - [ ] rm empty `default` values
   - [ ] wrap types with `interface`
   - [ ] split namespace into two layers to disambiguate contract instances between services
