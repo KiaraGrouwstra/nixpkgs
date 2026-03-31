@@ -868,6 +868,11 @@ checkConfigError 'not of type' config.foo.boo.bar ./extendSubmodule.nix
 # The increment provider returns request.value + 1, so 5 -> 6.
 checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.instance.value ./contracts-custom.nix
 
+# contracts: using a renamed contract name emits a deprecation warning in config.warnings
+checkConfigOutput 'oldName.*renamed.*newName' config.result ./contracts-contract-rename.nix
+# contracts: using a renamed contract name still produces the correct result
+checkConfigOutput '^6$' config.contracts.oldName.results.consumer.instance.value ./contracts-contract-rename.nix
+
 # contracts: using a renamed request option still forwards the value correctly
 checkConfigOutput '^6$' config.contracts.versioned.results.consumer.instance.value ./contracts-rename-warning.nix
 # contracts: using a renamed request option emits a deprecation warning on stderr
