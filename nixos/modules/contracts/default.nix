@@ -2,7 +2,6 @@
 let
   inherit (lib) mkOption types;
   inherit (types)
-    attrs
     attrsOf
     enum
     nestedAttrsOf
