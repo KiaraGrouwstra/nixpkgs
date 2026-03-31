@@ -45,7 +45,6 @@
 - make branches for any optional API changes to separate choices
   - [ ] rm empty `default` values
   - [ ] wrap types with `interface`
-  - [ ] split namespace into two layers to disambiguate contract instances between services
   - [ ] change `default`s for `services.stash` passwords to abstract out `output` links
   - [ ] add functionality to abstract out `input` links
 - add implementations or tests validating our approach with the various edge cases
