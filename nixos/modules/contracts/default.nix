@@ -284,6 +284,8 @@ in
                   ```
 
                   For an alternate way to set a default provider, consider `defaultProvider`.
+
+                  Note this options lacks `defaultProvider`'s graceful handling of contract renames.
                 '';
                 type = nullOr (enum (lib.attrNames contract.config.providers));
                 # default = null;

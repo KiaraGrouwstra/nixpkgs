@@ -59,7 +59,6 @@
     - self-referential case itself probably not real
   - [ ] [contracts combining multiple existing contracts](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-4063155555)
   - [ ] breaking changes to contract interfaces - could `mkAliasOptionModule` work with this weird `lib` / `config` dichotomy?
-  - [ ] gracefully handling changes to contract names (see above?)
   - UI generation for contract provider
     - [ ] pick default provider by e.g. `enum` of provider names
       - [ ] how to migrate such untyped serializable string values on contract name changes
