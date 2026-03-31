@@ -197,13 +197,32 @@ in
                   The helpers `lib.contract.mkRequests` and `lib.contract.mkResults` automatically
                   handle the wiring for all contract options listed in `contractOptions`.
 
-                  **Providers:**
+                  **Providers (regular NixOS module):**
 
-                  A provider module uses `contracts.${contractName}.requests` to grab
-                  the contract's request data (with `result`s filtered out):
+                  A plain NixOS module provider reads `contracts.${contractName}.requests`
+                  and sets `contracts.${contractName}.providers.<name>` directly:
 
                   ```nix
                   services."<provider>".${contractName} = config.contracts.${contractName}.requests;
+                  contracts.${contractName}.providers."<provider>" = config.services."<provider>".${contractName};
+                  ```
+
+                  **Providers (modular service):**
+
+                  A modular service provider reads `contracts.${contractName}.requests` from
+                  the `contracts` specialArg and sets `contract.providers.${contractName}`.
+                  `nixos-contracts-bridge` automatically wires it into
+                  `contracts.${contractName}.providers.<service>`:
+
+                  ```nix
+                  { lib, config, contracts ? { }, ... }:
+                  {
+                    _class = "service";
+                    config = {
+                      "<provider>".${contractName} = contracts.${contractName}.requests or { };
+                      contract.providers.${contractName} = config."<provider>".${contractName};
+                    };
+                  }
                   ```
                 '';
                 type = wantType;
@@ -229,10 +248,18 @@ in
                 description = ''
                   Where to find instances of a provider of the `${contractName}` contract that can take request inputs to return results.
 
-                  It is set in the provider:
+                  For a regular NixOS module provider, set it directly:
 
                   ```nix
                   contracts.${contractName}.providers."<provider>" = config.services."<provider>".${contractName};
+                  ```
+
+                  For a modular service provider, set `contract.providers.${contractName}` on the service instead;
+                  `nixos-contracts-bridge` will automatically register it here under the service's name:
+
+                  ```nix
+                  # in the service module:
+                  contract.providers.${contractName} = config."<provider>".${contractName};
                   ```
 
                   It may then be used where you configure the service consuming the `${contractName}` contract to manually set a provider:
