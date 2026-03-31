@@ -46,7 +46,7 @@ in
       dbInstanceModule = {
         options = {
           request = mkOption { type = extend.request { }; };
-          result  = mkOption { default = { }; type = extend.result { }; };
+          result  = mkOption { type = extend.result { }; };
         };
       };
 
@@ -61,7 +61,6 @@ in
           _class = "service";
 
           options.webapp.db = mkOption {
-            default = { };
             type = mkContract {
               request.name.default = "webapp_${name}";
             };
@@ -70,7 +69,7 @@ in
           config = {
             contract.requests = lib.contract.mkRequests "webapp" name contractOptions config;
 
-            webapp = { } // lib.contract.mkResults "webapp" name contractOptions contracts;
+            webapp = lib.contract.mkResults "webapp" name contractOptions contracts;
 
             # Write the received socket path to a file so the test script can
             # verify it without needing to know the path at test-script write time.
