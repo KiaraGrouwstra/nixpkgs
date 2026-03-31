@@ -165,95 +165,93 @@ in
     };
   };
 
-  config = let
-    contractOptions.fileSecrets = [ "dummySecret" ];
-  in {
-    contract.requests = lib.contract.mkRequests "ghostunnel" name contractOptions config;
+  config = lib.mkMerge [
+    (lib.contract.wire "ghostunnel" name contracts {
+      fileSecrets = { inherit (config.ghostunnel) dummySecret; };
+    })
 
-    assertions = [
-      {
-        message = ''
-          At least one access control flag is required.
-          Set at least one of:
-            - ${options.ghostunnel.disableAuthentication}
-            - ${options.ghostunnel.allowAll}
-            - ${options.ghostunnel.allowCN}
-            - ${options.ghostunnel.allowOU}
-            - ${options.ghostunnel.allowDNS}
-            - ${options.ghostunnel.allowURI}
-        '';
-        assertion =
-          cfg.disableAuthentication
-          || cfg.allowAll
-          || cfg.allowCN != [ ]
-          || cfg.allowOU != [ ]
-          || cfg.allowDNS != [ ]
-          || cfg.allowURI != [ ];
-      }
-    ];
+    {
+      assertions = [
+        {
+          message = ''
+            At least one access control flag is required.
+            Set at least one of:
+              - ${options.ghostunnel.disableAuthentication}
+              - ${options.ghostunnel.allowAll}
+              - ${options.ghostunnel.allowCN}
+              - ${options.ghostunnel.allowOU}
+              - ${options.ghostunnel.allowDNS}
+              - ${options.ghostunnel.allowURI}
+          '';
+          assertion =
+            cfg.disableAuthentication
+            || cfg.allowAll
+            || cfg.allowCN != [ ]
+            || cfg.allowOU != [ ]
+            || cfg.allowDNS != [ ]
+            || cfg.allowURI != [ ];
+        }
+      ];
 
-    ghostunnel = {
       # Clients should not be authenticated with the public root certificates
       # (afaict, it doesn't make sense), so we only provide that default when
       # client cert auth is disabled.
-      cacert = mkIf cfg.disableAuthentication (mkDefault null);
+      ghostunnel.cacert = mkIf cfg.disableAuthentication (mkDefault null);
+
+      # TODO assertions
+
+      process.argv =
+        [
+          (getExe cfg.package)
+          "server"
+          "--listen"
+          cfg.listen
+          "--target"
+          cfg.target
+        ]
+        ++ optional cfg.allowAll "--allow-all"
+        ++ map (v: "--allow-cn=${v}") cfg.allowCN
+        ++ map (v: "--allow-ou=${v}") cfg.allowOU
+        ++ map (v: "--allow-dns=${v}") cfg.allowDNS
+        ++ map (v: "--allow-uri=${v}") cfg.allowURI
+        ++ optional cfg.disableAuthentication "--disable-authentication"
+        ++ optional cfg.unsafeTarget "--unsafe-target"
+        ++ cfg.extraArguments;
     }
-    # Automatically inject contract results
-    // lib.contract.mkResults "ghostunnel" name contractOptions contracts;
 
-    # TODO assertions
+    # Refine the service for systemd
+    (lib.optionalAttrs (options ? systemd) (
+      let
+        # Build credential flags with systemd variable substitution
+        credentialFlags = concatStringsSep " " (
+          optional (cfg.keystore != null) "--keystore=\${CREDENTIALS_DIRECTORY}/keystore"
+          ++ optional (cfg.cert != null) "--cert=\${CREDENTIALS_DIRECTORY}/cert"
+          ++ optional (cfg.key != null) "--key=\${CREDENTIALS_DIRECTORY}/key"
+          ++ optional (cfg.cacert != null) "--cacert=\${CREDENTIALS_DIRECTORY}/cacert"
+        );
+      in
+      {
+        # Use mainExecStart to add credential flags with systemd variable substitution
+        systemd.mainExecStart =
+          config.systemd.lib.escapeSystemdExecArgs config.process.argv
+          + lib.optionalString (credentialFlags != "") " ${credentialFlags}";
 
-    process = {
-      argv = [
-        (getExe cfg.package)
-        "server"
-        "--listen"
-        cfg.listen
-        "--target"
-        cfg.target
-      ]
-      ++ optional cfg.allowAll "--allow-all"
-      ++ map (v: "--allow-cn=${v}") cfg.allowCN
-      ++ map (v: "--allow-ou=${v}") cfg.allowOU
-      ++ map (v: "--allow-dns=${v}") cfg.allowDNS
-      ++ map (v: "--allow-uri=${v}") cfg.allowURI
-      ++ optional cfg.disableAuthentication "--disable-authentication"
-      ++ optional cfg.unsafeTarget "--unsafe-target"
-      ++ cfg.extraArguments;
-    };
-  }
-  # Refine the service for systemd
-  // lib.optionalAttrs (options ? systemd) (
-    let
-      # Build credential flags with systemd variable substitution
-      credentialFlags = concatStringsSep " " (
-        optional (cfg.keystore != null) "--keystore=\${CREDENTIALS_DIRECTORY}/keystore"
-        ++ optional (cfg.cert != null) "--cert=\${CREDENTIALS_DIRECTORY}/cert"
-        ++ optional (cfg.key != null) "--key=\${CREDENTIALS_DIRECTORY}/key"
-        ++ optional (cfg.cacert != null) "--cacert=\${CREDENTIALS_DIRECTORY}/cacert"
-      );
-    in
-    {
-      # Use mainExecStart to add credential flags with systemd variable substitution
-      systemd.mainExecStart =
-        config.systemd.lib.escapeSystemdExecArgs config.process.argv
-        + lib.optionalString (credentialFlags != "") " ${credentialFlags}";
-
-      systemd.service = {
-        after = [ "network.target" ];
-        wants = [ "network.target" ];
-        wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          Restart = "always";
-          AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
-          DynamicUser = true;
-          LoadCredential =
-            optional (cfg.keystore != null) "keystore:${cfg.keystore}"
-            ++ optional (cfg.cert != null) "cert:${cfg.cert}"
-            ++ optional (cfg.key != null) "key:${cfg.key}"
-            ++ optional (cfg.cacert != null) "cacert:${cfg.cacert}";
+        systemd.service = {
+          after = [ "network.target" ];
+          wants = [ "network.target" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Restart = "always";
+            AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
+            DynamicUser = true;
+            LoadCredential =
+              optional (cfg.keystore != null) "keystore:${cfg.keystore}"
+              ++ optional (cfg.cert != null) "cert:${cfg.cert}"
+              ++ optional (cfg.key != null) "key:${cfg.key}"
+              ++ optional (cfg.cacert != null) "cacert:${cfg.cacert}";
+          };
         };
-      };
-    }
-  );
+      }
+    ))
+  ];
 }

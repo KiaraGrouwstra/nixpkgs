@@ -165,43 +165,31 @@ in
 
                   **Modular Services:**
 
-                  If the consumer is a [modular service](#modular-services), use `contract.requests`
-                  and the helper functions from `lib.contract`:
+                  If the consumer is a [modular service](#modular-services), use `lib.contract.wire`:
 
                   ```nix
-                  {
-                    lib,
-                    config,
-                    contracts ? { },
-                    ...
-                  }:
-                  let
-                    cfg = config."<consumer>";
-                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
-                  in
+                  { lib, config, contracts ? { }, name, ... }:
                   {
                     # Define contract option in your service options
-                    options."<consumer>" = {
-                      "<request>" = lib.mkOption {
-                        description = "...";
-                        type = lib.contracts.${contractName}.mkContract {
-                          request = {
-                            # "<attr>".default = ...;
-                          };
+                    options."<consumer>"."<request>" = lib.mkOption {
+                      description = "...";
+                      type = lib.contracts.${contractName}.mkContract {
+                        request = {
+                          # "<attr>".default = ...;
                         };
                       };
                     };
 
-                    config = {
-                      contract.requests = lib.contract.mkRequests "<consumer>" name contractOptions config;
-                      "<consumer>" = { }
-                        // lib.contract.mkResults "<consumer>" name contractOptions contracts;
-                    };
+                    config = lib.mkMerge [
+                      (lib.contract.wire "<consumer>" name contracts {
+                        ${contractName} = { inherit (config."<consumer>") "<request>"; };
+                      })
+                      {
+                        # other config …
+                      }
+                    ];
                   }
                   ```
-
-                  The helpers `lib.contract.mkRequests` and `lib.contract.mkResults` automatically
-                  handle the wiring for all contract options listed in `contractOptions`.
 
                   **Providers (regular NixOS module):**
 
@@ -381,35 +369,20 @@ in
                   **Modular Services:**
 
                   In [modular services](#modular-services), `config.contracts` is not available.
-                  Instead, access the `contracts` specialArg from the service module parameters:
+                  Instead, access the `contracts` specialArg from the service module parameters.
+                  Use `lib.contract.wire` to register requests and inject results in one call:
 
                   ```nix
+                  { lib, config, contracts ? { }, name, ... }:
                   {
-                    lib,
-                    config,
-                    options,
-                    contracts ? { },
-                    ...
-                  }:
-                  ```
-
-                  Use the `lib.contract.mkResults` helper to automatically inject contract
-                  results into your service options:
-
-                  ```nix
-                  let
-                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
-                  in
-                  {
-                    config = {
-                      "<service>" = { }
-                        // lib.contract.mkResults "<service>" name contractOptions contracts;
-                    };
+                    config = lib.mkMerge [
+                      (lib.contract.wire "<service>" name contracts {
+                        ${contractName} = { inherit (config."<service>") "<request>"; };
+                      })
+                      { # other config … }
+                    ];
                   }
                   ```
-
-                  The helper will automatically populate the `result` attribute of each
-                  contract option from the fulfilled contract instances.
 
                   Content in `contracts` is structured like `."<service>"."<instance">.{ request; result; }`.
                   Definition located at the provider's option navigated to according to
@@ -471,19 +444,8 @@ in
                   **Modular Services:**
 
                   In [modular services](#modular-services), `config.contracts` is not available.
-                  Instead, we access `results` through the `lib.contract.mkResults` helper:
-
-                  ```nix
-                  let
-                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
-                  in
-                  {
-                    config = {
-                      "<service>" = { }
-                        // lib.contract.mkResults "<service>" contractOptions contracts;
-                    };
-                  }
-                  ```
+                  Results are injected automatically by `lib.contract.wire`; see
+                  `contracts.${contractName}.instances` for usage.
                 '';
                 type = nestedAttrsOf raw;
                 default = lib.mapNestedAttrs' wantType

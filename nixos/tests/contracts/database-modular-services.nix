@@ -51,12 +51,8 @@ in
       };
 
       # Consumer: a webapp that needs one database.
-      # Uses mkRequests / mkResults for automatic contract wiring.
       webappModule =
         { lib, config, name, contracts ? { }, ... }:
-        let
-          contractOptions.database = [ "db" ];
-        in
         {
           _class = "service";
 
@@ -66,28 +62,29 @@ in
             };
           };
 
-          config = {
-            contract.requests = lib.contract.mkRequests "webapp" name contractOptions config;
+          config = lib.mkMerge [
+            (lib.contract.wire "webapp" name contracts {
+              database.db = config.webapp.db;
+            })
+            {
+              # Write the received socket path to a file so the test script can
+              # verify it without needing to know the path at test-script write time.
+              process.argv = [
+                "${pkgs.bash}/bin/sh"
+                "-c"
+                "echo ${lib.escapeShellArg config.webapp.db.result.socketPath} > /tmp/webapp-socket-path"
+              ];
 
-            webapp = lib.contract.mkResults "webapp" name contractOptions contracts;
-
-            # Write the received socket path to a file so the test script can
-            # verify it without needing to know the path at test-script write time.
-            process.argv = [
-              "${pkgs.bash}/bin/sh"
-              "-c"
-              "echo ${lib.escapeShellArg config.webapp.db.result.socketPath} > /tmp/webapp-socket-path"
-            ];
-
-            systemd.service = {
-              wantedBy   = [ "multi-user.target" ];
-              after      = [ "fakedb.service" ];
-              requires   = [ "fakedb.service" ];
-              serviceConfig.Type = "oneshot";
-              serviceConfig.RemainAfterExit = true;
-              serviceConfig.Restart = lib.mkForce "no";
-            };
-          };
+              systemd.service = {
+                wantedBy = [ "multi-user.target" ];
+                after = [ "fakedb.service" ];
+                requires = [ "fakedb.service" ];
+                serviceConfig.Type = "oneshot";
+                serviceConfig.RemainAfterExit = true;
+                serviceConfig.Restart = lib.mkForce "no";
+              };
+            }
+          ];
         };
 
       # Provider: a fake database that assigns a UNIX socket path to every

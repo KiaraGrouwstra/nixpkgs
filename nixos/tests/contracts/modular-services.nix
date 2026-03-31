@@ -1,6 +1,6 @@
 # Tests contracts where both the consumer and provider are modular services.
 #
-# - A consumer modular service declares a request using `mkRequests`.
+# - A consumer modular service uses `lib.contract.wire` to register requests and inject results.
 # - `nixos-contracts-bridge` automatically wires `contract.requests` → `contracts.<type>.want`.
 # - A provider modular service reads `contracts.arithmetic.requests` via the `contracts` specialArg
 #   and computes results (here: `request.value + 1`).
@@ -26,29 +26,31 @@
       };
 
       # Consumer service module.
-      # Uses `mkRequests` to register contract requests;
+      # Uses `lib.contract.wire` to register requests and inject results;
       # `nixos-contracts-bridge` collects these into `contracts.arithmetic.want` automatically.
       consumerModule =
         {
           lib,
           config,
           name,
+          contracts ? { },
           ...
         }:
-        let
-          contractOptions.arithmetic = [ "operation" ];
-        in
         {
           _class = "service";
           options.consumer.operation = mkOption {
             default = { };
             type = types.submodule arithmeticInstanceModule;
           };
-          config = {
-            consumer.operation.request.value = 5;
-            contract.requests = lib.contract.mkRequests "consumer" name contractOptions config;
-            process.argv = [ "${pkgs.coreutils}/bin/true" ];
-          };
+          config = lib.mkMerge [
+            (lib.contract.wire "consumer" name contracts {
+              arithmetic.operation = config.consumer.operation;
+            })
+            {
+              consumer.operation.request.value = 5;
+              process.argv = [ "${pkgs.coreutils}/bin/true" ];
+            }
+          ];
         };
 
       # Increment contract provider implemented as a modular service.

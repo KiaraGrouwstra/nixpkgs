@@ -15,14 +15,11 @@ let
 in
 let
   /**
-    Generate contract requests for a service instance.
+    Wire contract requests and result injection for a modular service consumer.
 
-    This creates the `contract.requests` configuration for a service module,
-    automatically registering all contract options under the service and instance name.
+    Returns a config attrset suitable for use with `lib.mkMerge`.
 
-    ```nix
-    contract.requests = lib.contract.mkRequests "myService" name contractOptions config;
-    ```
+    lib.contract.wire :: String -> String -> Attrs -> AttrsOf (AttrsOf Attrs) -> Attrs
 
     # Inputs
 
@@ -32,75 +29,45 @@ let
 
     `instanceName`
 
-    : 2\. Name of this specific service instance (e.g., the `name` module arg)
-
-    `contractOptions`
-
-    : 3\. Attribute set mapping contract types to option names, e.g., `{ fileSecrets = [ "secret1" "secret2" ]; }`
-
-    `serviceConfig`
-
-    : 4\. The service's config attribute set (usually `config`)
-
-    # Type
-
-    ```
-    lib.contract.mkRequests :: String -> String -> AttrsOf (ListOf String) -> Attrs -> AttrsOf (NestedAttrsOf Attrs)
-    ```
-  */
-  mkRequests =
-    serviceName: instanceName: contractOptions: serviceConfig:
-    lib.mapAttrs (_: optionNames: {
-      ${serviceName}.${instanceName} = lib.genAttrs optionNames (
-        name: serviceConfig.${serviceName}.${name}
-      );
-    }) contractOptions;
-
-  /**
-    Generate contract result injections for a service instance.
-
-    This creates configuration that automatically injects fulfilled contract
-    results into the service's options.
-
-    ```nix
-    myService = { }
-      // lib.contract.mkResults "myService" name contractOptions contracts;
-    ```
-
-    # Inputs
-
-    `serviceName`
-
-    : 1\. Name of the service type (e.g., `"ghostunnel"`)
-
-    `instanceName`
-
-    : 2\. Name of this specific service instance (e.g., the `name` module arg)
-
-    `contractOptions`
-
-    : 3\. Attribute set mapping contract types to option names, e.g., `{ fileSecrets = [ "secret1" "secret2" ]; }`
+    : 2\. Name of this specific service instance (the `name` module arg)
 
     `contracts`
 
-    : 4\. The contracts attribute set (from specialArgs)
+    : 3\. The contracts attribute set (from specialArgs)
 
-    # Type
+    `contractAttrs`
 
-    ```
-    lib.contract.mkResults :: String -> String -> AttrsOf (ListOf String) -> Attrs -> Attrs
+    : 4\. Attribute set mapping contract types to `{ optionName = optionValue; }` pairs,
+      e.g., `{ fileSecrets = { inherit (config.ghostunnel) dummySecret; }; }`
+
+    # Example
+
+    ```nix
+    config = lib.mkMerge [
+      (lib.contract.wire "ghostunnel" name contracts {
+        fileSecrets = { inherit (config.ghostunnel) dummySecret; };
+      })
+      {
+        ghostunnel.otherOption = "foo";
+      }
+    ];
     ```
   */
-  mkResults =
-    serviceName: instanceName: contractOptions: contracts:
-    lib.mkMerge (
-      lib.mapAttrsToList (
-        contractType: optionNames:
-        lib.genAttrs optionNames (name: {
-          result = lib.attrByPath [ contractType "results" serviceName instanceName name ] { } contracts;
-        })
-      ) contractOptions
-    );
+  wire =
+    serviceName: instanceName: contracts: contractAttrs:
+    {
+      contract.requests = lib.mapAttrs (contractType: optionAttrs: {
+        ${serviceName}.${instanceName} = optionAttrs;
+      }) contractAttrs;
+
+      ${serviceName} = lib.foldlAttrs (
+        acc: contractType: optionAttrs:
+        acc
+        // lib.mapAttrs (optionName: _: {
+          result = lib.attrByPath [ contractType "results" serviceName instanceName optionName ] { } contracts;
+        }) optionAttrs
+      ) { } contractAttrs;
+    };
 
   /**
     Evaluate a configuration in the context of a corresponding module system option.
@@ -445,8 +412,7 @@ let
 in
 {
   inherit
-    mkRequests
-    mkResults
+    wire
     evalOption
     extendOption
     extendSubmodule
