@@ -135,6 +135,29 @@ checkExpression() {
   }
 }
 
+checkConfigWarning() {
+    local warningContains=$1
+    local err=""
+    shift
+    if ! err="$(evalConfig "$@" 2>&1 >/dev/null)"; then
+        logStartFailure
+        echo "ACTUAL: non-zero exit code, stderr:"
+        echo "$err"
+        echo "EXPECTED: exit code 0 with warning matching '$warningContains'"
+        logFailure
+        logEndFailure
+    elif echo "$err" | grep -E --silent "$warningContains" ; then
+        ((++pass))
+    else
+        logStartFailure
+        echo "ACTUAL stderr:"
+        echo "$err"
+        echo "EXPECTED: warning matching '$warningContains'"
+        logFailure
+        logEndFailure
+    fi
+}
+
 checkConfigError() {
     local errorContains=$1
     local err=""
