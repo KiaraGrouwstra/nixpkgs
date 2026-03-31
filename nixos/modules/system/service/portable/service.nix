@@ -51,7 +51,7 @@ in
       };
     };
     contractRequests = lib.mkOption {
-      type = types.attrsOf (types.attrsOf (types.attrsOf types.attrs));
+      type = types.attrsOf (types.nestedAttrsOf types.raw);
       description = ''
         Contract requests made by this service.
         Organized by contract type (e.g., `fileSecrets`).

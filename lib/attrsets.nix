@@ -2246,15 +2246,151 @@ rec {
     in
     (x // y) // mask;
 
-  mapNestedType =
+  /**
+    Determine whether a value is a leaf node when traversing a `nestedAttrsOf elemType` structure.
+
+    `isNestedAttrsLeaf :: ((String -> Bool) -> [String] -> Bool) -> OptionType -> Any -> Bool`
+
+    For scalar element types (e.g. `int`, `str`), uses the type's `.check`.
+    For submodule types, given their native type check works only after merge,
+    instead check key presence, controlled by `predicate` (`lib.any` or `lib.all`)
+    depending on whether the element submodule should allow additional keys.
+
+    # Inputs
+
+    `predicate`
+
+    : 1\. A predicate combinator: `lib.any` treats a value as a leaf if *any* key matches a declared option; `lib.all` requires *all* keys to match
+
+    `elemType`
+
+    : 2\. The element option type of the `nestedAttrsOf` structure
+
+    `v`
+
+    : 3\. The value to test
+
+    # Example
+
+    ```nix
+    let
+      elementType = types.submodule { options.result = mkOption { type = types.int; }; };
+    in
+      isNestedAttrsLeaf lib.any elementType { result = 1; }
+      # => true
+      isNestedAttrsLeaf lib.any elementType { a.b = { result = 1; }; }
+      # => false (intermediate attrset, no key matches "result")
+    ```
+  */
+  isNestedAttrsLeaf =
+    predicate: elemType: v:
+    let
+      # Top-level option names of the element type, used to detect leaves.
+      # Mirrors the heuristic in `nestedAttrsOf.merge`.
+      elemOptAttrs = elemType.getSubOptions [ ];
+    in
+    if elemOptAttrs == { } then
+      elemType.check v
+    else
+      lib.isAttrs v && predicate (k: elemOptAttrs ? ${k}) (lib.attrNames v);
+
+  /**
+    Map a function over all leaves in a `nestedAttrsOf` structure.
+
+    `mapNestedAttrsWith :: ((String -> Bool) -> [String] -> Bool) -> nestedAttrsOf a -> (a -> b) -> nestedAttrsOf a -> nestedAttrsOf b`
+
+    Traverses the nested attribute set recursively, applying `fn` only at leaf
+    values as determined by `isNestedAttrsLeaf predicate`. Intermediate attrset
+    nodes are preserved as-is in the output structure.
+
+    # Inputs
+
+    `predicate`
+
+    : 1\. Leaf-detection combinator: `lib.any` or `lib.all`
+
+    `type`
+
+    : 2\. A `nestedAttrsOf` option type whose element type identifies leaves
+
+    `fn`
+
+    : 3\. Function applied to each leaf value
+
+    `value`
+
+    : 4\. The nested attribute set (or leaf) to traverse
+
+    # Example
+
+    ```nix
+    mapNestedAttrsWith lib.any (types.nestedAttrsOf types.int) (x: x * 2) { a.b = 1; a.c = 3; d = 5; }
+    # => { a.b = 2; a.c = 6; d = 10; }
+    ```
+  */
+  mapNestedAttrsWith =
+    predicate:
     let
       recurse =
-        mapper: type: fn: value:
-        if type.check value then fn value else mapper (recurse mapper type fn) value;
+        type: fn: value:
+        if isNestedAttrsLeaf predicate type.nestedTypes.elemType value then
+          fn value
+        else
+          mapAttrs (_: recurse type fn) value;
     in
     recurse;
 
-  mapNestedAttrs = mapNestedType (fn: mapAttrs (_: fn));
+  /**
+    Like `concatMapNestedAttrs'`, but with a configurable leaf-detection predicate.
+
+    `concatMapNestedAttrsWith :: ((String -> Bool) -> [String] -> Bool) -> nestedAttrsOf elemType -> ([String] -> elemType -> AttrSet b) -> nestedAttrsOf elemType -> AttrSet b`
+
+    The `predicate` argument controls how submodule-typed leaves are detected from
+    intermediate namespace attrsets: pass `lib.any` (used by `concatMapNestedAttrs'`)
+    to treat a value as a leaf if *any* of its keys is a declared option of the element
+    type, or `lib.all` to require *all* keys to match.
+
+    # Inputs
+
+    `predicate`
+
+    : 1\. Leaf-detection combinator: `lib.any` or `lib.all`
+
+    `type`
+
+    : 2\. A `nestedAttrsOf` option type whose element type identifies leaves
+
+    `fn`
+
+    : 3\. Function called at each leaf: receives the path (list of strings) and leaf value, returns an attrset
+
+    `attrs`
+
+    : 4\. The nested attribute set to traverse
+
+    # Example
+
+    ```nix
+    concatMapNestedAttrsWith lib.all (nestedAttrsOf (submodule { options.result = mkOption { type = int; }; }))
+      (path: v: { ${concatStringsSep "." path} = v.result; })
+      { a.b = { result = 1; }; a.c = { result = 2; }; }
+    # => { "a.b" = 1; "a.c" = 2; }
+    ```
+  */
+  concatMapNestedAttrsWith =
+    predicate: type: fn:
+    let
+      recurse =
+        path: attrs:
+        lib.concatMapAttrs (
+          name: v:
+          if isNestedAttrsLeaf predicate type.nestedTypes.elemType v then
+            fn (path ++ [ name ]) v
+          else
+            recurse (path ++ [ name ]) v
+        ) attrs;
+    in
+    recurse [ ];
 
   /**
     Like `concatMapAttrs`, but recurses into nested attribute sets, calling `fn`
@@ -2268,7 +2404,7 @@ rec {
     cannot distinguish leaves from intermediate nodes) a value is treated as a leaf when
     all of its keys are declared options of the element type.
 
-    `concatMapNestedAttrs :: nestedAttrsOf elemType -> ([String] -> elemType -> AttrSet b) -> nestedAttrsOf elemType -> AttrSet b`
+    `concatMapNestedAttrs' :: nestedAttrsOf elemType -> ([String] -> elemType -> AttrSet b) -> nestedAttrsOf elemType -> AttrSet b`
 
     # Inputs
 
@@ -2287,35 +2423,11 @@ rec {
     # Example
 
     ```nix
-    concatMapNestedAttrs (nestedAttrsOf (submodule { options.result = mkOption { type = int; }; }))
+    concatMapNestedAttrs' (nestedAttrsOf (submodule { options.result = mkOption { type = int; }; }))
       (path: v: { ${concatStringsSep "." path} = v.result; })
       { a.b = { result = 1; }; a.c = { result = 2; }; }
     # => { "a.b" = 1; "a.c" = 2; }
     ```
   */
-  concatMapNestedAttrs =
-    type: fn:
-    let
-      elemType = type.nestedTypes.elemType;
-      # Top-level option names of the element type, used to detect leaves.
-      # Mirrors the heuristic in `nestedAttrsOf.merge`.
-      elemOptAttrs = elemType.getSubOptions [ ];
-      # For scalar types, `elemOptAttrs` is empty and `elemType.check`
-      # correctly distinguishes leaves from attrsets.  For submodule types
-      # (check = isAttrs), we use key-presence instead so intermediate namespace
-      # attrsets are not mistaken for leaves.
-      isLeaf =
-        v:
-        if elemOptAttrs == { } then
-          elemType.check v
-        else
-          lib.isAttrs v && lib.all (k: elemOptAttrs ? ${k}) (lib.attrNames v);
-      recurse =
-        path: attrs:
-        lib.concatMapAttrs (
-          name: v:
-          if isLeaf v then fn (path ++ [ name ]) v else recurse (path ++ [ name ]) v
-        ) attrs;
-    in
-    recurse [ ];
+  concatMapNestedAttrs' = concatMapNestedAttrsWith lib.any;
 }

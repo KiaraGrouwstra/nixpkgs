@@ -35,6 +35,24 @@ in
         contractName: contractType:
         let
           inherit (contractType) meta interface;
+          wantType = nestedAttrsOf (submodule {
+            options = {
+              request = mkOption {
+                description = ''
+                  The request parameters.
+                  Must match the `${contractName}` contract interface's request type.
+                '';
+                type = submodule { options = interface.request; };
+              };
+              result = mkOption {
+                description = ''
+                  Result returned to the request by the provider's side of the `${contractName}` contract.
+                  Must match the `${contractName}` contract interface's result type.
+                '';
+                type = submodule { options = interface.result; };
+              };
+            };
+          });
         in
         mkOption {
           description = ''
@@ -193,24 +211,7 @@ in
                   services."<provider>".${contractName} = config.contracts.${contractName}.requests;
                   ```
                 '';
-                type = nestedAttrsOf (submodule {
-                  options = {
-                    request = mkOption {
-                      description = ''
-                        The request parameters.
-                        Must match the `${contractName}` contract interface's request type.
-                      '';
-                      type = submodule { options = interface.request; };
-                    };
-                    result = mkOption {
-                      description = ''
-                        Result returned to the request by the provider's side of the `${contractName}` contract.
-                        Must match the `${contractName}` contract interface's result type.
-                      '';
-                      type = submodule { options = interface.result; };
-                    };
-                  };
-                });
+                type = wantType;
               };
               requests = mkOption {
                 description = ''
@@ -218,12 +219,14 @@ in
 
                   Providers read from this option to get consumer requests.
                 '';
-                type = attrsOf (attrsOf attrs);
-                default = lib.mapAttrs (_: lib.mapAttrs (_: lib.getAttrs [ "request" ])) contract.config.want;
+                type = nestedAttrsOf raw;
+                default = lib.concatMapNestedAttrs' wantType
+                  (path: v: lib.setAttrByPath path (lib.getAttrs [ "request" ] v))
+                  contract.config.want;
                 defaultText = ''
-                  lib.mapAttrs (
-                    _: lib.mapAttrs (_: lib.getAttrs [ "request" ])
-                  ) contract.config.want
+                  lib.concatMapNestedAttrs' wantType
+                    (path: v: lib.setAttrByPath path (lib.getAttrs [ "request" ] v))
+                    contract.config.want
                 '';
                 readOnly = true;
               };
@@ -295,7 +298,6 @@ in
                   config.contracts.fileSecrets.providers.hardcoded-secret
                 '';
               };
-              # FIXME figure out how to use these namespaces with modular services' multiple instantiations
               instances = mkOption {
                 description = ''
                   Instances of the `${contractName}` contract.
@@ -378,8 +380,7 @@ in
                   Definition located at the provider's option navigated to according to
                   `config.contracts.${contractName}.providers."<provider>"`.
                 '';
-                # `type = attrsOf (attrsOf interface);` breaks the docs build
-                type = attrsOf (attrsOf attrs);
+                type = nestedAttrsOf raw;
                 default =
                   let
                     provider = contract.config.defaultProvider;
@@ -449,12 +450,14 @@ in
                   }
                   ```
                 '';
-                type = attrsOf (attrsOf attrs);
-                default = lib.mapAttrs (_: lib.mapAttrs (_: v: v.result)) contract.config.instances;
+                type = nestedAttrsOf raw;
+                default = lib.concatMapNestedAttrs' wantType
+                  (path: v: lib.setAttrByPath path v.result)
+                  contract.config.instances;
                 defaultText = ''
-                  lib.mapAttrs (
-                    _: lib.mapAttrs (_: v: v.result)
-                  ) config.contracts.${contractName}.instances
+                  lib.concatMapNestedAttrs' wantType
+                    (path: v: lib.setAttrByPath path v.result)
+                    config.contracts.${contractName}.instances
                 '';
                 readOnly = true;
               };
