@@ -60,4 +60,3 @@
   - [ ] [contracts combining multiple existing contracts](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-4063155555)
   - UI generation for contract provider
     - [ ] reinstate providers' `options` reference (or just use path like `[ "testing" "hardcoded-secret" ]` again to obtain references to both the `config` and the `options` - tho this would distinguish the path from `.fileSecrets` used now) to know what options should be visualized to configure this provider
-  - merging options - should be fine, i think we should not have special needs here
