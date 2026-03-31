@@ -41,7 +41,6 @@
 
 - [ ] isolate provider rather than consumer
 - [ ] eliminate API differences for modular services
-- [ ] test contracts not part of `lib` with NixOS and modular services
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
 - make branches for any optional API changes to separate choices
@@ -51,7 +50,6 @@
   - [ ] change `default`s for `services.stash` passwords to abstract out `output` links
   - [ ] add functionality to abstract out `input` links
 - add implementations or tests validating our approach with the various edge cases
-  - e.g. create tests using a test contract `arithmetic` with a provider `increment` doing `+1` (this might not generate configuration, but that might be fine for the scope of such a test)
   - [ ] service providing multiple contracts (e.g. SHB's [`restic`](https://shb.skarabox.com/blocks-restic.html#blocks-restic-contract-provider) / [`borgbackup`](https://shb.skarabox.com/blocks-borgbackup.html#blocks-borgbackup-contract-provider) providing for both contracts [backup](https://shb.skarabox.com/contracts-backup.html) + [database backup](https://shb.skarabox.com/contracts-databasebackup.html))
   - use in modular services
     - [ ] simple test like using secrets in existing modular service
