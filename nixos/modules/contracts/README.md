@@ -48,8 +48,6 @@
   - [ ] change `default`s for `services.stash` passwords to abstract out `output` links
   - [ ] add functionality to abstract out `input` links
 - add implementations or tests validating our approach with the various edge cases
-  - use in modular services
-    - [ ] [coordinating across modular services to port to modular services existing nixos service modules spanning disparate systemd services](https://github.com/NixOS/nixpkgs/issues/490688)
   - [ ] use in Darwin/home-manager?
   - [ ] [side effects](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-3258197623)
     - seem already handled with secrets?
