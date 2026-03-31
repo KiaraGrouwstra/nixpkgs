@@ -81,6 +81,7 @@ let
     mapAttrs
     isNestedAttrsLeaf
     mapNestedAttrsWith
+    mapNestedAttrs'
     concatMapNestedAttrs'
     concatMapNestedAttrsWith
     mapAttrsToListRecursive
@@ -2165,7 +2166,7 @@ runTests {
     };
   };
 
-  # mapNestedAttrsWith: flat input (no nesting) — fn applied directly to each value
+  # mapNestedAttrsWith: flat input (no nesting) - fn applied directly to each value
   testMapNestedAttrsFlat = {
     expr = mapNestedAttrsWith lib.any (types.nestedAttrsOf types.int) (x: x * 2) {
       a = 1;
@@ -2177,7 +2178,7 @@ runTests {
     };
   };
 
-  # mapNestedAttrsWith: nested input — fn applied only at leaves, attrset nodes preserved
+  # mapNestedAttrsWith: nested input - fn applied only at leaves, attrset nodes preserved
   testMapNestedAttrsNested = {
     expr = mapNestedAttrsWith lib.any (types.nestedAttrsOf types.int) (x: x * 2) {
       a.b = 1;
@@ -2197,7 +2198,7 @@ runTests {
     expected = { };
   };
 
-  # concatMapNestedAttrs': flat input — fn receives single-element path and leaf value
+  # concatMapNestedAttrs': flat input - fn receives single-element path and leaf value
   testConcatMapNestedAttrsFlat = {
     expr =
       concatMapNestedAttrs' (types.nestedAttrsOf types.int)
@@ -2212,7 +2213,7 @@ runTests {
     };
   };
 
-  # concatMapNestedAttrs': nested input — fn receives full path list and leaf value, result is flat
+  # concatMapNestedAttrs': nested input - fn receives full path list and leaf value, result is flat
   testConcatMapNestedAttrsNested = {
     expr =
       concatMapNestedAttrs' (types.nestedAttrsOf types.int)
@@ -2237,19 +2238,19 @@ runTests {
     expected = { };
   };
 
-  # isNestedAttrsLeaf: scalar type — leaf detected by elemType.check
+  # isNestedAttrsLeaf: scalar type - leaf detected by elemType.check
   testIsNestedAttrsLeafScalar = {
     expr = isNestedAttrsLeaf lib.any types.int 42;
     expected = true;
   };
 
-  # isNestedAttrsLeaf: scalar type — non-leaf (attrset where int expected)
+  # isNestedAttrsLeaf: scalar type - non-leaf (attrset where int expected)
   testIsNestedAttrsLeafScalarNonLeaf = {
     expr = isNestedAttrsLeaf lib.any types.int { a = 1; };
     expected = false;
   };
 
-  # isNestedAttrsLeaf: submodule type with lib.any — leaf when any key matches declared option
+  # isNestedAttrsLeaf: submodule type with lib.any - leaf when any key matches declared option
   testIsNestedAttrsLeafSubmoduleAny = {
     expr =
       let
@@ -2262,7 +2263,7 @@ runTests {
     expected = true;
   };
 
-  # isNestedAttrsLeaf: submodule type with lib.all — non-leaf when not all keys match declared options
+  # isNestedAttrsLeaf: submodule type with lib.all - non-leaf when not all keys match declared options
   testIsNestedAttrsLeafSubmoduleAllFalse = {
     expr =
       let
@@ -2275,7 +2276,7 @@ runTests {
     expected = false;
   };
 
-  # isNestedAttrsLeaf: submodule type — intermediate attrset not a leaf (no keys match)
+  # isNestedAttrsLeaf: submodule type - intermediate attrset not a leaf (no keys match)
   testIsNestedAttrsLeafSubmoduleIntermediate = {
     expr =
       let
@@ -2287,7 +2288,7 @@ runTests {
     expected = false;
   };
 
-  # concatMapNestedAttrsWith: lib.all predicate — only detects leaves where all keys match declared options
+  # concatMapNestedAttrsWith: lib.all predicate - only detects leaves where all keys match declared options
   testConcatMapNestedAttrsWithAll = {
     expr =
       let
@@ -2307,7 +2308,7 @@ runTests {
     };
   };
 
-  # concatMapNestedAttrsWith: lib.any predicate — detects leaves even with extra keys alongside declared options
+  # concatMapNestedAttrsWith: lib.any predicate - detects leaves even with extra keys alongside declared options
   testConcatMapNestedAttrsWithAny = {
     expr =
       let
