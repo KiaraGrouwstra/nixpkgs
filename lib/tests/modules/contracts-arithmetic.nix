@@ -3,6 +3,8 @@
 #
 # The `arithmetic` contract has a request of one `int` and a result of one `int`.
 # The `increment` provider fulfills it by returning `request.value + 1`.
+# Note that this is a pure operation, making contracts overkill.
+# For a full-fledged contract test, see `nixos/tests/stash.nix`.
 { lib, config, ... }:
 let
   inherit (lib) mkOption types;
