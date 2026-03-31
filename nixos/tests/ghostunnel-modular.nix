@@ -20,7 +20,8 @@
           ../modules/testing/hardcoded-secret.nix
         ];
         contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
-        testing.hardcoded-secret.fileSecrets.ghostunnel.dummySecret.content = "dummy";
+        testing.hardcoded-secret.fileSecrets.ghostunnel.ghostunnel-plain-old.dummySecret.content = "dummy";
+        testing.hardcoded-secret.fileSecrets.ghostunnel.ghostunnel-client-cert.dummySecret.content = "dummy";
 
         system.services."ghostunnel-plain-old" = {
           imports = [ pkgs.ghostunnel.services.default ];
@@ -62,7 +63,7 @@
   testScript =
     { nodes, ... }:
     let
-      secret = nodes.service.contracts.fileSecrets.results.ghostunnel.dummySecret.path;
+      secret = nodes.service.contracts.fileSecrets.results.ghostunnel.ghostunnel-plain-old.dummySecret.path;
     in
     ''
 

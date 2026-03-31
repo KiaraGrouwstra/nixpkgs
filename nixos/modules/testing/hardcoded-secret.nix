@@ -61,6 +61,7 @@ in
                 options = {
                   request = mkOption {
                     description = "Request of the contract for file secrets.";
+                    default = { };
                     type = extend.request {
                       owner.default = "root";
                       group.default = "root";

@@ -14,79 +14,87 @@ let
 in
 let
   /**
-    Generate contract requests for a service.
+    Generate contract requests for a service instance.
 
     This creates the `contractRequests` configuration for a service module,
-    automatically registering all contract options.
+    automatically registering all contract options under the service and instance name.
 
     ```nix
-    contractRequests = lib.contract.mkRequests "myService" contractOptions config;
+    contractRequests = lib.contract.mkRequests "myService" name contractOptions config;
     ```
 
     # Inputs
 
     `serviceName`
 
-    : 1\. Name of the service (e.g., `"ghostunnel"`)
+    : 1\. Name of the service type (e.g., `"ghostunnel"`)
+
+    `instanceName`
+
+    : 2\. Name of this specific service instance (e.g., the `name` module arg)
 
     `contractOptions`
 
-    : 2\. Attribute set mapping contract types to option names, e.g., `{ fileSecrets = [ "secret1" "secret2" ]; }`
+    : 3\. Attribute set mapping contract types to option names, e.g., `{ fileSecrets = [ "secret1" "secret2" ]; }`
 
     `serviceConfig`
 
-    : 3\. The service's config attribute set (usually `config`)
+    : 4\. The service's config attribute set (usually `config`)
 
     # Type
 
     ```
-    lib.contract.mkRequests :: String -> AttrsOf (ListOf String) -> Attrs -> AttrsOf (AttrsOf (AttrsOf Attrs))
+    lib.contract.mkRequests :: String -> String -> AttrsOf (ListOf String) -> Attrs -> AttrsOf (NestedAttrsOf Attrs)
     ```
   */
   mkRequests =
-    serviceName: contractOptions: serviceConfig:
+    serviceName: instanceName: contractOptions: serviceConfig:
     lib.mapAttrs (_: optionNames: {
-      ${serviceName} = lib.genAttrs optionNames (name: serviceConfig.${serviceName}.${name});
+      ${serviceName}.${instanceName} = lib.genAttrs optionNames (name: serviceConfig.${serviceName}.${name});
     }) contractOptions;
 
   /**
-    Generate contract result injections for a service.
+    Generate contract result injections for a service instance.
 
     This creates configuration that automatically injects fulfilled contract
     results into the service's options.
 
     ```nix
     myService = { }
-      // lib.contract.mkResults "myService" contractOptions contracts;
+      // lib.contract.mkResults "myService" name contractOptions contracts;
     ```
 
     # Inputs
 
     `serviceName`
 
-    : 1\. Name of the service (e.g., `"ghostunnel"`)
+    : 1\. Name of the service type (e.g., `"ghostunnel"`)
+
+    `instanceName`
+
+    : 2\. Name of this specific service instance (e.g., the `name` module arg)
 
     `contractOptions`
 
-    : 2\. Attribute set mapping contract types to option names, e.g., `{ fileSecrets = [ "secret1" "secret2" ]; }`
+    : 3\. Attribute set mapping contract types to option names, e.g., `{ fileSecrets = [ "secret1" "secret2" ]; }`
 
     `contracts`
 
-    : 3\. The contracts attribute set (from specialArgs)
+    : 4\. The contracts attribute set (from specialArgs)
 
     # Type
 
     ```
-    lib.contract.mkResults :: String -> AttrsOf (ListOf String) -> Attrs -> Attrs
+    lib.contract.mkResults :: String -> String -> AttrsOf (ListOf String) -> Attrs -> Attrs
     ```
   */
   mkResults =
-    serviceName: contractOptions: contracts:
+    serviceName: instanceName: contractOptions: contracts:
     lib.mkMerge (
       lib.mapAttrsToList (
         contractType: optionNames:
         lib.genAttrs optionNames (name: {
-          result = lib.attrByPath [ contractType "results" serviceName name ] { } contracts;
+          result = lib.attrByPath [ contractType "results" serviceName instanceName name ] { } contracts;
         })
       ) contractOptions
     );

@@ -6,6 +6,7 @@
   lib,
   config,
   options,
+  name,
   contracts ? { },
   ...
 }:
@@ -167,7 +168,7 @@ in
   config = let
     contractOptions.fileSecrets = [ "dummySecret" ];
   in {
-    contractRequests = lib.contract.mkRequests "ghostunnel" contractOptions config;
+    contractRequests = lib.contract.mkRequests "ghostunnel" name contractOptions config;
 
     assertions = [
       {
@@ -198,7 +199,7 @@ in
       cacert = mkIf cfg.disableAuthentication (mkDefault null);
     }
     # Automatically inject contract results
-    // lib.contract.mkResults "ghostunnel" contractOptions contracts;
+    // lib.contract.mkResults "ghostunnel" name contractOptions contracts;
 
     # TODO assertions
 

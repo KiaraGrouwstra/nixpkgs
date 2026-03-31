@@ -56,7 +56,6 @@
   - [ ] service providing multiple contracts (e.g. SHB's [`restic`](https://shb.skarabox.com/blocks-restic.html#blocks-restic-contract-provider) / [`borgbackup`](https://shb.skarabox.com/blocks-borgbackup.html#blocks-borgbackup-contract-provider) providing for both contracts [backup](https://shb.skarabox.com/contracts-backup.html) + [database backup](https://shb.skarabox.com/contracts-databasebackup.html))
   - use in modular services
     - [ ] simple test like using secrets in existing modular service
-    - [ ] [modular service with multiple instantiations consuming contracts](https://github.com/NixOS/nixpkgs/issues/428084#issuecomment-3904908631)
     - [ ] [coordinating across modular services to port to modular services existing nixos service modules spanning disparate systemd services](https://github.com/NixOS/nixpkgs/issues/490688)
   - [ ] use in Darwin/home-manager?
   - [ ] [side effects](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-3258197623)

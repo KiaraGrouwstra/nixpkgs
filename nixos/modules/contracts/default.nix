@@ -192,9 +192,9 @@ in
                     };
 
                     config = {
-                      contractRequests = lib.contract.mkRequests "<consumer>" contractOptions config;
+                      contractRequests = lib.contract.mkRequests "<consumer>" name contractOptions config;
                       "<consumer>" = { }
-                        // lib.contract.mkResults "<consumer>" contractOptions contracts;
+                        // lib.contract.mkResults "<consumer>" name contractOptions contracts;
                     };
                   }
                   ```
@@ -368,7 +368,7 @@ in
                   {
                     config = {
                       "<service>" = { }
-                        // lib.contract.mkResults "<service>" contractOptions contracts;
+                        // lib.contract.mkResults "<service>" name contractOptions contracts;
                     };
                   }
                   ```
