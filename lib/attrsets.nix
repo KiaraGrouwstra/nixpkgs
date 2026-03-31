@@ -2341,6 +2341,40 @@ rec {
     recurse;
 
   /**
+    Map a function over all leaves in a `nestedAttrsOf` structure, preserving the structure.
+
+    `mapNestedAttrs' :: nestedAttrsOf a -> (a -> b) -> nestedAttrsOf a -> nestedAttrsOf b`
+
+    Traverses the nested attribute set recursively,
+    applying `fn` only at leaf values.
+    Intermediate attrset nodes are preserved as-is.
+    For submodule element types allowing additional keys,
+    while presuming no key of the nestred attrset structure is contained in the element submodule type.
+
+    # Inputs
+
+    `type`
+
+    : 1\. A `nestedAttrsOf` option type whose element type identifies leaves
+
+    `fn`
+
+    : 2\. Function applied to each leaf value; result replaces the leaf in the output
+
+    `value`
+
+    : 3\. The nested attribute set to traverse
+
+    # Example
+
+    ```nix
+    mapNestedAttrs' (types.nestedAttrsOf types.int) (x: x * 2) { a.b = 1; a.c = 3; d = 5; }
+    # => { a.b = 2; a.c = 6; d = 10; }
+    ```
+  */
+  mapNestedAttrs' = mapNestedAttrsWith lib.any;
+
+  /**
     Like `concatMapNestedAttrs'`, but with a configurable leaf-detection predicate.
 
     `concatMapNestedAttrsWith :: ((String -> Bool) -> [String] -> Bool) -> nestedAttrsOf elemType -> ([String] -> elemType -> AttrSet b) -> nestedAttrsOf elemType -> AttrSet b`

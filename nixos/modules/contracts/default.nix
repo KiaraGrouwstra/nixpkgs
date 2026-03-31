@@ -220,12 +220,12 @@ in
                   Providers read from this option to get consumer requests.
                 '';
                 type = nestedAttrsOf raw;
-                default = lib.concatMapNestedAttrs' wantType
-                  (path: v: lib.setAttrByPath path (lib.getAttrs [ "request" ] v))
+                default = lib.mapNestedAttrs' wantType
+                  (v: lib.getAttrs [ "request" ] v)
                   contract.config.want;
                 defaultText = ''
-                  lib.concatMapNestedAttrs' wantType
-                    (path: v: lib.setAttrByPath path (lib.getAttrs [ "request" ] v))
+                  lib.mapNestedAttrs' wantType
+                    (v: lib.getAttrs [ "request" ] v)
                     contract.config.want
                 '';
                 readOnly = true;
@@ -451,12 +451,12 @@ in
                   ```
                 '';
                 type = nestedAttrsOf raw;
-                default = lib.concatMapNestedAttrs' wantType
-                  (path: v: lib.setAttrByPath path v.result)
+                default = lib.mapNestedAttrs' wantType
+                  (v: v.result)
                   contract.config.instances;
                 defaultText = ''
-                  lib.concatMapNestedAttrs' wantType
-                    (path: v: lib.setAttrByPath path v.result)
+                  lib.mapNestedAttrs' wantType
+                    (v: v.result)
                     config.contracts.${contractName}.instances
                 '';
                 readOnly = true;

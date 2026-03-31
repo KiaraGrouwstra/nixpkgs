@@ -2198,6 +2198,32 @@ runTests {
     expected = { };
   };
 
+  # mapNestedAttrs': flat input - equivalent to mapNestedAttrsWith lib.any
+  testMapNestedAttrsFlat' = {
+    expr = mapNestedAttrs' (types.nestedAttrsOf types.int) (x: x * 2) { a = 1; b = 3; };
+    expected = { a = 2; b = 6; };
+  };
+
+  # mapNestedAttrs': nested input - structure preserved, apply `fn` only at leaves
+  testMapNestedAttrsNested' = {
+    expr = mapNestedAttrs' (types.nestedAttrsOf types.int) (x: x * 2) { a.b = 1; a.c = 3; d = 5; };
+    expected = { a.b = 2; a.c = 6; d = 10; };
+  };
+
+  # mapNestedAttrs': multiple siblings at same level all transformed
+  testMapNestedAttrsSiblings' = {
+    expr =
+      let
+        elementType = types.submodule { options.v = lib.mkOption { type = types.int; }; };
+      in
+      mapNestedAttrs' (types.nestedAttrsOf elementType) (x: x.v) {
+        ns.a.v = 1;
+        ns.b.v = 2;
+        ns.c.v = 3;
+      };
+    expected = { ns.a = 1; ns.b = 2; ns.c = 3; };
+  };
+
   # concatMapNestedAttrs': flat input - fn receives single-element path and leaf value
   testConcatMapNestedAttrsFlat = {
     expr =

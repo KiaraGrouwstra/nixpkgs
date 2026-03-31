@@ -261,6 +261,7 @@ let
         intersectAttrs
         removeAttrs
         isNestedAttrsLeaf
+        mapNestedAttrs'
         mapNestedAttrsWith
         concatMapNestedAttrsWith
         concatMapNestedAttrs'
