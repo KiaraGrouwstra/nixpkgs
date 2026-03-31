@@ -8,6 +8,7 @@ let
     listOf
     option
     optionType
+    raw
     str
     submodule
     ;
@@ -50,7 +51,9 @@ let
   mkRequests =
     serviceName: instanceName: contractOptions: serviceConfig:
     lib.mapAttrs (_: optionNames: {
-      ${serviceName}.${instanceName} = lib.genAttrs optionNames (name: serviceConfig.${serviceName}.${name});
+      ${serviceName}.${instanceName} = lib.genAttrs optionNames (
+        name: serviceConfig.${serviceName}.${name}
+      );
     }) contractOptions;
 
   /**
@@ -302,6 +305,17 @@ let
                 description = "Result type of the contract.";
                 inherit type default;
               };
+              extraImports = mkOption {
+                description = "Extra imports for the request and result submodules (e.g. rename shims).";
+                default = { };
+                type = submodule {
+                  options = lib.genAttrs [ "request" "result" ] (k: mkOption {
+                    description = "Extra imports for the ${k} submodule.";
+                    type = listOf raw;
+                    default = [ ];
+                  });
+                };
+              };
             };
           };
       };
@@ -342,13 +356,20 @@ let
         readOnly = true;
         default =
           overrides:
+          let
+            inherit (contract.config) interface;
+          in
           lib.extendSubmodule overrides (submodule {
             options = lib.mapAttrs (
-              k: options: mkOption {
+              k: options:
+              mkOption {
                 description = "The ${k} of the contract instance.";
-                type = submodule { inherit options; };
+                type = submodule {
+                  imports = interface.extraImports.${k};
+                  inherit options;
+                };
               }
-            ) contract.config.interface;
+            ) (lib.getAttrs [ "request" "result" ] interface);
           });
       };
       extend = mkOption {
@@ -359,10 +380,19 @@ let
         '';
         type = attrsOf (functionTo optionType);
         readOnly = true;
-        default = lib.mapAttrs (
-          _: options: overrides:
-          lib.extendSubmodule overrides (lib.types.submodule { inherit options; })
-        ) contract.config.interface;
+        default =
+          let
+            inherit (contract.config) interface;
+          in
+          lib.mapAttrs (
+            k: options: overrides:
+            lib.extendSubmodule overrides (
+              lib.types.submodule {
+                imports = interface.extraImports.${k};
+                inherit options;
+              }
+            )
+          ) (lib.getAttrs [ "request" "result" ] interface);
 
       };
       behaviorTest = mkOption {

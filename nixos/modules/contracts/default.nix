@@ -41,14 +41,20 @@ in
                   The request parameters.
                   Must match the `${contractName}` contract interface's request type.
                 '';
-                type = submodule { options = interface.request; };
+                type = submodule {
+                  imports = interface.extraImports.request;
+                  options = interface.request;
+                };
               };
               result = mkOption {
                 description = ''
                   Result returned to the request by the provider's side of the `${contractName}` contract.
                   Must match the `${contractName}` contract interface's result type.
                 '';
-                type = submodule { options = interface.result; };
+                type = submodule {
+                  imports = interface.extraImports.result;
+                  options = interface.result;
+                };
               };
             };
           });
@@ -232,14 +238,19 @@ in
                   Request data for the `${contractName}` contract, with `result` attributes filtered out.
 
                   Providers read from this option to get consumer requests.
+
+                  Only canonical request options (those declared in `interface.request`) are included.
+                  Deprecated aliases added via `interface.extraImports.request` are intentionally excluded:
+                  they exist only in the consumer's `want` submodule and must not leak into provider data,
+                  since providers declare only the canonical options.
                 '';
                 type = nestedAttrsOf raw;
                 default = lib.mapNestedAttrs' wantType
-                  (v: lib.getAttrs [ "request" ] v)
+                  (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
                   contract.config.want;
                 defaultText = ''
                   lib.mapNestedAttrs' wantType
-                    (v: lib.getAttrs [ "request" ] v)
+                    (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
                     contract.config.want
                 '';
                 readOnly = true;
