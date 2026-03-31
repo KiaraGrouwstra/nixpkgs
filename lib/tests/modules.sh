@@ -843,7 +843,7 @@ checkConfigError 'not of type' config.foo.boo.bar ./extendSubmodule.nix
 
 # contracts: arithmetic contract defined inline in config.contractTypes (downstream user pattern)
 # The increment provider returns request.value + 1, so 5 -> 6.
-checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.instance.value ./contracts-arithmetic.nix
+checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.instance.value ./contracts-custom.nix
 
 # specialArgs._class
 checkConfigOutput '"nixos"' config.nixos.config.foo ./specialArgs-class.nix
