@@ -872,6 +872,10 @@ checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.instance.va
 checkConfigOutput 'oldName.*renamed.*newName' config.result ./contracts-contract-rename.nix
 # contracts: using a renamed contract name still produces the correct result
 checkConfigOutput '^6$' config.contracts.oldName.results.consumer.instance.value ./contracts-contract-rename.nix
+# contracts: contract rename + option rename: value still forwards correctly
+checkConfigOutput '^6$' config.contracts.oldNameWithRename.results.consumer.instance.value ./contracts-contract-rename.nix
+# contracts: contract rename + option rename: option rename warning fires on stderr
+checkConfigWarning 'legacyValue.*renamed.*value' config.contracts.oldNameWithRename.results.consumer.instance.value ./contracts-contract-rename.nix
 
 # contracts: using a renamed request option still forwards the value correctly
 checkConfigOutput '^6$' config.contracts.versioned.results.consumer.instance.value ./contracts-rename-warning.nix

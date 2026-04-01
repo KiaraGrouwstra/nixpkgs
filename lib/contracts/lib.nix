@@ -70,6 +70,46 @@ let
     };
 
   /**
+    Inject contract results into a NixOS module's config namespace as defaults.
+
+    Replaces the `default.result = config.contracts.<type>.results.<service>.<option>`
+    coupling in option declarations, moving result injection into the module's `config` block.
+
+    lib.contract.injectResults :: String -> Attrs -> AttrsOf (ListOf String) -> Attrs
+
+    # Inputs
+
+    `serviceName`
+
+    : 1\. Name of the NixOS module (used as the consumer key in `contracts.<type>.results`)
+
+    `nixosContracts`
+
+    : 2\. The NixOS contracts attrset (`config.contracts`)
+
+    `contractAttrs`
+
+    : 3\. Attribute set mapping contract type names to a list of option names to inject
+
+    # Example
+
+    ```nix
+    config.services.stash = lib.contract.injectResults "stash" config.contracts {
+      fileSecrets = [ "passwordFile" "jwtSecretKey" ];
+    };
+    ```
+  */
+  injectResults =
+    serviceName: nixosContracts: contractAttrs:
+    lib.foldlAttrs (
+      acc: contractType: optionNames:
+      acc
+      // lib.genAttrs optionNames (optionName:
+        lib.mkDefault { result = nixosContracts.${contractType}.results.${serviceName}.${optionName}; }
+      )
+    ) { } contractAttrs;
+
+  /**
     Evaluate a configuration in the context of a corresponding module system option.
 
     contract.evalOption :: option -> attrs -> attrs
@@ -413,6 +453,7 @@ in
 {
   inherit
     wire
+    injectResults
     evalOption
     extendOption
     extendSubmodule

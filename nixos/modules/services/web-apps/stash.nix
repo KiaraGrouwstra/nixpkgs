@@ -18,8 +18,6 @@ let
     types
     ;
   inherit (contracts.fileSecrets) mkContract;
-  inherit (config.contracts.fileSecrets.results.stash) passwordFile jwtSecretKey sessionStoreKey;
-
   cfg = config.services.stash;
 
   stashType = types.submodule {
@@ -434,10 +432,6 @@ in
 
       passwordFile = mkOption {
         type = types.nullOr secretOptionType;
-        default.result = passwordFile;
-        defaultText = ''
-          { result = config.contracts.fileSecrets.results.stash.passwordFile; }
-        '';
         example = "/path/to/password/file";
         description = ''
           Path to file containing password for login.
@@ -452,18 +446,10 @@ in
       jwtSecretKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret used to sign JWT tokens.";
-        default.result = jwtSecretKey;
-        defaultText = ''
-          { result = config.contracts.fileSecrets.results.stash.jwtSecretKey; }
-        '';
       };
       sessionStoreKey = mkOption {
         type = secretOptionType;
         description = "Path to file containing a secret for session store.";
-        default.result = sessionStoreKey;
-        defaultText = ''
-          { result = config.contracts.fileSecrets.results.stash.sessionStoreKey; }
-        '';
       };
 
       mutableSettings = mkOption {
@@ -505,10 +491,18 @@ in
       sessionStoreKey = if lib.isPath cfg.sessionStoreKey then { } else cfg.sessionStoreKey;
     };
 
-    services.stash.settings = {
-      username = mkIf (cfg.username != null) cfg.username;
-      plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
-      scrapers_path = mkIf (!cfg.mutableScrapers) cfg.scrapers;
+    services.stash = lib.contract.injectResults "stash" config.contracts {
+      fileSecrets = [
+        "passwordFile"
+        "jwtSecretKey"
+        "sessionStoreKey"
+      ];
+    } // {
+      settings = {
+        username = mkIf (cfg.username != null) cfg.username;
+        plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
+        scrapers_path = mkIf (!cfg.mutableScrapers) cfg.scrapers;
+      };
     };
 
     networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [ cfg.settings.port ];
