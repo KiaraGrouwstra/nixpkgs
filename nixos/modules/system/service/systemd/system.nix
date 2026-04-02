@@ -70,6 +70,7 @@ let
       systemdPackage = config.systemd.package;
     };
     inherit (config) contracts;
+    nixosContractTypes = config.contractTypes;
   };
 in
 {

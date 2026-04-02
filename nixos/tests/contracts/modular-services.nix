@@ -1,11 +1,13 @@
 # Tests contracts where both the consumer and provider are modular services.
 #
-# - A consumer modular service declares a request using `mkRequests`.
-# - `nixos-contracts-bridge` automatically wires `contract.requests` → `contracts.<type>.want`.
-# - A provider modular service reads `contracts.arithmetic.requests` via the `contracts` specialArg
-#   and computes results (here: `request.value + 1`).
-# - The provider sets `contract.providers.arithmetic`; `nixos-contracts-bridge` automatically wires
-#   it into `contracts.arithmetic.providers.<serviceName>`.
+# - A consumer modular service declares a request via `contracts.arithmetic.want`
+#   and reads results from `config.contracts.arithmetic.results`.
+# - `nixos-contracts-bridge` automatically wires `contracts.<type>.want` → NixOS
+#   `contracts.<type>.want`.
+# - A provider modular service reads `contracts.arithmetic.requests` via the
+#   `contracts` specialArg and computes results (here: `request.value + 1`).
+# - The provider sets `contract.providers.arithmetic`; `nixos-contracts-bridge`
+#   automatically wires it into `contracts.arithmetic.providers.<serviceName>`.
 { lib, pkgs, ... }:
 {
   name = "contracts-modular-services";
@@ -26,8 +28,8 @@
       };
 
       # Consumer service module.
-      # Uses `mkRequests` to register contract requests;
-      # `nixos-contracts-bridge` collects these into `contracts.arithmetic.want` automatically.
+      # Uses `contracts.arithmetic.want` to register contract requests;
+      # reads results from `config.contracts.arithmetic.results`.
       consumerModule =
         {
           lib,
@@ -35,9 +37,6 @@
           name,
           ...
         }:
-        let
-          contractOptions.arithmetic = [ "operation" ];
-        in
         {
           _class = "service";
           options.consumer.operation = mkOption {
@@ -46,7 +45,11 @@
           };
           config = {
             consumer.operation.request.value = 5;
-            contract.requests = lib.contract.mkRequests "consumer" name contractOptions config;
+            contracts.arithmetic.want.consumer.${name} = {
+              inherit (config.consumer) operation;
+            };
+            consumer.operation.result =
+              config.contracts.arithmetic.results.consumer.${name}.operation;
             process.argv = [ "${pkgs.coreutils}/bin/true" ];
           };
         };
@@ -93,7 +96,8 @@
       ];
 
       # Consumer service: requests an arithmetic operation with `value = 5`.
-      # `nixos-contracts-bridge` wires its `contract.requests` into `contracts.arithmetic.want`.
+      # `nixos-contracts-bridge` wires its `contracts.arithmetic.want` into NixOS
+      # `contracts.arithmetic.want`.
       system.services.instance = {
         imports = [ consumerModule ];
       };
@@ -103,7 +107,8 @@
         imports = [ incrementProviderModule ];
       };
 
-      # `nixos-contracts-bridge` automatically wires `contract.providers.arithmetic` → `contracts.arithmetic.providers.increment`.
+      # `nixos-contracts-bridge` automatically wires `contract.providers.arithmetic` →
+      # `contracts.arithmetic.providers.increment`.
       contracts.arithmetic.defaultProviderName = "increment";
 
       assertions = [

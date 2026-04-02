@@ -19,6 +19,7 @@ in
     ../../../../../modules/generic/meta-maintainers.nix
     ../../../misc/assertions.nix
     (lib.modules.importApply ./config-data.nix { inherit pkgs; })
+    ../../../../../lib/contracts/module.nix
   ];
   options = {
     services = mkOption {
@@ -51,13 +52,6 @@ in
       };
     };
     contract = {
-      requests = lib.mkOption {
-        type = types.attrsOf (types.nestedAttrsOf types.raw);
-        description = ''
-          Contract requests made by this service.
-          Organized by contract type (e.g., `fileSecrets`).
-        '';
-      };
       providers = lib.mkOption {
         type = types.attrsOf (types.nestedAttrsOf types.raw);
         description = ''

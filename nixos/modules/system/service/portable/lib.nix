@@ -61,15 +61,46 @@ rec {
       extraRootModules ? [ ],
       extraRootSpecialArgs ? { },
       contracts ? { },
+      # All NixOS-level contract type definitions (meta + interface), so services
+      # can use `contracts.<type>.*` for both lib-level and user-defined contract types.
+      nixosContractTypes ? { },
     }:
     let
+      # Seeds the service's module system with:
+      # 1. All NixOS contract type definitions (meta + interface only - computed
+      #    `readOnly` fields are re-derived by the service's own module system).
+      # 2. The NixOS-resolved `defaultProvider` for each contract type, so consumers
+      #    can read `config.contracts.<type>.results` directly without needing the
+      #    `contracts` specialArg.
+      #
+      # Only `defaultProvider` is injected (not `providers` or `want`) to avoid a
+      # circular read by nixos-contracts-bridge, which reads `contracts.<type>.want`
+      # from services to populate the NixOS-level `contracts.<type>.want`.
+      nixosProviderSeedModule =
+        { lib, ... }:
+        {
+          config = lib.mkMerge [
+            {
+              # Propagate contract type definitions so user-defined types are available.
+              contractTypes = lib.mapAttrs (_: contract: {
+                inherit (contract) meta interface;
+              }) nixosContractTypes;
+            }
+            (lib.mkMerge (
+              lib.mapAttrsToList (contractType: nixosContract: {
+                contracts.${contractType}.defaultProvider = lib.mkDefault nixosContract.defaultProvider;
+              }) contracts
+            ))
+          ];
+        };
       modules = [
         (lib.modules.importApply ./service.nix { pkgs = serviceManagerPkgs; })
       ];
       serviceSubmodule = types.submoduleWith {
         class = "service";
-        modules = modules ++ extraRootModules;
+        modules = modules ++ [ nixosProviderSeedModule ] ++ extraRootModules;
         specialArgs = extraRootSpecialArgs // {
+          # Kept for provider services that read `contracts.<type>.requests`.
           inherit contracts;
         };
       };

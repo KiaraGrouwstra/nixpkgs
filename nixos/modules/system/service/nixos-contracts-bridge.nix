@@ -6,7 +6,7 @@ in
   contracts = lib.mapAttrs (contractType: _: {
     want = lib.mkMerge (
       portable-lib.flattenMapServicesConfigToList (
-        _: service: lib.toList (service.contract.requests.${contractType} or { })
+        _: service: lib.toList (service.contracts.${contractType}.want or { })
       ) [ ] config.system
     );
     providers = lib.mkMerge (

@@ -7,7 +7,6 @@
   config,
   options,
   name,
-  contracts ? { },
   ...
 }:
 let
@@ -165,10 +164,10 @@ in
     };
   };
 
-  config = let
-    contractOptions.fileSecrets = [ "dummySecret" ];
-  in {
-    contract.requests = lib.contract.mkRequests "ghostunnel" name contractOptions config;
+  config = {
+    contracts.fileSecrets.want.ghostunnel.${name} = {
+      inherit (cfg) dummySecret;
+    };
 
     assertions = [
       {
@@ -197,9 +196,8 @@ in
       # (afaict, it doesn't make sense), so we only provide that default when
       # client cert auth is disabled.
       cacert = mkIf cfg.disableAuthentication (mkDefault null);
-    }
-    # Automatically inject contract results
-    // lib.contract.mkResults "ghostunnel" name contractOptions contracts;
+      dummySecret.result = config.contracts.fileSecrets.results.ghostunnel.${name}.dummySecret;
+    };
 
     # TODO assertions
 

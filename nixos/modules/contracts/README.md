@@ -39,7 +39,6 @@
 
 ## TODO
 
-- [ ] eliminate API differences for modular services
 - [ ] reconsider `default` changes for `services.stash` passwords
 - [ ] squash
 - make branches for any optional API changes to separate choices

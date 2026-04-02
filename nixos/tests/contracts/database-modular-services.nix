@@ -1,6 +1,8 @@
 # Tests a database contract fulfilled across two modular services.
 #
-# - `webapp`  (consumer): requests a database via the `database` contract.
+# - `webapp`  (consumer): requests a database via the `database` contract,
+#                         using `contracts.database.want` and reading results
+#                         from `config.contracts.database.results` directly.
 # - `fakedb`  (provider): fulfils database requests by assigning socket paths
 #                         and creating the directories at runtime with a oneshot
 #                         systemd unit, so the consumer can verify them.
@@ -51,12 +53,9 @@ in
       };
 
       # Consumer: a webapp that needs one database.
-      # Uses mkRequests / mkResults for automatic contract wiring.
+      # Uses `contracts.database.want` and reads results from `config.contracts.database.results`.
       webappModule =
-        { lib, config, name, contracts ? { }, ... }:
-        let
-          contractOptions.database = [ "db" ];
-        in
+        { lib, config, name, ... }:
         {
           _class = "service";
 
@@ -67,9 +66,12 @@ in
           };
 
           config = {
-            contract.requests = lib.contract.mkRequests "webapp" name contractOptions config;
+            contracts.database.want.webapp.${name} = {
+              inherit (config.webapp) db;
+            };
 
-            webapp = lib.contract.mkResults "webapp" name contractOptions contracts;
+            webapp.db.result =
+              config.contracts.database.results.webapp.${name}.db;
 
             # Write the received socket path to a file so the test script can
             # verify it without needing to know the path at test-script write time.
