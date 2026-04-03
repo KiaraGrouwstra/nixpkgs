@@ -135,6 +135,29 @@ checkExpression() {
   }
 }
 
+checkConfigWarning() {
+    local warningContains=$1
+    local err=""
+    shift
+    if ! err="$(evalConfig "$@" 2>&1 >/dev/null)"; then
+        logStartFailure
+        echo "ACTUAL: non-zero exit code, stderr:"
+        echo "$err"
+        echo "EXPECTED: exit code 0 with warning matching '$warningContains'"
+        logFailure
+        logEndFailure
+    elif echo "$err" | grep -E --silent "$warningContains" ; then
+        ((++pass))
+    else
+        logStartFailure
+        echo "ACTUAL stderr:"
+        echo "$err"
+        echo "EXPECTED: warning matching '$warningContains'"
+        logFailure
+        logEndFailure
+    fi
+}
+
 checkConfigError() {
     local errorContains=$1
     local err=""
@@ -170,8 +193,6 @@ checkConfigError() {
 
 # Shorthand meta attribute does not duplicate the config
 checkConfigOutput '^"one two"$' config.result ./shorthand-meta.nix
-
-checkConfigError "In module .*test-push-down-non-attrs.nix., you're trying to define a value of type \`bool'\n\s*rather than an attribute set for the option" config ./test-push-down-non-attrs.nix
 
 checkConfigOutput '^true$' config.result ./test-mergeAttrDefinitionsWithPrio.nix
 
@@ -437,6 +458,10 @@ checkConfigOutput '^"hello-other"$' options.packageFromOtherSet.default.pname ./
 checkConfigOutput '^"hello"$' config.packageInvalidIdentifier.pname ./declare-mkPackageOption.nix
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifier.defaultText.text ./declare-mkPackageOption.nix
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifierExample.example.text ./declare-mkPackageOption.nix
+
+# Check nestedAttrsOf
+checkConfigOutput '^3$' config.value.b.d.e ./declare-nested-attrs.nix
+checkConfigError 'A definition for option .* is not of type .*' config.value.b.f ./declare-nested-attrs-unsound.nix
 
 # submoduleWith
 
@@ -717,6 +742,9 @@ checkConfigError 'In module .*/options-type-error-configuration.nix: expected an
 # Check that that merging of option collisions doesn't depend on type being set
 checkConfigError 'The option .group..*would be a parent of the following options, but its type .<no description>. does not support nested options.\n\s*- option.s. with prefix .group.enable..*' config.group.enable ./merge-typeless-option.nix
 
+# types.optionDeclaration
+checkConfigOutput '^10$' config.anOption ./option.nix
+
 # Test that types.optionType merges types correctly
 checkConfigOutput '^10$' config.theOption.int ./optionTypeMerging.nix
 checkConfigOutput '^"hello"$' config.theOption.str ./optionTypeMerging.nix
@@ -831,6 +859,10 @@ checkConfigError 'A definition for option .viaOptionDefault. is not of type .boo
 checkConfigOutput '^true$' config.viaConfig ./mkDefinition.nix
 checkConfigOutput '^true$' config.mkMerge ./mkDefinition.nix
 checkConfigOutput '^true$' config.mkForce ./mkDefinition.nix
+
+checkConfigOutput '2' config.bar.baz ./evalOption.nix
+checkConfigError 'not of type' config.foo.boo.bar ./extendOption.nix
+checkConfigError 'not of type' config.foo.boo.bar ./extendSubmodule.nix
 
 # specialArgs._class
 checkConfigOutput '"nixos"' config.nixos.config.foo ./specialArgs-class.nix
