@@ -866,6 +866,33 @@ checkConfigOutput '2' config.bar.baz ./evalOption.nix
 checkConfigError 'not of type' config.foo.boo.bar ./extendOption.nix
 checkConfigError 'not of type' config.foo.boo.bar ./extendSubmodule.nix
 
+# contracts: provider selection mechanisms
+# manual instances override (double: 5 * 2 = 10)
+checkConfigOutput '^10$' config.result.manual ./contracts-provider-selection.nix
+# defaultProvider reference (increment: 5 + 1 = 6)
+checkConfigOutput '^6$' config.result.byDefault ./contracts-provider-selection.nix
+# defaultProviderName enum (increment: 5 + 1 = 6)
+checkConfigOutput '^6$' config.result.byName ./contracts-provider-selection.nix
+# no provider set: clear error message
+checkConfigError 'contracts\.noProvider\.defaultProvider is unset' config.contracts.noProvider.results.consumer.instance.value ./contracts-provider-selection.nix
+
+# contracts: using a renamed contract name emits a deprecation warning in config.warnings
+checkConfigOutput 'oldName.*renamed.*newName' config.result ./contracts-contract-rename.nix
+# contracts: using a renamed contract name still produces the correct result
+checkConfigOutput '^6$' config.contracts.oldName.results.consumer.instance.value ./contracts-contract-rename.nix
+
+# contracts: using a renamed request option still forwards the value correctly
+checkConfigOutput '^6$' config.contracts.versioned.results.consumer.instance.value ./contracts-rename-warning.nix
+# contracts: using a renamed request option emits a deprecation warning on stderr
+checkConfigWarning 'request\.oldValue.*renamed.*request\.newValue' config.contracts.versioned.results.consumer.instance.value ./contracts-rename-warning.nix
+
+# contracts: varying nesting depths in want (flat, grouped, deeply nested)
+checkConfigOutput '^2$' config.contracts.arithmetic.results.myapp.simple.value ./contracts-nested-want.nix
+checkConfigOutput '^11$' config.contracts.arithmetic.results.myapp.db.primary.value ./contracts-nested-want.nix
+checkConfigOutput '^21$' config.contracts.arithmetic.results.myapp.db.replica.value ./contracts-nested-want.nix
+checkConfigOutput '^101$' config.contracts.arithmetic.results.myapp.caches.region-a.fast.value ./contracts-nested-want.nix
+checkConfigOutput '^201$' config.contracts.arithmetic.results.myapp.caches.region-b.fast.value ./contracts-nested-want.nix
+
 # specialArgs._class
 checkConfigOutput '"nixos"' config.nixos.config.foo ./specialArgs-class.nix
 checkConfigOutput '"bar"' config.conditionalImportAsNixos.config.foo ./specialArgs-class.nix
