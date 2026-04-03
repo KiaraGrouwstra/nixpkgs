@@ -441,6 +441,16 @@ checkConfigOutput '^"hello"$' config.packageInvalidIdentifier.pname ./declare-mk
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifier.defaultText.text ./declare-mkPackageOption.nix
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifierExample.example.text ./declare-mkPackageOption.nix
 
+# Check nestedAttrsOf
+checkConfigOutput '^3$' config.value.b.d.e ./declare-nested-attrs.nix
+checkConfigOutput '^true$' config.value.b.c.merged ./declare-nested-attrs-attrs-leaf.nix
+checkConfigOutput '^2$' config.value.a.b ./declare-nested-attrs-properties.nix
+checkConfigOutput '^3$' config.value.a.c ./declare-nested-attrs-properties.nix
+checkConfigOutput '^4$' config.value.d.e ./declare-nested-attrs-properties.nix
+checkConfigError 'A definition for option .* is not of type .*' config.value.a.b ./declare-nested-attrs-properties.nix ./declare-nested-attrs-properties-invalid.nix
+checkConfigError 'A definition for option .* is not of type .*' config.value.b.f ./declare-nested-attrs-unsound.nix
+checkConfigError 'expected an attribute set with keys from \[request, result\]' config.value.consumer ./declare-nested-attrs-misshapen.nix
+
 # contracts: each entry of `instances` has a `request` and a `response`
 checkConfigOutput '^11$' config.contracts.number.instances.a.response.value ./contracts-instances.nix
 checkConfigOutput '^5$' config.contracts.number.instances.b.response.value ./contracts-instances.nix
