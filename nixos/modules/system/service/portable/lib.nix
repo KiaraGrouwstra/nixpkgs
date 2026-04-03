@@ -66,32 +66,25 @@ rec {
       nixosContractTypes ? { },
     }:
     let
-      # Seeds the service's module system with:
-      # 1. All NixOS contract type definitions (meta + interface only - computed
-      #    `readOnly` fields are re-derived by the service's own module system).
-      # 2. The NixOS-resolved `defaultProvider` for each contract type, so consumers
-      #    can read `config.contracts.<type>.results` directly without needing the
-      #    `contracts` specialArg.
+      # Seeds the service's module system with upstream contract state.
       #
-      # Only `defaultProvider` is injected (not `providers` or `want`) to avoid a
-      # circular read by nixos-contracts-bridge, which reads `contracts.<type>.want`
-      # from services to populate the NixOS-level `contracts.<type>.want`.
+      # `_upstreamContracts` connects the service's contract namespace to a
+      # containing system's resolved contracts. This gives services
+      # access to aggregated `requests` and resolved `defaultProvider`/`results`.
+      #
+      # Write-side options (`want`, `providers`) remain local to the service.
+      # `nixos-contracts-bridge` reads these and lifts them to the containing system.
       nixosProviderSeedModule =
         { lib, ... }:
         {
-          config = lib.mkMerge [
-            {
-              # Propagate contract type definitions so user-defined types are available.
-              contractTypes = lib.mapAttrs (_: contract: {
-                inherit (contract) meta interface;
-              }) nixosContractTypes;
-            }
-            (lib.mkMerge (
-              lib.mapAttrsToList (contractType: nixosContract: {
-                contracts.${contractType}.defaultProvider = lib.mkDefault nixosContract.defaultProvider;
-              }) contracts
-            ))
-          ];
+          config = {
+            # Propagate contract type definitions so user-defined types are available.
+            contractTypes = lib.mapAttrs (_: contract: {
+              inherit (contract) meta interface;
+            }) nixosContractTypes;
+            # Connect read-side contract options to the containing system.
+            _upstreamContracts = contracts;
+          };
         };
       modules = [
         (lib.modules.importApply ./service.nix { pkgs = serviceManagerPkgs; })
@@ -99,10 +92,7 @@ rec {
       serviceSubmodule = types.submoduleWith {
         class = "service";
         modules = modules ++ [ nixosProviderSeedModule ] ++ extraRootModules;
-        specialArgs = extraRootSpecialArgs // {
-          # Kept for provider services that read `contracts.<type>.requests`.
-          inherit contracts;
-        };
+        specialArgs = extraRootSpecialArgs;
       };
     in
     {

@@ -11,9 +11,10 @@ in
     );
     providers = lib.mkMerge (
       portable-lib.flattenMapServicesConfigToList (
-        loc: service:
-          lib.optional (loc != [ ] && service.contract.providers ? ${contractType})
-            { ${lib.last loc} = service.contract.providers.${contractType}; }
+        _: service:
+          lib.mapAttrsToList (name: provider: {
+            ${name} = provider;
+          }) (service.contracts.${contractType}.providers or { })
       ) [ ] config.system
     );
   }) config.contractTypes;

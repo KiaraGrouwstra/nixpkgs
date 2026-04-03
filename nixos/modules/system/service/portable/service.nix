@@ -51,15 +51,5 @@ in
         '';
       };
     };
-    contract = {
-      providers = lib.mkOption {
-        type = types.attrsOf (types.nestedAttrsOf types.raw);
-        description = ''
-          Contract provisions made by this service.
-          Organized by contract type (e.g., `fileSecrets`).
-          The service will be registered as a provider under its own name.
-        '';
-      };
-    };
   };
 }

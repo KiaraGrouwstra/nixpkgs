@@ -9,6 +9,7 @@ let
     raw
     submodule
     ;
+  upstream = config._upstreamContracts;
 in
 {
   options.contractTypes = mkOption {
@@ -157,32 +158,12 @@ in
                   };
                   ```
 
-                  **Providers (regular NixOS module):**
-
-                  A plain NixOS module provider reads `contracts.${contractName}.requests`
-                  and sets `contracts.${contractName}.providers.<name>` directly:
+                  **Providers** read `contracts.${contractName}.requests` and set
+                  `contracts.${contractName}.providers.<name>`:
 
                   ```nix
-                  services."<provider>".${contractName} = config.contracts.${contractName}.requests;
-                  contracts.${contractName}.providers."<provider>" = config.services."<provider>".${contractName};
-                  ```
-
-                  **Providers (modular service):**
-
-                  A modular service provider reads `contracts.${contractName}.requests` from
-                  the `contracts` specialArg and sets `contract.providers.${contractName}`.
-                  `nixos-contracts-bridge` automatically wires it into
-                  `contracts.${contractName}.providers.<service>`:
-
-                  ```nix
-                  { lib, config, contracts ? { }, ... }:
-                  {
-                    _class = "service";
-                    config = {
-                      "<provider>".${contractName} = contracts.${contractName}.requests or { };
-                      contract.providers.${contractName} = config."<provider>".${contractName};
-                    };
-                  }
+                  "<provider>".${contractName} = config.contracts.${contractName}.requests;
+                  contracts.${contractName}.providers."<provider>" = config."<provider>".${contractName};
                   ```
                 '';
                 type = wantType;
@@ -198,9 +179,12 @@ in
                   Deprecated aliases added via `interface.extraImports.request` are intentionally excluded.
                 '';
                 type = nestedAttrsOf raw;
-                default = lib.mapNestedAttrs' wantType
-                  (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
-                  contract.config.want;
+                default =
+                  if upstream != null
+                  then upstream.${contractName}.requests
+                  else lib.mapNestedAttrs' wantType
+                    (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
+                    contract.config.want;
                 defaultText = ''
                   lib.mapNestedAttrs' wantType
                     (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
@@ -212,19 +196,12 @@ in
                 description = ''
                   Where to find instances of a provider of the `${contractName}` contract that can take request inputs to return results.
 
-                  For a regular NixOS module provider, set it directly:
-
                   ```nix
-                  contracts.${contractName}.providers."<provider>" = config.services."<provider>".${contractName};
+                  contracts.${contractName}.providers."<provider>" = config."<provider>".${contractName};
                   ```
 
-                  For a modular service provider, set `contract.providers.${contractName}` on the service instead;
-                  `nixos-contracts-bridge` will automatically register it here under the service's name:
-
-                  ```nix
-                  # in the service module:
-                  contract.providers.${contractName} = config."<provider>".${contractName};
-                  ```
+                  `nixos-contracts-bridge` automatically collects providers set by modular services
+                  into the containing system's `contracts.${contractName}.providers`.
 
                   It may then be used where you configure the service consuming the `${contractName}` contract to manually set a provider:
 
@@ -382,29 +359,6 @@ in
                     };
                   }
                   ```
-
-                  **Modular Services:**
-
-                  Read results the same way as regular NixOS modules:
-
-                  ```nix
-                  "<service>"."<request>".result =
-                    config.contracts.${contractName}.results."<consumer>".''${name}."<request>";
-                  ```
-
-                  **Outstanding difference:** provider modular services still read consumer
-                  requests via the `contracts` specialArg (not `config.contracts.${contractName}.requests`),
-                  because each service's module system is evaluated in isolation — it can only
-                  see `want` entries set within its own evaluation, not those of other services.
-                  The containing system aggregates all services' wants and passes the result
-                  back via the specialArg:
-
-                  ```nix
-                  { lib, config, contracts ? { }, ... }:
-                  {
-                    config."<provider>".${contractName} = contracts.${contractName}.requests or { };
-                  }
-                  ```
                 '';
                 type = nestedAttrsOf raw;
                 default = lib.mapNestedAttrs' wantType
@@ -422,5 +376,25 @@ in
         }
       ) config.contractTypes;
     };
+  };
+  options._upstreamContracts = mkOption {
+    type = nullOr raw;
+    internal = true;
+    description = ''
+      When set, read-side contract options (`requests`, `defaultProvider`,
+      `instances`, `results`) delegate to this upstream source.
+
+      Used by the modular service seed module to connect a service's contract
+      namespace to a containing system's resolved contracts, giving services
+      first-class access to aggregated requests and results.
+    '';
+  };
+
+  # When upstream contracts are available, inject the resolved `defaultProvider`
+  # so consumers can read results without explicit wiring.
+  config = lib.mkIf (upstream != null) {
+    contracts = lib.mapAttrs (contractName: _: {
+      defaultProvider = lib.mkDefault upstream.${contractName}.defaultProvider;
+    }) config.contractTypes;
   };
 }

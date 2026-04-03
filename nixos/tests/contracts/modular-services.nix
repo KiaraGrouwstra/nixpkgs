@@ -4,10 +4,10 @@
 #   and reads results from `config.contracts.arithmetic.results`.
 # - `nixos-contracts-bridge` automatically wires `contracts.<type>.want` → NixOS
 #   `contracts.<type>.want`.
-# - A provider modular service reads `contracts.arithmetic.requests` via the
-#   `contracts` specialArg and computes results (here: `request.value + 1`).
-# - The provider sets `contract.providers.arithmetic`; `nixos-contracts-bridge`
-#   automatically wires it into `contracts.arithmetic.providers.<serviceName>`.
+# - A provider modular service reads `config.contracts.arithmetic.requests` and
+#   sets `contracts.arithmetic.providers.increment`.
+# - `nixos-contracts-bridge` automatically collects providers into NixOS
+#   `contracts.arithmetic.providers`.
 { lib, pkgs, ... }:
 {
   name = "contracts-modular-services";
@@ -55,12 +55,12 @@
         };
 
       # Increment contract provider implemented as a modular service.
-      # Reads consumer requests from the `contracts` specialArg and computes results.
+      # Reads `config.contracts.arithmetic.requests`
+      # and sets `contracts.arithmetic.providers.increment`.
       incrementProviderModule =
         {
           lib,
           config,
-          contracts ? { },
           ...
         }:
         {
@@ -82,8 +82,8 @@
             );
           };
           config = {
-            arithmetic = contracts.arithmetic.requests or { };
-            contract.providers.arithmetic = config.arithmetic;
+            arithmetic = config.contracts.arithmetic.requests;
+            contracts.arithmetic.providers.increment = config.arithmetic;
             process.argv = [ "${pkgs.coreutils}/bin/true" ];
           };
         };
@@ -107,8 +107,6 @@
         imports = [ incrementProviderModule ];
       };
 
-      # `nixos-contracts-bridge` automatically wires `contract.providers.arithmetic` →
-      # `contracts.arithmetic.providers.increment`.
       contracts.arithmetic.defaultProviderName = "increment";
 
       assertions = [
