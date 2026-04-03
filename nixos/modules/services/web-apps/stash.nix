@@ -6,6 +6,7 @@
 }:
 let
   inherit (lib)
+    contracts
     getExe
     literalExpression
     mkEnableOption
@@ -16,6 +17,8 @@ let
     toUpper
     types
     ;
+  inherit (contracts.fileSecrets) mkContract;
+  inherit (config.contracts.fileSecrets.results.stash) jwtSecretKey sessionStoreKey;
 
   cfg = config.services.stash;
 
@@ -108,6 +111,7 @@ let
 
       stash = mkOption {
         type = types.listOf stashType;
+        default = [ ];
         description = ''
           Add directories containing your adult videos and images.
           Stash will use these directories to find videos and/or images during scanning.
@@ -318,7 +322,6 @@ let
     kind:
     mkOption {
       type = types.listOf types.package;
-      default = [ ];
       description = ''
         The ${kind} Stash should be started with.
       '';
@@ -366,6 +369,20 @@ let
             done
           '';
     };
+
+  secretOptionType =
+    let
+      contractSecretsType = mkContract {
+        request = {
+          owner.default = cfg.user;
+          group.default = cfg.group;
+        };
+      };
+    in
+    types.oneOf [
+      types.path
+      contractSecretsType
+    ];
 in
 {
   meta = {
@@ -418,7 +435,7 @@ in
       };
 
       passwordFile = mkOption {
-        type = types.nullOr types.path;
+        type = types.nullOr secretOptionType;
         default = null;
         example = "/path/to/password/file";
         description = ''
@@ -431,13 +448,21 @@ in
         '';
       };
 
-      jwtSecretKeyFile = mkOption {
-        type = types.path;
+      jwtSecretKey = mkOption {
+        type = secretOptionType;
         description = "Path to file containing a secret used to sign JWT tokens.";
+        default.result = jwtSecretKey;
+        defaultText = ''
+          { result = config.contracts.fileSecrets.results.stash.jwtSecretKey; }
+        '';
       };
-      sessionStoreKeyFile = mkOption {
-        type = types.path;
+      sessionStoreKey = mkOption {
+        type = secretOptionType;
         description = "Path to file containing a secret for session store.";
+        default.result = sessionStoreKey;
+        defaultText = ''
+          { result = config.contracts.fileSecrets.results.stash.sessionStoreKey; }
+        '';
       };
 
       mutableSettings = mkOption {
@@ -472,6 +497,12 @@ in
         message = "You must set either both username and password, or neither.";
       }
     ];
+
+    contracts.fileSecrets.want.stash = {
+      passwordFile = if lib.isPath cfg.passwordFile then { } else cfg.passwordFile;
+      jwtSecretKey = if lib.isPath cfg.jwtSecretKey then { } else cfg.jwtSecretKey;
+      sessionStoreKey = if lib.isPath cfg.sessionStoreKey then { } else cfg.sessionStoreKey;
+    };
 
     services.stash.settings = {
       username = mkIf (cfg.username != null) cfg.username;
@@ -514,9 +545,15 @@ in
               install -d ${cfg.settings.generated}
               if [[ -z "${toString cfg.mutableSettings}" || ! -f ${cfg.dataDir}/config.yml ]]; then
                 env \
-                  password=$(< ${cfg.passwordFile}) \
-                  jwtSecretKeyFile=$(< ${cfg.jwtSecretKeyFile}) \
-                  sessionStoreKeyFile=$(< ${cfg.sessionStoreKeyFile}) \
+                  password=$(< ${
+                    if lib.isPath cfg.passwordFile then cfg.passwordFile else cfg.passwordFile.result.path
+                  }) \
+                  jwtSecretKeyFile=$(< ${
+                    if lib.isPath cfg.jwtSecretKey then cfg.jwtSecretKey else cfg.jwtSecretKey.result.path
+                  }) \
+                  sessionStoreKeyFile=$(< ${
+                    if lib.isPath cfg.sessionStoreKey then cfg.sessionStoreKey else cfg.sessionStoreKey.result.path
+                  }) \
                   ${lib.getExe pkgs.yq-go} '
                     .jwt_secret_key = strenv(jwtSecretKeyFile) |
                     .session_store_key = strenv(sessionStoreKeyFile) |
