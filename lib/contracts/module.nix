@@ -385,18 +385,24 @@ in
 
                   **Modular Services:**
 
-                  In [modular services](#modular-services), `config.contracts` is not available.
-                  Instead, we access `results` through the `lib.contract.mkResults` helper:
+                  Read results the same way as regular NixOS modules:
 
                   ```nix
-                  let
-                    contractOptions.${contractName} = [ "<request1>" "<request2>" ];
-                  in
+                  "<service>"."<request>".result =
+                    config.contracts.${contractName}.results."<consumer>".''${name}."<request>";
+                  ```
+
+                  **Outstanding difference:** provider modular services still read consumer
+                  requests via the `contracts` specialArg (not `config.contracts.${contractName}.requests`),
+                  because each service's module system is evaluated in isolation — it can only
+                  see `want` entries set within its own evaluation, not those of other services.
+                  The containing system aggregates all services' wants and passes the result
+                  back via the specialArg:
+
+                  ```nix
+                  { lib, config, contracts ? { }, ... }:
                   {
-                    config = {
-                      "<service>" = { }
-                        // lib.contract.mkResults "<service>" contractOptions contracts;
-                    };
+                    config."<provider>".${contractName} = contracts.${contractName}.requests or { };
                   }
                   ```
                 '';
