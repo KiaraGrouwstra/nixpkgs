@@ -72,6 +72,10 @@ let
       options = callLibs ./options.nix;
       types = callLibs ./types.nix;
 
+      # contracts
+      contract = callLibs ./contracts/lib.nix;
+      contracts = callLibs ./contracts;
+
       # constants
       licenses = callLibs ./licenses.nix;
       sourceTypes = callLibs ./source-types.nix;
@@ -256,6 +260,11 @@ let
         isAttrs
         intersectAttrs
         removeAttrs
+        isNestedAttrsLeaf
+        mapNestedAttrs'
+        mapNestedAttrsWith
+        concatMapNestedAttrsWith
+        concatMapNestedAttrs'
         ;
       inherit (self.lists)
         singleton
@@ -473,6 +482,9 @@ let
         ;
       inherit (self.modules)
         evalModules
+        evalOption
+        extendOption
+        extendSubmodule
         setDefaultModuleLocation
         unifyModuleSyntax
         applyModuleArgsIfFunction
