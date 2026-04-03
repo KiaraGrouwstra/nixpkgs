@@ -231,6 +231,32 @@ in
                   '';
                   type = attrsOf raw;
                 };
+                providerMeta = mkOption {
+                  description = ''
+                    Metadata about providers of the `${contractName}` contract.
+
+                    This is informational only - it does not affect contract resolution.
+                    UIs can use this to discover which options to present for configuring
+                    a provider.
+
+                    ```nix
+                    contracts.${contractName}.providerMeta."<provider>".optionPath =
+                      [ "testing" "hardcoded-secret" "${contractName}" ];
+                    ```
+                  '';
+                  type = attrsOf (submodule {
+                    options.optionPath = mkOption {
+                      description = ''
+                        The option path to the provider's configuration.
+
+                        A UI can use this to look up `options` and render the provider's
+                        configurable fields.
+                      '';
+                      type = types.listOf types.str;
+                    };
+                  });
+                  default = { };
+                };
                 defaultProviderName = mkOption {
                   description = ''
                     Select the name of the default provider to use for the `${contractName}` contract.

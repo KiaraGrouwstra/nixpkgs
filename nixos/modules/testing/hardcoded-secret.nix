@@ -98,7 +98,11 @@ in
 
   config = {
     testing.hardcoded-secret.${contract} = config.contracts.${contract}.requests;
-    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.${contract};
+    contracts.${contract} = {
+      providers.hardcoded-secret = config.testing.hardcoded-secret.${contract};
+      providerMeta.hardcoded-secret.optionPath =
+        [ "testing" "hardcoded-secret" contract ];
+    };
 
     system.activationScripts = lib.concatMapNestedAttrs'
       (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
