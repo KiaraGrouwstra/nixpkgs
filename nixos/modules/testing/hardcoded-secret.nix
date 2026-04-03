@@ -1,23 +1,28 @@
 {
   config,
   lib,
+  options,
   pkgs,
   ...
 }:
 let
   cfg = config.testing.hardcoded-secret;
 
-  inherit (lib) mapAttrs' mkOption nameValuePair;
+  inherit (lib)
+    contracts
+    mkOption
+    ;
   inherit (lib.types)
-    attrsOf
+    nestedAttrsOf
     str
     submodule
     ;
   inherit (pkgs) writeText;
+  contract = "fileSecrets";
+  inherit (contracts.${contract}) extend;
 in
 {
   options.testing.hardcoded-secret = mkOption {
-    default = { };
     description = ''
       Hardcoded file secrets. These should only be used in tests.
 
@@ -27,101 +32,93 @@ in
       This makes the tests more accurate, ensuring the permissions
       set by the contract consumer are correct.
     '';
-    example = lib.literalExpression ''
-      {
-        mySecret = {
-          input = {
-            user = "me";
-            mode = "0400";
-          };
-          content = "My Secret";
+    type = submodule (hardcoded-secret: {
+      options = {
+        directory = mkOption {
+          description = "The directory to store the secrets at.";
+          type = str;
+          default = "/run/hardcodedsecrets";
         };
-      }
-    '';
-    type = attrsOf (
-      submodule (
-        { name, ... }:
-        {
-          options = {
-            input = mkOption {
-              description = "Input of the contract for file secrets.";
-              type = lib.types.submodule {
+        ${contract} = mkOption {
+          description = ''
+            Instances of the fileSecrets contract, including secret content and contract request/result.
+          '';
+          example = lib.literalExpression ''
+            {
+              my.secret = {
+                request = {
+                  owner = "me";
+                  mode = "0400";
+                };
+                content = "My Secret";
+              };
+            }
+          '';
+          type = nestedAttrsOf (
+            submodule (
+              { name, ... }:
+              {
                 options = {
-                  mode = mkOption {
-                    description = ''
-                      Mode the secret file must have.
-                    '';
-                    type = str;
-                    default = "0400";
+                  request = mkOption {
+                    description = "Request of the contract for file secrets.";
+                    default = { };
+                    type = extend.request {
+                      owner.default = "root";
+                      group.default = "root";
+                    };
                   };
-
-                  owner = mkOption {
-                    description = ''
-                      Linux user that must own the secret file.
-                    '';
-                    type = str;
-                    default = "root";
+                  result = mkOption {
+                    description = "Result of the contract for file secrets.";
+                    default = { };
+                    type = extend.result {
+                      path = {
+                        default = "${hardcoded-secret.config.directory}/${name}";
+                        defaultText = ''
+                          "''${hardcoded-secret.config.directory}/''${name}"
+                        '';
+                      };
+                    };
                   };
-
-                  group = mkOption {
-                    description = ''
-                      Linux group that must own the secret file.
-                    '';
+                  content = mkOption {
                     type = str;
-                    default = "root";
+                    description = ''
+                      Content of the secret as a string.
+
+                      This will be stored in the nix store and should only be used for testing or maybe in dev.
+                    '';
                   };
                 };
-              };
-            };
-
-            output = mkOption {
-              description = "Output of the contract for file secrets.";
-              default = { };
-              type = lib.types.submodule {
-                options = {
-                  path = mkOption {
-                    type = str;
-                    description = ''
-                      Path to the file containing the secret generated out of band.
-
-                      This path will exist after deploying to a target host,
-                      it is not available through the nix store.
-                    '';
-                    default = "/run/hardcodedsecrets/${name}";
-                  };
-                };
-              };
-            };
-
-            content = mkOption {
-              type = str;
-              description = ''
-                Content of the secret as a string.
-
-                This will be stored in the nix store and should only be used for testing or maybe in dev.
-              '';
-            };
-          };
-        }
-      )
-    );
+              }
+            )
+          );
+        };
+      };
+    });
   };
 
   config = {
-    system.activationScripts = mapAttrs' (
-      n: cfg':
-      let
-        source = writeText "hardcodedsecret_${n}_content" cfg'.content;
+    testing.hardcoded-secret.${contract} = config.contracts.${contract}.requests;
+    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.${contract};
 
-        inherit (cfg') input output;
-      in
-      nameValuePair "hardcodedsecret_${n}" ''
-        mkdir -p "$(dirname "${output.path}")"
-        touch "${output.path}"
-        chmod ${input.mode} "${output.path}"
-        chown ${input.owner}:${input.group} "${output.path}"
-        cp ${source} "${output.path}"
-      ''
-    ) cfg;
+    system.activationScripts =
+      lib.concatMapNestedAttrs' (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
+        (
+          path: cfg':
+          let
+            name = lib.concatStringsSep "_" path;
+            source = writeText "hardcodedsecret_${name}_content" cfg'.content;
+            inherit (cfg') request result;
+          in
+          {
+            ${"hardcodedsecret_${name}"} = ''
+              mkdir -p "$(dirname "${result.path}")"
+              touch "${result.path}"
+              chmod ${request.mode} "${result.path}"
+              chown ${request.owner}:${request.group} "${result.path}"
+              cp ${source} "${result.path}"
+            '';
+          }
+        )
+        cfg.${contract};
   };
 }
