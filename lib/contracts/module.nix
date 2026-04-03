@@ -377,7 +377,7 @@ in
         ) config.contractTypes;
       };
     };
-    options._upstreamContracts = mkOption {
+    _upstreamContracts = mkOption {
       type = nullOr raw;
       internal = true;
       description = ''
