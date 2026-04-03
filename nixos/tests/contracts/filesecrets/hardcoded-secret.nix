@@ -1,0 +1,27 @@
+{
+  lib,
+  ...
+}:
+{
+  meta.maintainers = [ lib.maintainers.ibizaman ];
+}
+// lib.contracts.fileSecrets.behaviorTest {
+  name = "hardcoded-secret";
+  providerRoot = [
+    "testing"
+    "hardcoded-secret"
+    "fileSecrets"
+    "mysecret"
+  ];
+  extraModules = [
+    ../../../modules/testing/hardcoded-secret.nix
+    (
+      { config, ... }:
+      {
+        # setting by defaultProvider is easier, but let's set it manually here
+        contracts.fileSecrets.instances."mysecret" = config.contracts.fileSecrets.providers.hardcoded-secret;
+        testing.hardcoded-secret.fileSecrets."mysecret".content = config.test.content;
+      }
+    )
+  ];
+}

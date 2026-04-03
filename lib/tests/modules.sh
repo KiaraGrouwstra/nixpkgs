@@ -864,6 +864,20 @@ checkConfigOutput '2' config.bar.baz ./evalOption.nix
 checkConfigError 'not of type' config.foo.boo.bar ./extendOption.nix
 checkConfigError 'not of type' config.foo.boo.bar ./extendSubmodule.nix
 
+# contracts: arithmetic contract defined inline in config.contractTypes (downstream user pattern)
+# The increment provider returns request.value + 1, so 5 -> 6.
+checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.instance.value ./contracts-custom.nix
+
+# contracts: using a renamed contract name emits a deprecation warning in config.warnings
+checkConfigOutput 'oldName.*renamed.*newName' config.result ./contracts-contract-rename.nix
+# contracts: using a renamed contract name still produces the correct result
+checkConfigOutput '^6$' config.contracts.oldName.results.consumer.instance.value ./contracts-contract-rename.nix
+
+# contracts: using a renamed request option still forwards the value correctly
+checkConfigOutput '^6$' config.contracts.versioned.results.consumer.instance.value ./contracts-rename-warning.nix
+# contracts: using a renamed request option emits a deprecation warning on stderr
+checkConfigWarning 'request\.oldValue.*renamed.*request\.newValue' config.contracts.versioned.results.consumer.instance.value ./contracts-rename-warning.nix
+
 # specialArgs._class
 checkConfigOutput '"nixos"' config.nixos.config.foo ./specialArgs-class.nix
 checkConfigOutput '"bar"' config.conditionalImportAsNixos.config.foo ./specialArgs-class.nix
