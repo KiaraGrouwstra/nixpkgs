@@ -1,6 +1,26 @@
 # Contracts
 
-## Design
+## Architecture
+
+The contracts system is split across two layers:
+
+- **`lib/contracts/`** - system-agnostic contract infrastructure
+  - `module.nix` - generic contracts module (defines `contractTypes`, `contracts`, `_upstreamContracts`); importable into any module system (NixOS, home-manager, nix-darwin)
+  - `default.nix` - nixpkgs-shipped contract definitions and computed helpers (`mkContract`, `extend`)
+  - `lib.nix` - helper functions (`evalOption`, `extendOption`, `extendSubmodule`) and `templateType`
+- **`nixos/modules/contracts/`** - NixOS wrapper that imports the generic module and seeds `lib.contracts`
+
+For modular services, two additional layers connect services to contracts:
+
+- **`lib/services/lib.nix`** - `configure` function that builds a `serviceSubmodule` type with contract integration via `_upstreamContracts`
+- **Bridge module** (per system) - collects `contracts.<type>.want` and `contracts.<type>.providers` from services into the containing system's contract namespace; see `nixos/modules/system/service/nixos-contracts-bridge.nix`
+
+### Adding contracts to a new module system
+
+1. Import `lib/contracts/module.nix` and seed `config.contractTypes = lib.contracts` (see this directory's `default.nix`)
+2. If the system supports modular services: call `lib/services/lib.nix`'s `configure`, add a bridge module, and write a service manager integration (see `nixos/modules/system/service/systemd/system.nix`)
+
+## Design decisions
 
 - `lib`
   - usable when building docs, making this a good place from which to source types
@@ -23,6 +43,8 @@
       - LLMs: prefers shorter code for lower token use
       - the module system: want to merge configurations with various priorities, so don't like e.g. mutually exclusive settings such as `users.users.<name>`'s `isNormalUser` + `isSystemUser`
   - `providers`
+    - consumers and providers use the same `contracts.<type>.providers.<name>` API in both NixOS modules and modular services
+    - the bridge module automatically collects providers set by modular services into the containing system's contract namespace
     - currently opted to manually pass paths to this like `config.testing.hardcoded-secret.fileSecrets`
     - i considered manually passing just `config.testing.hardcoded-secret`, potentially standardizing over where to find the contract instances (in this case at `.fileSecrets`), but that seemed maybe too restrictive in the event some consumers would consider their contract consumption to be part of some more local name space.
     - also passing `options` seemed relevant to:
@@ -32,7 +54,12 @@
         - aliasing these failed as well, see `defaultProvider`
     - if i could make use of `options` as well, we could just maybe pass a path like `[ "testing" "hardcoded-secret" ]`, though this would also raise questions on that path (relevant for `options`) vs appending a path such as (in that case) `"fileSecrets"` (relevant for `config`)
   - `requests`
+    - read-only, derived from `want`; in modular services, delegates to the containing system's aggregated requests via `_upstreamContracts`
   - `instances`
+  - `_upstreamContracts`
+    - connects a modular service's contract namespace to the containing system's resolved contracts
+    - read-side options (`requests`, `defaultProvider`, `results`) delegate to upstream; write-side options (`want`, `providers`) remain local for the bridge to collect
+    - avoids circularity: the bridge reads `want`/`providers` (local), and the seed injects `requests`/`defaultProvider` (resolved) - these are disjoint paths through the fixpoint
 - consumer
   - options _having_ `output`s rather than _being_ them
     - prevents an infinite recursion (*REPRO*: see stash, probably also prior infinite recursion discussions)
@@ -56,3 +83,5 @@
   - [ ] [contracts combining multiple existing contracts](https://github.com/ibizaman/selfhostblocks/issues/467#issuecomment-4063155555)
   - UI generation for contract provider
     - [ ] reinstate providers' `options` reference (or just use path like `[ "testing" "hardcoded-secret" ]` again to obtain references to both the `config` and the `options` - tho this would distinguish the path from `.fileSecrets` used now) to know what options should be visualized to configure this provider
+  - [ ] home-manager integration
+  - [ ] nix-darwin integration
