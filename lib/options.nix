@@ -664,12 +664,24 @@ rec {
     if v ? _type && v ? text then
       v
     else
-      literalExpression (
-        lib.generators.toPretty {
-          multiline = true;
-          allowPrettyValues = true;
-        } v
-      );
+      let
+        lines = lib.splitString "\n" v;
+        displayLines = if isString v && last lines == "" then take (length lines - 1) lines else lines;
+        # Multi-line strings would be wrapped in `''...''` by `toPretty`, which adds
+        # noise and produces confusing escape sequences (`''` → `'''`, `${` → `''${`).
+        # Show all multi-line strings as plain Nix code blocks instead.
+        # See https://github.com/NixOS/nixpkgs/issues/503758
+        useRawBlock = isString v && length lines > 1;
+      in
+      if useRawBlock then
+        literalMD ("```nix\n" + concatStringsSep "\n" displayLines + "\n```")
+      else
+        literalExpression (
+          lib.generators.toPretty {
+            multiline = true;
+            allowPrettyValues = true;
+          } v
+        );
 
   /**
     For use in the `defaultText` and `example` option attributes. Causes the
