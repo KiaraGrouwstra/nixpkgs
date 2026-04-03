@@ -21,13 +21,29 @@ in
         To create a new contract type, add an instance of `config.contractTypes."<name>"`
         defining `meta` and `interface` options, or when adding to nixpkgs,
         preferably adding one in `lib/contracts`.
+
+        **Integrating into a new module system** (e.g. home-manager, nix-darwin):
+
+        1\. Import this module (`lib/contracts/module.nix`).
+
+        2\. Seed `config.contractTypes` with `lib.contracts` so that nixpkgs-shipped
+        contract definitions are available.
+
+        Both steps are combined in a thin wrapper module; see
+        `nixos/modules/contracts/default.nix` for the reference implementation.
       '';
       # types are in `lib` as the docs build's sandbox has no `config`.
       type = attrsOf lib.contract.templateType;
     };
     contracts = mkOption {
       description = ''
-        Base option for a contract.
+        Contract instances, keyed by contract type.
+
+        This option is system-agnostic - it works identically in NixOS
+        and any module system that imports `lib/contracts/module.nix`.
+
+        Consumers set `contracts.<type>.want`, providers set `contracts.<type>.providers`,
+        and results are read from `contracts.<type>.results`.
       '';
       type = submodule {
         options = lib.mapAttrs (
@@ -384,9 +400,14 @@ in
         When set, read-side contract options (`requests`, `defaultProvider`,
         `instances`, `results`) delegate to this upstream source.
 
-        Used by the modular service seed module to connect a service's contract
-        namespace to a containing system's resolved contracts, giving services
-        first-class access to aggregated requests and results.
+        Set automatically by `lib/services/lib.nix`'s `configure` function to
+        connect a modular service's contract namespace to the containing system's
+        resolved contracts - giving services access to aggregated requests and results.
+
+        Write-side options (`want`, `providers`) remain local to the service;
+        a bridge module in the containing system collects them. See
+        `nixos/modules/system/service/nixos-contracts-bridge.nix` for the
+        reference bridge implementation.
       '';
     };
   };
