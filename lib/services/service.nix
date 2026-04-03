@@ -1,6 +1,15 @@
 # Non-module arguments
 # These are separate from the module arguments to avoid implicit dependencies.
 # This makes service modules self-contains, allowing mixing of Nixpkgs versions.
+#
+# Portable service base module - imported into every modular service's module system.
+#
+# Defines the core service interface (`process.argv`, sub-`services`, `configData`)
+# and imports the contracts module. This is system-agnostic: it works regardless of
+# whether the containing system is NixOS, home-manager, or similar systems.
+#
+# Service-manager-specific options (systemd units, launchd plists, etc.) are added
+# via `extraRootModules` in `lib/services/lib.nix`'s `configure` function, not here.
 { pkgs }:
 
 # The module
@@ -16,9 +25,10 @@ in
   # https://nixos.org/manual/nixos/unstable/#modular-services
   _class = "service";
   imports = [
-    ../../../../../modules/generic/meta-maintainers.nix
-    ../../../misc/assertions.nix
+    ../../modules/generic/meta-maintainers.nix
+    ../../nixos/modules/misc/assertions.nix
     (lib.modules.importApply ./config-data.nix { inherit pkgs; })
+    ../contracts/module.nix
   ];
   options = {
     services = mkOption {
