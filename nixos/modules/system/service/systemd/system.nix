@@ -76,6 +76,9 @@ in
 {
   _class = "nixos";
 
+  # system.services type transitively imports lib/contracts/module.nix (outside nixos/).
+  meta.buildDocsInSandbox = false;
+
   imports = [
     ../nixos-contracts-bridge.nix
   ];
