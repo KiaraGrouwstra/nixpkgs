@@ -1,6 +1,6 @@
 { config, lib, ... }:
 let
-  portable-lib = import ./portable/lib.nix { inherit lib; };
+  portable-lib = import ../../../../lib/services/lib.nix { inherit lib; };
 in
 {
   contracts = lib.mapAttrs (contractType: _: {
