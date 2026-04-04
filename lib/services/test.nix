@@ -70,6 +70,7 @@ let
             state = "cowsay";
             logs = "cowsay";
           };
+          capabilities = [ "net_bind_service" ];
         };
       };
       service3 = {
@@ -134,6 +135,7 @@ let
               ];
               user = null;
               directories = { state = null; cache = null; runtime = null; logs = null; };
+              capabilities = [ ];
               ports = {
                 http = { port = 8080; range = null; protocol = "tcp"; };
                 metrics = { port = 9090; range = null; protocol = "tcp"; };
@@ -177,6 +179,7 @@ let
               ports = { };
               user = { name = "cowsay"; group = "cowsay"; home = null; createHome = false; };
               directories = { state = "cowsay"; cache = null; runtime = null; logs = "cowsay"; };
+              capabilities = [ "net_bind_service" ];
             };
             services = { };
             assertions = [ ];
@@ -187,6 +190,7 @@ let
               argv = [ "/bin/false" ];
               user = null;
               directories = { state = null; cache = null; runtime = null; logs = null; };
+              capabilities = [ ];
               ports = { };
             };
             services.exclacow = {
@@ -197,6 +201,7 @@ let
                 ];
                 user = null;
                 directories = { state = null; cache = null; runtime = null; logs = null; };
+                capabilities = [ ];
                 ports = { };
               };
               services = { };

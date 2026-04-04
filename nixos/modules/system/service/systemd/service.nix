@@ -194,6 +194,15 @@ in
         (lib.mkIf (config.process.directories.logs != null) {
           LogsDirectory = lib.mkDefault config.process.directories.logs;
         })
+        (lib.mkIf (config.process.capabilities != [ ]) (
+          let
+            caps = map (c: "CAP_${lib.toUpper c}") config.process.capabilities;
+          in
+          {
+            AmbientCapabilities = caps;
+            CapabilityBoundingSet = caps;
+          }
+        ))
       ];
     };
   };
