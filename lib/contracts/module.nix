@@ -11,6 +11,7 @@ let
     ;
   # `or` fallbacks allow the docs build sandbox to evaluate this module:
   # the sandbox passes a fake `config` via `specialArgs` that lacks these attributes.
+  upstream = config._upstreamContracts or { };
   contractTypes = config.contractTypes or lib.contracts;
 in
 {
@@ -249,7 +250,10 @@ in
                   '';
                   type = nestedAttrsOf raw;
                   default =
-                    lib.mapNestedAttrs' wantType (v: {
+                    if upstream ? ${contractName} then
+                      upstream.${contractName}.requests
+                    else
+                      lib.mapNestedAttrs' wantType (v: {
                         request = lib.getAttrs (lib.attrNames interface.request) v.request;
                       }) contract.config.want;
                   defaultText = lib.literalExpression ''
@@ -415,10 +419,43 @@ in
                       };
                     }
                     ```
+
+                    **Modular service consumer** - results are scoped automatically by
+                    `_upstreamContracts`, so no prefix is needed:
+
+                    ```nix
+                    { lib, config, ... }:
+                    {
+                      _class = "service";
+                      options."<consumer>"."<option>" = lib.mkOption {
+                        type = lib.contracts.${contractName}.mkContract { ... };
+                      };
+                      config = {
+                        contracts.${contractName}.want = { inherit (config."<consumer>") "<option>"; };
+                        "<consumer>"."<option>".result =
+                          config.contracts.${contractName}.results."<option>";
+                      };
+                    }
+                    ```
+
+                    The same scoped API applies to sub-services at any nesting depth.
+
+                    **At the NixOS level** (e.g. in assertions), results include the full
+                    service tree path added by the bridge:
+
+                    ```nix
+                    # root service "myService":
+                    config.contracts.${contractName}.results.myService."<option>"
+
+                    # sub-service "inner" under "outer":
+                    config.contracts.${contractName}.results.outer.inner."<option>"
+                    ```
                   '';
                   type = nestedAttrsOf raw;
                   default =
-                    if contract.config.defaultProvider == null && contract.config.want == { } then
+                    if upstream ? ${contractName} then
+                      upstream.${contractName}.results
+                    else if contract.config.defaultProvider == null && contract.config.want == { } then
                       # No consumers and no provider (e.g. docs sandbox) -- safe empty.
                       { }
                     else
@@ -442,5 +479,40 @@ in
         ) contractTypes;
       };
     };
+    _upstreamContracts = mkOption {
+      type = attrsOf raw;
+      internal = true;
+      description = ''
+        When populated, read-side contract options (`requests`, `defaultProvider`,
+        `results`) delegate to this upstream source.
+
+        Set automatically by `lib/services/lib.nix`'s `configure` function to
+        connect a modular service's contract namespace to the containing system's
+        resolved contracts. Each service level receives a scoped view where
+        `results` is narrowed to just that service's entries - so services read
+        results by option name directly, without a manual prefix.
+
+        Propagates automatically from parent services to sub-services via
+        `lib/services/service.nix`, with each level further scoping `results`
+        under the sub-service's name.
+
+        Write-side options (`want`, `providers`) remain local to the service.
+        The bridge auto-nests each service's `want` under its service tree path
+        and collects them into the containing system's contract namespace.
+        See `nixos/modules/system/service/nixos-contracts-bridge.nix` for the
+        reference bridge implementation.
+      '';
+    };
+  };
+
+  # When upstream contracts are available, inject the resolved `defaultProvider`
+  # so consumers can read results without explicit wiring.
+  config = {
+    contracts = lib.mapAttrs (
+      contractName: _:
+      lib.optionalAttrs (upstream ? ${contractName}) {
+        defaultProvider = lib.mkDefault upstream.${contractName}.defaultProvider;
+      }
+    ) contractTypes;
   };
 }
