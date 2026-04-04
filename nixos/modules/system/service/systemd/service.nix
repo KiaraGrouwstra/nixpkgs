@@ -170,6 +170,11 @@ in
       # TODO description;
       wantedBy = lib.mkDefault [ "multi-user.target" ];
       environment = config.process.environment;
+      reloadTriggers = lib.mkIf (config.process.reload.signal != null) (
+        lib.mapAttrsToList (_: cfg: cfg.source) (
+          lib.filterAttrs (_: cfg: cfg.enable) config.configData
+        )
+      );
       serviceConfig = lib.mkMerge [
         {
           Type = lib.mkDefault "simple";
@@ -194,6 +199,9 @@ in
         })
         (lib.mkIf (config.process.directories.logs != null) {
           LogsDirectory = lib.mkDefault config.process.directories.logs;
+        })
+        (lib.mkIf (config.process.reload.signal != null) {
+          ExecReload = lib.mkDefault "/run/current-system/sw/bin/kill -s ${config.process.reload.signal} $MAINPID";
         })
         (lib.mkIf (config.process.capabilities != [ ]) (
           let

@@ -6,7 +6,7 @@
 #
 # Defines the core service interface (`process.argv`, `process.ports`,
 # `process.user`, `process.directories`, `process.capabilities`,
-# `process.environment`, sub-`services`, `configData`)
+# `process.environment`, `process.reload`, sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -163,6 +163,23 @@ in
         example = {
           RUST_LOG = "info";
           PORT = "8080";
+        };
+      };
+      reload = {
+        signal = mkOption {
+          type = types.nullOr types.str;
+          description = ''
+            Signal that triggers a graceful configuration reload.
+
+            When set, the execution context wires up reload support:
+            - systemd: sets `ExecReload` to send this signal and registers
+              `configData` paths as `reloadTriggers`, so config changes
+              trigger a reload rather than a full restart.
+            - Other contexts may use this to implement equivalent behavior.
+
+            Common values: `SIGHUP`, `SIGUSR1`, `SIGUSR2`.
+          '';
+          example = "SIGHUP";
         };
       };
       capabilities = mkOption {

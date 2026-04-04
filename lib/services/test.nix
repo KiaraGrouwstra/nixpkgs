@@ -74,6 +74,7 @@ let
           environment = {
             MOO = "true";
           };
+          reload.signal = "SIGHUP";
         };
       };
       service3 = {
@@ -140,6 +141,7 @@ let
               directories = { state = null; cache = null; runtime = null; logs = null; };
               capabilities = [ ];
               environment = { };
+              reload = { signal = null; };
               ports = {
                 http = { port = 8080; range = null; protocol = "tcp"; };
                 metrics = { port = 9090; range = null; protocol = "tcp"; };
@@ -185,6 +187,7 @@ let
               directories = { state = "cowsay"; cache = null; runtime = null; logs = "cowsay"; };
               capabilities = [ "net_bind_service" ];
               environment = { MOO = "true"; };
+              reload = { signal = "SIGHUP"; };
             };
             services = { };
             assertions = [ ];
@@ -197,6 +200,7 @@ let
               directories = { state = null; cache = null; runtime = null; logs = null; };
               capabilities = [ ];
               environment = { };
+              reload = { signal = null; };
               ports = { };
             };
             services.exclacow = {
@@ -209,6 +213,7 @@ let
                 directories = { state = null; cache = null; runtime = null; logs = null; };
                 capabilities = [ ];
                 environment = { };
+                reload = { signal = null; };
                 ports = { };
               };
               services = { };
