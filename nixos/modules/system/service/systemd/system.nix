@@ -60,6 +60,12 @@ let
       subServiceName: subService: makeUnits unitType (dash prefix subServiceName) subService
     ) service.services;
 
+  # Collect process.user declarations from the service tree.
+  collectUsers =
+    service:
+    lib.optional (service.process.user != null) service.process.user
+    ++ concatLists (mapAttrsToList (_: collectUsers) service.services);
+
   modularServiceConfiguration = portable-lib.configure {
     serviceManagerPkgs = pkgs;
     extraRootModules = [
@@ -121,5 +127,26 @@ in
     environment.etc = concatMapAttrs (
       serviceName: topLevelService: makeNixosEtcFiles serviceName topLevelService
     ) config.system.services;
+
+    users =
+      let
+        allUsers = concatLists (mapAttrsToList (_: collectUsers) config.system.services);
+      in
+      {
+        users = lib.listToAttrs (map (u: {
+          name = u.name;
+          value = {
+            isSystemUser = true;
+            group = u.group;
+          } // lib.optionalAttrs (u.home != null) {
+            home = u.home;
+            inherit (u) createHome;
+          };
+        }) allUsers);
+        groups = lib.listToAttrs (map (u: {
+          name = u.group;
+          value = { };
+        }) allUsers);
+      };
   };
 }

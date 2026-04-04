@@ -5,7 +5,7 @@
 # Portable service base module - imported into every modular service's module system.
 #
 # Defines the core service interface (`process.argv`, `process.ports`,
-# sub-`services`, `configData`)
+# `process.user`, sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -79,6 +79,39 @@ in
           This is a raw command-line that should not contain any shell escaping.
           If expansion of environmental variables is required then use
           a shell script or `importas` from `pkgs.execline`.
+        '';
+      };
+      user = mkOption {
+        type = types.nullOr (types.submodule {
+          options = {
+            name = mkOption {
+              type = types.str;
+              description = "User name for the service process.";
+            };
+            group = mkOption {
+              type = types.str;
+              description = "Primary group name.";
+            };
+            home = mkOption {
+              type = types.nullOr types.str;
+              description = "Home directory path, or null for no dedicated home.";
+            };
+            createHome = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Whether to create the home directory if it does not exist.";
+            };
+          };
+        });
+        description = ''
+          User identity for the service process.
+
+          When set, the execution context ensures this user and group exist.
+          On NixOS, this creates `users.users` and `users.groups` entries and
+          sets `User=` / `Group=` in the systemd unit.
+
+          For complex requirements (fixed UID/GID, extra groups, login shell),
+          use execution-context-specific options instead.
         '';
       };
       ports = mkOption {

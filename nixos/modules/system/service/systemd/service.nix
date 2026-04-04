@@ -169,14 +169,20 @@ in
     systemd.services."" = {
       # TODO description;
       wantedBy = lib.mkDefault [ "multi-user.target" ];
-      serviceConfig = {
-        Type = lib.mkDefault "simple";
-        Restart = lib.mkDefault "always";
-        RestartSec = lib.mkDefault "5";
-        ExecStart = [
-          config.systemd.mainExecStart
-        ];
-      };
+      serviceConfig = lib.mkMerge [
+        {
+          Type = lib.mkDefault "simple";
+          Restart = lib.mkDefault "always";
+          RestartSec = lib.mkDefault "5";
+          ExecStart = [
+            config.systemd.mainExecStart
+          ];
+        }
+        (lib.mkIf (config.process.user != null) {
+          User = lib.mkDefault config.process.user.name;
+          Group = lib.mkDefault config.process.user.group;
+        })
+      ];
     };
   };
 }
