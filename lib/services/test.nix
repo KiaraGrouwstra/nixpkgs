@@ -66,6 +66,10 @@ let
             name = "cowsay";
             group = "cowsay";
           };
+          directories = {
+            state = "cowsay";
+            logs = "cowsay";
+          };
         };
       };
       service3 = {
@@ -131,6 +135,7 @@ let
               reloadSignal = null;
               reloadCommand = null;
               user = null;
+              directories = { state = null; cache = null; runtime = null; logs = null; };
               ports = {
                 http = { port = 8080; range = null; protocol = "tcp"; };
                 metrics = { port = 9090; range = null; protocol = "tcp"; };
@@ -179,6 +184,7 @@ let
               reloadCommand = null;
               ports = { };
               user = { name = "cowsay"; group = "cowsay"; home = null; createHome = false; };
+              directories = { state = "cowsay"; cache = null; runtime = null; logs = "cowsay"; };
             };
             services = { };
             assertions = [
@@ -195,6 +201,7 @@ let
               reloadSignal = null;
               reloadCommand = null;
               user = null;
+              directories = { state = null; cache = null; runtime = null; logs = null; };
               ports = { };
             };
             services.exclacow = {
@@ -206,6 +213,7 @@ let
                 reloadSignal = null;
                 reloadCommand = null;
                 user = null;
+                directories = { state = null; cache = null; runtime = null; logs = null; };
                 ports = { };
               };
               services = { };
