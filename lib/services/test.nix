@@ -66,6 +66,10 @@ let
             name = "cowsay";
             group = "cowsay";
           };
+          directories = {
+            state = "cowsay";
+            logs = "cowsay";
+          };
         };
       };
       service3 = {
@@ -129,6 +133,7 @@ let
                 "hello"
               ];
               user = null;
+              directories = { state = null; cache = null; runtime = null; logs = null; };
               ports = {
                 http = { port = 8080; range = null; protocol = "tcp"; };
                 metrics = { port = 9090; range = null; protocol = "tcp"; };
@@ -171,6 +176,7 @@ let
               ];
               ports = { };
               user = { name = "cowsay"; group = "cowsay"; home = null; createHome = false; };
+              directories = { state = "cowsay"; cache = null; runtime = null; logs = "cowsay"; };
             };
             services = { };
             assertions = [ ];
@@ -180,6 +186,7 @@ let
             process = {
               argv = [ "/bin/false" ];
               user = null;
+              directories = { state = null; cache = null; runtime = null; logs = null; };
               ports = { };
             };
             services.exclacow = {
@@ -189,6 +196,7 @@ let
                   "!"
                 ];
                 user = null;
+                directories = { state = null; cache = null; runtime = null; logs = null; };
                 ports = { };
               };
               services = { };

@@ -182,6 +182,18 @@ in
           User = lib.mkDefault config.process.user.name;
           Group = lib.mkDefault config.process.user.group;
         })
+        (lib.mkIf (config.process.directories.state != null) {
+          StateDirectory = lib.mkDefault config.process.directories.state;
+        })
+        (lib.mkIf (config.process.directories.cache != null) {
+          CacheDirectory = lib.mkDefault config.process.directories.cache;
+        })
+        (lib.mkIf (config.process.directories.runtime != null) {
+          RuntimeDirectory = lib.mkDefault config.process.directories.runtime;
+        })
+        (lib.mkIf (config.process.directories.logs != null) {
+          LogsDirectory = lib.mkDefault config.process.directories.logs;
+        })
       ];
     };
   };

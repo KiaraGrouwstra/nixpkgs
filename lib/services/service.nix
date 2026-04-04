@@ -5,7 +5,7 @@
 # Portable service base module - imported into every modular service's module system.
 #
 # Defines the core service interface (`process.argv`, `process.ports`,
-# `process.user`, sub-`services`, `configData`)
+# `process.user`, `process.directories`, sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -113,6 +113,42 @@ in
           For complex requirements (fixed UID/GID, extra groups, login shell),
           use execution-context-specific options instead.
         '';
+      };
+      directories = {
+        state = mkOption {
+          type = types.nullOr types.str;
+          description = ''
+            Persistent state directory for the service.
+
+            On NixOS/systemd, maps to `StateDirectory` when the path follows
+            the `/var/lib/<name>` convention, otherwise generates tmpfiles rules.
+          '';
+          example = "myservice";
+        };
+        cache = mkOption {
+          type = types.nullOr types.str;
+          description = ''
+            Cache directory (may be cleared between restarts).
+
+            On NixOS/systemd, maps to `CacheDirectory`.
+          '';
+        };
+        runtime = mkOption {
+          type = types.nullOr types.str;
+          description = ''
+            Runtime directory (cleared on reboot).
+
+            On NixOS/systemd, maps to `RuntimeDirectory`.
+          '';
+        };
+        logs = mkOption {
+          type = types.nullOr types.str;
+          description = ''
+            Log directory for the service.
+
+            On NixOS/systemd, maps to `LogsDirectory`.
+          '';
+        };
       };
       ports = mkOption {
         type = types.attrsOf (types.submodule {
