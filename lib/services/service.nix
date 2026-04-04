@@ -5,8 +5,9 @@
 # Portable service base module - imported into every modular service's module system.
 #
 # Defines the core service interface (`process.argv`, `process.ports`,
-# `process.user`, `process.directories`, `process.reloadSignal`,
-# `process.reloadCommand`, `notificationProtocol`, sub-`services`, `configData`)
+# `process.user`, `process.directories`, `process.capabilities`,
+# `process.reloadSignal`, `process.reloadCommand`, `notificationProtocol`,
+# sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -148,6 +149,30 @@ in
             On NixOS/systemd, maps to `LogsDirectory`.
           '';
         };
+      };
+      capabilities = mkOption {
+        type = types.listOf (types.enum [
+          "net_bind_service"
+          "net_raw"
+          "sys_time"
+          "dac_override"
+          "dac_read_search"
+          "chown"
+          "fowner"
+          "kill"
+          "setuid"
+          "setgid"
+        ]);
+        default = [ ];
+        description = ''
+          Linux capabilities required by the service process.
+          Uses lowercase names without the `CAP_` prefix.
+
+          Execution contexts interpret this appropriately:
+          - systemd: sets `AmbientCapabilities` and `CapabilityBoundingSet`
+          - containers: adds to the container capability set
+          - k8s: sets `securityContext.capabilities.add`
+        '';
       };
 
       reloadSignal = mkOption {
