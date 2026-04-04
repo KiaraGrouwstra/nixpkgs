@@ -4,7 +4,8 @@
 #
 # Portable service base module - imported into every modular service's module system.
 #
-# Defines the core service interface (`process.argv`, sub-`services`, `configData`)
+# Defines the core service interface (`process.argv`, `process.ports`,
+# sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -80,6 +81,57 @@ in
           a shell script or `importas` from `pkgs.execline`.
         '';
       };
+      ports = mkOption {
+        type = types.attrsOf (types.submodule {
+          options = {
+            port = mkOption {
+              type = types.nullOr types.port;
+              description = ''
+                Single port number. Mutually exclusive with `range`.
+              '';
+            };
+            range = mkOption {
+              type = types.nullOr (types.submodule {
+                options = {
+                  from = mkOption {
+                    type = types.port;
+                    description = "Start of port range (inclusive).";
+                  };
+                  to = mkOption {
+                    type = types.port;
+                    description = "End of port range (inclusive).";
+                  };
+                };
+              });
+              description = ''
+                Port range (inclusive). Mutually exclusive with `port`.
+              '';
+            };
+            protocol = mkOption {
+              type = types.enum [ "tcp" "udp" ];
+              default = "tcp";
+              description = "Transport protocol.";
+            };
+          };
+        });
+        default = { };
+        description = ''
+          Named network ports this service listens on.
+
+          This is declarative metadata about what ports the service process uses.
+          Execution contexts interpret this appropriately: NixOS can open firewall
+          ports, containers can set EXPOSE directives, orchestrators can configure
+          service port specs.
+
+          Port names should be descriptive (e.g. "http", "grpc", "metrics").
+        '';
+      };
     };
   };
+  config.assertions = lib.concatLists (lib.mapAttrsToList (name: portCfg: [
+    {
+      assertion = (portCfg.port != null) != (portCfg.range != null);
+      message = "process.ports.${name}: set either `port` or `range`, not both or neither.";
+    }
+  ]) config.process.ports);
 }
