@@ -7,4 +7,5 @@
   modular-services = runTest ./modular-services.nix;
   nested-services = runTest ./nested-services.nix;
   nixos-provider-modular-consumer = runTest ./nixos-provider-modular-consumer.nix;
+  systemd-openbaod = runTest ./systemd-openbaod.nix;
 }
