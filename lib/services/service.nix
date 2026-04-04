@@ -6,8 +6,8 @@
 #
 # Defines the core service interface (`process.argv`, `process.ports`,
 # `process.user`, `process.directories`, `process.capabilities`,
-# `process.reloadSignal`, `process.reloadCommand`, `notificationProtocol`,
-# sub-`services`, `configData`)
+# `process.environment`, `process.reloadSignal`, `process.reloadCommand`,
+# `notificationProtocol`, sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -148,6 +148,20 @@ in
 
             On NixOS/systemd, maps to `LogsDirectory`.
           '';
+        };
+      };
+      environment = mkOption {
+        type = types.attrsOf types.str;
+        default = { };
+        description = ''
+          Environment variables set for the service process.
+
+          On NixOS/systemd, these are passed via the systemd unit's
+          `Environment` directive.
+        '';
+        example = {
+          RUST_LOG = "info";
+          PORT = "8080";
         };
       };
       capabilities = mkOption {

@@ -207,6 +207,7 @@ in
     systemd.services."" = {
       # TODO description;
       wantedBy = lib.mkDefault [ "multi-user.target" ];
+      environment = config.process.environment;
       serviceConfig = lib.mkMerge [
         {
           ExecReload = config.systemd.mainExecReload;
