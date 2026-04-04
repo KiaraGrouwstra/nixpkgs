@@ -207,15 +207,21 @@ in
     systemd.services."" = {
       # TODO description;
       wantedBy = lib.mkDefault [ "multi-user.target" ];
-      serviceConfig = {
-        ExecReload = config.systemd.mainExecReload;
-        Type = lib.mkDefault (if config.notificationProtocol.systemd then "notify" else "simple");
-        Restart = lib.mkDefault "always";
-        RestartSec = lib.mkDefault "5";
-        ExecStart = [
-          config.systemd.mainExecStart
-        ];
-      };
+      serviceConfig = lib.mkMerge [
+        {
+          ExecReload = config.systemd.mainExecReload;
+          Type = lib.mkDefault (if config.notificationProtocol.systemd then "notify" else "simple");
+          Restart = lib.mkDefault "always";
+          RestartSec = lib.mkDefault "5";
+          ExecStart = [
+            config.systemd.mainExecStart
+          ];
+        }
+        (lib.mkIf (config.process.user != null) {
+          User = lib.mkDefault config.process.user.name;
+          Group = lib.mkDefault config.process.user.group;
+        })
+      ];
     };
   };
 }

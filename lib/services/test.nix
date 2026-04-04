@@ -62,6 +62,10 @@ let
             (dummyPkg "cowsay.sh")
             "world"
           ];
+          user = {
+            name = "cowsay";
+            group = "cowsay";
+          };
         };
       };
       service3 = {
@@ -126,6 +130,7 @@ let
               ];
               reloadSignal = null;
               reloadCommand = null;
+              user = null;
               ports = {
                 http = { port = 8080; range = null; protocol = "tcp"; };
                 metrics = { port = 9090; range = null; protocol = "tcp"; };
@@ -173,6 +178,7 @@ let
               reloadSignal = null;
               reloadCommand = null;
               ports = { };
+              user = { name = "cowsay"; group = "cowsay"; home = null; createHome = false; };
             };
             services = { };
             assertions = [
@@ -188,6 +194,7 @@ let
               argv = [ "/bin/false" ];
               reloadSignal = null;
               reloadCommand = null;
+              user = null;
               ports = { };
             };
             services.exclacow = {
@@ -198,6 +205,7 @@ let
                 ];
                 reloadSignal = null;
                 reloadCommand = null;
+                user = null;
                 ports = { };
               };
               services = { };
