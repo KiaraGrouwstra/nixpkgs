@@ -1528,6 +1528,7 @@
   ./services/security/sshguard.nix
   ./services/security/sslmate-agent.nix
   ./services/security/step-ca.nix
+  ./services/security/systemd-openbaod.nix
   ./services/security/tang.nix
   ./services/security/timekpr.nix
   ./services/security/tinyauth.nix
