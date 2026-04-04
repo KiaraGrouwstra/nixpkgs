@@ -29,6 +29,20 @@ let
             "/usr/bin/echo" # *giggles*
             "hello"
           ];
+          ports.http = {
+            port = 8080;
+          };
+          ports.metrics = {
+            port = 9090;
+          };
+          ports.dns = {
+            port = 53;
+            protocol = "udp";
+          };
+          ports.turn = {
+            range = { from = 49152; to = 65535; };
+            protocol = "udp";
+          };
         };
         assertions = [
           {
@@ -112,12 +126,34 @@ let
               ];
               reloadSignal = null;
               reloadCommand = null;
+              ports = {
+                http = { port = 8080; range = null; protocol = "tcp"; };
+                metrics = { port = 9090; range = null; protocol = "tcp"; };
+                dns = { port = 53; range = null; protocol = "udp"; };
+                turn = { port = null; range = { from = 49152; to = 65535; }; protocol = "udp"; };
+              };
             };
             services = { };
             assertions = [
               {
                 assertion = true;
                 message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+              }
+              {
+                assertion = true;
+                message = "process.ports.dns: set either `port` or `range`, not both or neither.";
+              }
+              {
+                assertion = true;
+                message = "process.ports.http: set either `port` or `range`, not both or neither.";
+              }
+              {
+                assertion = true;
+                message = "process.ports.metrics: set either `port` or `range`, not both or neither.";
+              }
+              {
+                assertion = true;
+                message = "process.ports.turn: set either `port` or `range`, not both or neither.";
               }
               {
                 assertion = false;
@@ -136,6 +172,7 @@ let
               ];
               reloadSignal = null;
               reloadCommand = null;
+              ports = { };
             };
             services = { };
             assertions = [
@@ -151,6 +188,7 @@ let
               argv = [ "/bin/false" ];
               reloadSignal = null;
               reloadCommand = null;
+              ports = { };
             };
             services.exclacow = {
               process = {
@@ -160,6 +198,7 @@ let
                 ];
                 reloadSignal = null;
                 reloadCommand = null;
+                ports = { };
               };
               services = { };
               assertions = [
@@ -195,6 +234,22 @@ let
         {
           assertion = true;
           message = "in service1: reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+        }
+        {
+          assertion = true;
+          message = "in service1: process.ports.dns: set either `port` or `range`, not both or neither.";
+        }
+        {
+          assertion = true;
+          message = "in service1: process.ports.http: set either `port` or `range`, not both or neither.";
+        }
+        {
+          assertion = true;
+          message = "in service1: process.ports.metrics: set either `port` or `range`, not both or neither.";
+        }
+        {
+          assertion = true;
+          message = "in service1: process.ports.turn: set either `port` or `range`, not both or neither.";
         }
         {
           message = "in service1: you can't enable this for that reason";
