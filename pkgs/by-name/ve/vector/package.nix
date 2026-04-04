@@ -23,6 +23,9 @@
   darwin,
   versionCheckHook,
   zlib,
+  formats,
+  runCommand,
+  vector,
 }:
 
 rustPlatform.buildRustPackage (finalAttrs: {
@@ -153,6 +156,12 @@ rustPlatform.buildRustPackage (finalAttrs: {
       inherit (nixosTests) vector;
     };
     updateScript = nix-update-script { };
+    services.default = {
+      imports = [
+        (lib.modules.importApply ./service.nix { inherit formats runCommand; })
+      ];
+      vector.package = vector; # FIXME: finalAttrs.finalPackage
+    };
   };
 
   meta = {
