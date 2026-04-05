@@ -53,7 +53,9 @@ rec {
       portable-lib = import <nixpkgs/lib/services/lib.nix> { inherit lib; };
 
       modularServiceConfiguration = portable-lib.configure {
-        serviceManagerPkgs = pkgs;
+        baseModules = [
+          <nixpkgs/lib/services/service.nix>    # portable service base
+        ];
         extraRootModules = [
           ./launchd-service.nix    # launchd-specific options (plist generation, etc.)
         ];
@@ -79,21 +81,11 @@ rec {
 
     # Inputs
 
-    `serviceManagerPkgs`
+    `baseModules`: The portable service base modules (typically `service.nix` via `importApply`). These are loaded into the "root" service submodule and must handle propagation to sub-`services` themselves.
 
-    : 1\. A Nixpkgs instance used for built-in logic such as converting
-    `configData.<path>.text` to a store path.
+    `extraRootModules`: Additional modules to be loaded into the "root" service submodule, but not into its sub-`services`. That's the modules' own responsibility.
 
-    `extraRootModules`
-
-    : 2\. Modules to be loaded into the "root" service submodule, but not
-    into its sub-`services`. That's the modules' own responsibility.
-    Typically contains service-manager-specific option modules
-    (e.g. systemd unit options, launchd plist options).
-
-    `extraRootSpecialArgs`
-
-    : 3\. Fixed module arguments provided alongside `extraRootModules`.
+    `extraRootSpecialArgs`: Fixed module arguments that are provided in a similar manner to `extraRootModules`.
 
     # Output
 
@@ -103,17 +95,14 @@ rec {
   */
   configure =
     {
-      serviceManagerPkgs,
+      baseModules ? [ ],
       extraRootModules ? [ ],
       extraRootSpecialArgs ? { },
     }:
     let
-      modules = [
-        (lib.modules.importApply ./service.nix { pkgs = serviceManagerPkgs; })
-      ];
       serviceSubmodule = types.submoduleWith {
         class = "service";
-        modules = modules ++ extraRootModules;
+        modules = baseModules ++ extraRootModules;
         specialArgs = extraRootSpecialArgs;
       };
     in
