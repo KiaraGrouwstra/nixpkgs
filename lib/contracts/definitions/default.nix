@@ -4,4 +4,7 @@
 lib.mapAttrs (
   _: path:
   lib.evalOption (lib.mkOption { type = lib.contract.definitionType; }) (import path { inherit lib; })
-) { fileSecrets = ./file-secrets.nix; }
+) {
+  fileSecrets = ./file-secrets.nix;
+  fileBackup = ./file-backup.nix;
+}
