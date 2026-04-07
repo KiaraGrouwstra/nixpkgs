@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  options,
   pkgs,
   ...
 }:
@@ -340,6 +341,89 @@ let
       borgbackup.repos.${name}: repo isn't a local path, thus it can't be a removable device!
     '';
   };
+
+  mkContractBorgOptions = {
+    repo = lib.mkOption {
+      type = lib.types.str;
+      description = "Repository location for this backup.";
+      example = "/var/backup/borg";
+    };
+
+    doInit = lib.mkOption {
+      type = lib.types.bool;
+      description = "Initialize repository if it does not exist.";
+      default = false;
+    };
+
+    encryption = {
+      mode = lib.mkOption {
+        type = lib.types.enum [
+          "repokey"
+          "keyfile"
+          "repokey-blake2"
+          "keyfile-blake2"
+          "authenticated"
+          "authenticated-blake2"
+          "none"
+        ];
+        description = "Encryption mode for the repository.";
+      };
+
+      passCommand = lib.mkOption {
+        type = with lib.types; nullOr str;
+        description = "Command to obtain the passphrase.";
+        default = null;
+      };
+
+      passphrase = lib.mkOption {
+        type = with lib.types; nullOr str;
+        description = "Repository passphrase. Stored world-readable in the Nix store; prefer `passCommand`.";
+        default = null;
+      };
+    };
+  };
+
+  mkBorgContractScript =
+    name: instance:
+    let
+      wrapper = mkWrapperDrv {
+        original = lib.getExe config.services.borgbackup.package;
+        name = "borg-job-${name}";
+        set =
+          { BORG_REPO = instance.repo; }
+          // lib.optionalAttrs (instance.encryption.mode == "none") {
+            BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK = "yes";
+          }
+          // (mkPassEnv instance);
+      };
+    in
+    pkgs.writeShellApplication {
+      name = "borgbackup-contract-${name}";
+      text = ''
+        verb="''${1:-}"
+        case "$verb" in
+          backup)
+            systemctl start --wait borgbackup-job-${name}
+            ;;
+          snapshots)
+            ${wrapper}/bin/borg-job-${name} list --short
+            ;;
+          restore)
+            shift
+            snapshot="''${1:?Usage: $0 restore <snapshot>}"
+            (cd / && exec ${wrapper}/bin/borg-job-${name} extract "::$snapshot")
+            ;;
+          exec)
+            shift
+            exec ${wrapper}/bin/borg-job-${name} "$@"
+            ;;
+          *)
+            echo "Usage: $0 {backup|snapshots|restore <snap>|exec <args...>}" >&2
+            exit 1
+            ;;
+        esac
+      '';
+    };
 
 in
 {
@@ -931,9 +1015,51 @@ in
     );
   };
 
+  options.services.borgbackup.contracts.fileBackup = lib.mkOption {
+    description = "Instances of the fileBackup contract fulfilled by borgbackup.";
+    default = config.contracts.fileBackup.requests;
+    defaultText = lib.literalExpression "config.contracts.fileBackup.requests";
+    type = config.contracts.fileBackup.mkProviderType {
+      providerOptions = mkContractBorgOptions;
+      fulfill' = { name, instance, ... }: {
+        script = mkBorgContractScript name instance;
+      };
+    };
+  };
+
   ###### implementation
 
-  config = lib.mkIf (with config.services.borgbackup; jobs != { } || repos != { }) (
+  config = lib.mkMerge [
+    {
+      services.borgbackup.jobs = lib.concatMapNestedAttrs'
+        options.services.borgbackup.contracts.fileBackup.type
+        (
+          path: instance:
+          let
+            name = lib.concatStringsSep "_" path;
+            inherit (instance) request;
+          in
+          {
+            ${name} = {
+              inherit (instance)
+                repo
+                doInit
+                encryption
+                ;
+              paths = request.sourceDirectories;
+              exclude = map (p: "sh:**/${p}") request.excludePatterns;
+              user = request.user;
+              preHook = lib.concatMapStringsSep "\n" toString request.hooks.beforeBackup;
+              postHook = lib.concatMapStringsSep "\n" toString request.hooks.afterBackup;
+            };
+          }
+        )
+        config.services.borgbackup.contracts.fileBackup;
+
+      contracts.fileBackup.providers.borgbackup.module =
+        options.services.borgbackup.contracts.fileBackup;
+    }
+    (lib.mkIf (with config.services.borgbackup; jobs != { } || repos != { }) (
     with config.services.borgbackup;
     {
       assertions =
@@ -963,5 +1089,6 @@ in
       ]
       ++ (lib.flatten (lib.mapAttrsToList mkBorgWrapper jobs));
     }
-  );
+  ))
+  ];
 }

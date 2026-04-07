@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  options,
   pkgs,
   utils,
   ...
@@ -8,6 +9,79 @@
 let
   # Type for a valid systemd unit option. Needed for correctly passing "timerConfig" to "systemd.timers"
   inherit (utils.systemdUtils.unitOptions) unitOption;
+
+  resticCfg = config.services.restic;
+
+  mkEnvSetup = instance: ''
+    ${lib.optionalString (
+      instance.repository != null
+    ) "export RESTIC_REPOSITORY=${lib.escapeShellArg instance.repository}"}
+    ${lib.optionalString (
+      instance.passwordFile != null
+    ) "export RESTIC_PASSWORD_FILE=${lib.escapeShellArg instance.passwordFile}"}
+  '';
+
+  mkContractScript =
+    name: instance:
+    pkgs.writeShellApplication {
+      name = "restic-contract-${name}";
+      text = ''
+        ${mkEnvSetup instance}
+
+        verb="''${1:-}"
+        case "$verb" in
+          backup)
+            systemctl start --wait restic-backups-${name}
+            ;;
+          snapshots)
+            ${lib.getExe instance.package} snapshots --json \
+              | ${pkgs.jq}/bin/jq --raw-output '.[].id'
+            ;;
+          restore)
+            snapshot="''${2:?Usage: $0 restore <snapshot>}"
+            ${lib.getExe instance.package} restore "$snapshot" --target /
+            ;;
+          exec)
+            shift
+            exec ${lib.getExe instance.package} "$@"
+            ;;
+          *)
+            echo "Usage: $0 {backup|snapshots|restore <snap>|exec <args...>}" >&2
+            exit 1
+            ;;
+        esac
+      '';
+    };
+
+  # Shared restic settings for contract instances
+  mkContractResticOptions = {
+    repository = lib.mkOption {
+      description = "Repository location for this backup.";
+      type = with lib.types; nullOr str;
+      default = null;
+    };
+    passwordFile = lib.mkOption {
+      description = "Path to file containing the repository password.";
+      type = with lib.types; nullOr str;
+      default = null;
+    };
+    initialize = lib.mkOption {
+      description = "Create the repository if it doesn't exist.";
+      type = lib.types.bool;
+      default = false;
+    };
+    timerConfig = lib.mkOption {
+      description = "When to run the backup. Set to null to disable the timer.";
+      type = lib.types.nullOr (lib.types.attrsOf unitOption);
+      default = null;
+    };
+    pruneOpts = lib.mkOption {
+      description = "Options for `restic forget --prune`.";
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+    };
+    package = lib.mkPackageOption pkgs "restic" { };
+  };
 in
 {
   options.services.restic.backups = lib.mkOption {
@@ -323,6 +397,7 @@ in
       )
     );
     default = { };
+
     example = {
       localbackup = {
         paths = [ "/home" ];
@@ -359,6 +434,18 @@ in
           "--keep-monthly 2"
           "--group-by tags"
         ];
+      };
+    };
+  };
+
+  options.services.restic.contracts.fileBackup = lib.mkOption {
+    description = "Instances of the fileBackup contract fulfilled by restic.";
+    default = config.contracts.fileBackup.requests;
+    defaultText = lib.literalExpression "config.contracts.fileBackup.requests";
+    type = config.contracts.fileBackup.mkProviderType {
+      providerOptions = mkContractResticOptions;
+      fulfill' = { name, instance, ... }: {
+        script = mkContractScript name instance;
       };
     };
   };
@@ -530,5 +617,36 @@ in
         exec ${resticCmd} "$@"
       ''
     ) (lib.filterAttrs (_: v: v.createWrapper) config.services.restic.backups);
+
+    # Contract provider wiring
+    services.restic.backups =
+      lib.concatMapNestedAttrs' options.services.restic.contracts.fileBackup.type
+        (
+          path: instance:
+          let
+            name = lib.concatStringsSep "_" path;
+            inherit (instance) request;
+          in
+          {
+            ${name} = {
+              inherit (instance)
+                repository
+                passwordFile
+                initialize
+                timerConfig
+                pruneOpts
+                package
+                ;
+              paths = request.sourceDirectories;
+              exclude = request.excludePatterns;
+              user = request.user;
+              backupPrepareCommand = lib.concatMapStringsSep "\n" toString request.hooks.beforeBackup;
+              backupCleanupCommand = lib.concatMapStringsSep "\n" toString request.hooks.afterBackup;
+            };
+          }
+        )
+        resticCfg.contracts.fileBackup;
+
+    contracts.fileBackup.providers.restic.module = options.services.restic.contracts.fileBackup;
   };
 }
