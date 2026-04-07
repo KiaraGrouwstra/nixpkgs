@@ -4,6 +4,7 @@
   cross-node = runTest ./cross-node.nix;
   database-modular-services = runTest ./database-modular-services.nix;
   filesecrets-hardcoded-secret = runTest ./filesecrets/hardcoded-secret.nix;
+  systemd-openbaod = runTest ./systemd-openbaod.nix;
   collision = runTest ./collision-test.nix;
   modular-services = runTest ./modular-services.nix;
   nested-services = runTest ./nested-services.nix;
