@@ -5,6 +5,8 @@
   database-modular-services = runTest ./database-modular-services.nix;
   filesecrets-hardcoded-secret = runTest ./filesecrets/hardcoded-secret.nix;
   systemd-openbaod = runTest ./systemd-openbaod.nix;
+  filebackup-hardcoded-file-backup = runTest ./filebackup/hardcoded-file-backup.nix;
+  filebackup-restic = runTest ./filebackup/restic.nix;
   collision = runTest ./collision-test.nix;
   modular-services = runTest ./modular-services.nix;
   nested-services = runTest ./nested-services.nix;
