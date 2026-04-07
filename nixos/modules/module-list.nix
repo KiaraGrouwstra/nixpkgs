@@ -1544,6 +1544,7 @@
   ./services/security/torsocks.nix
   ./services/security/tsidp.nix
   ./services/security/usbguard.nix
+  ./services/security/systemd-openbaod.nix
   ./services/security/vault-agent.nix
   ./services/security/vault.nix
   ./services/security/vaultwarden/default.nix
