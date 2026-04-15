@@ -904,6 +904,9 @@ checkConfigError 'Did you mean .enable., .ebe. or .enabled.\?' config ./error-ty
 checkConfigError 'Did you mean .services\.myservice\.port. or .services\.myservice\.enable.\?' config.services.myservice ./error-typo-submodule.nix
 checkConfigError 'Did you mean .services\.nginx\.virtualHosts\."example\.com"\.ssl\.certificate. or .services\.nginx\.virtualHosts\."example\.com"\.ssl\.certificateKey.\?' config.services.nginx.virtualHosts.\"example.com\" ./error-typo-deeply-nested.nix
 
+# contracts: basic want -> instances -> results round-trip (no mkContract or mkProviderType)
+checkConfigOutput '^6$' config.contracts.basic.results.consumer.x.value ./contracts-basic.nix
+
 cat <<EOF
 ====== module tests ======
 $pass Pass
