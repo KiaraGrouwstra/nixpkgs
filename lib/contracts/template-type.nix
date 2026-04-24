@@ -114,16 +114,24 @@ submodule (contract: {
           inherit (contract.config) interface;
         in
         lib.extendSubmodule overrides (submodule {
-          options = lib.mapAttrs (
-            k: options:
-            mkOption {
-              description = "The ${k} of the contract instance.";
-              type = submodule {
-                imports = interface.extraImports.${k};
-                inherit options;
+          options =
+            (lib.mapAttrs (
+              k: options:
+              mkOption {
+                description = "The ${k} of the contract instance.";
+                type = submodule {
+                  imports = interface.extraImports.${k};
+                  inherit options;
+                };
+              }
+            ) (lib.getAttrs [ "request" "result" ] interface))
+            // {
+              requireTags = mkOption {
+                description = "Tags required of the provider for this contract instance.";
+                type = listOf str;
+                default = [ ];
               };
-            }
-          ) (lib.getAttrs [ "request" "result" ] interface);
+            };
         });
     };
     mkProviderType = mkOption {

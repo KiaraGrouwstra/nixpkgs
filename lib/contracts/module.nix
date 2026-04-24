@@ -4,9 +4,11 @@ let
   inherit (types)
     attrsOf
     enum
+    listOf
     nestedAttrsOf
     nullOr
     raw
+    str
     submodule
     ;
   # `or` fallbacks allow the docs build sandbox to evaluate this module:
@@ -78,6 +80,16 @@ in
                     imports = interface.extraImports.result;
                     options = interface.result;
                   };
+                };
+                requireTags = mkOption {
+                  description = ''
+                    Tags required of the provider for this contract instance.
+                    The provider whose `providerTags.<name>` is a superset of this list
+                    is selected to fulfill this `want` entry, overriding `defaultProvider`.
+                    When empty, `defaultProvider` is used.
+                  '';
+                  type = listOf str;
+                  default = [ ];
                 };
               };
             });
@@ -289,6 +301,19 @@ in
                     instance, consider `defaultProviderName` / `defaultProvider`.
                   '';
                   type = attrsOf raw;
+                };
+                providerTags = mkOption {
+                  description = ''
+                    Capability tags advertised by each provider, used for qualifier-based
+                    selection: a `want` entry with `requireTags` is routed to the (uniquely)
+                    matching provider whose tags are a superset of the required ones.
+
+                    ```nix
+                    contracts.${contractName}.providerTags."<provider>" = [ "fast" "ssd" ];
+                    ```
+                  '';
+                  type = attrsOf (listOf str);
+                  default = { };
                 };
                 defaultProviderName = mkOption {
                   description = ''
@@ -530,44 +555,62 @@ in
               # than on the option itself: the docs build sandbox evaluates option
               # defaults but does not evaluate submodule config blocks.
               #
-              # `defaultProvider` is conventionally a provider reference
-              # `{ module, contract? }` (apply resolves it path-aware) but
-              # may also be a raw `nestedAttrsOf` tree of pre-resolved
-              # instances. Either way: walk each `want`-leaf path and set a
-              # `mkOptionDefault`-priority value at that path - either the
-              # whole providerRef (apply will pick the per-path slice) or
-              # the tree's value at that path. Wrapping each leaf
-              # individually (rather than the whole tree) lets per-leaf
-              # overrides from other modules compose against the default
-              # via `nestedAttrsOf`'s leaf-level priority handling.
+              # Pick the provider for each `want` leaf path: tagged leaves
+              # use `requireTags` against `providerTags` to find a matching
+              # provider, others fall back to `defaultProvider`. Both forms
+              # are conventionally provider references `{ module, contract? }`
+              # which `instances`'s `apply` then resolves path-aware. Each
+              # leaf is wrapped at `mkOptionDefault` priority so per-leaf
+              # overrides from other modules compose via `nestedAttrsOf`'s
+              # leaf-level priority handling.
               config.instances =
                 let
-                  provider = contract.config.defaultProvider;
-                  # Walk `want` with explicit recursion (vs.
-                  # `concatMapNestedAttrs'` whose `mergeAttrs` fold loses
-                  # sibling leaves at depth > 1) to produce a tree mirroring
-                  # `want` with `mkOptionDefault`-wrapped leaves carrying
-                  # the `defaultProvider` reference - `instances`'s `apply`
-                  # then resolves each leaf path-aware.
+                  inherit (contract.config)
+                    defaultProvider
+                    providers
+                    providerTags
+                    want
+                    ;
+                  pickByTags =
+                    path: required:
+                    let
+                      matches = lib.attrNames (
+                        lib.filterAttrs (_: tags: lib.all (t: lib.elem t tags) required) providerTags
+                      );
+                      pathStr = lib.concatStringsSep "." path;
+                    in
+                    assert lib.assertMsg (matches != [ ])
+                      "contracts.${contractName}.want.${pathStr}.requireTags = ${builtins.toJSON required} matches no provider in providerTags";
+                    assert lib.assertMsg (lib.length matches == 1)
+                      "contracts.${contractName}.want.${pathStr}.requireTags = ${builtins.toJSON required} matches multiple providers (${lib.concatStringsSep ", " matches}); narrow the tags or set instances explicitly";
+                    providers.${lib.head matches};
+                  pickProvider =
+                    path: subWant:
+                    if subWant.requireTags or [ ] != [ ] then
+                      pickByTags path subWant.requireTags
+                    else
+                      (
+                        assert lib.assertMsg (
+                          defaultProvider != null
+                        ) "contracts.${contractName}.defaultProvider is unset!";
+                        defaultProvider
+                      );
                   buildDefaultTree =
-                    subWant:
+                    path: subWant:
                     if subWant ? request then
+                      let
+                        provider = pickProvider path subWant;
+                      in
+                      assert lib.assertMsg (provider ? module)
+                        "contracts.${contractName}.defaultProvider must be a provider reference `{ module, contract? }`.";
                       lib.mkOptionDefault provider
                     else
-                      lib.mapAttrs (_: buildDefaultTree) subWant;
+                      lib.mapAttrs (n: child: buildDefaultTree (path ++ [ n ]) child) subWant;
                 in
-                if provider != null then
-                  assert lib.assertMsg (
-                    provider ? module
-                  ) "contracts.${contractName}.defaultProvider must be a provider reference `{ module, contract? }`.";
-                  buildDefaultTree contract.config.want
+                if want != { } then
+                  buildDefaultTree [ ] want
                 else
-                  lib.mkOptionDefault (
-                    assert lib.assertMsg (
-                      contract.config.want == { }
-                    ) "contracts.${contractName}.defaultProvider is unset!";
-                    { }
-                  );
+                  lib.mkOptionDefault { };
             });
           }
         ) contractTypes;
