@@ -175,6 +175,7 @@ rec {
                 # Scope results to this service's namespace so it can read
                 # results via just the option name.
                 results = contract.results.${name} or { };
+                allResults = contract.allResults.${name} or { };
               }
             ) contracts;
 

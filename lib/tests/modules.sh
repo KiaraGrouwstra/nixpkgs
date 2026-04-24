@@ -881,6 +881,14 @@ checkConfigOutput '^6$' config.result.byName ./contracts-provider-selection.nix
 # no provider set: clear error message
 checkConfigError 'contracts\.noProvider\.defaultProvider is unset' config.contracts.noProvider.results.consumer.instance.value ./contracts-provider-selection.nix
 
+# contracts: multi-binding fans a single `want` to every registered provider
+# single-binding still selects the default provider (increment: 5 + 1 = 6)
+checkConfigOutput '^6$' config.result.single ./contracts-multi-binding.nix
+# allResults exposes the increment provider's result alongside the others (5 + 1 = 6)
+checkConfigOutput '^6$' config.result.multiIncrement ./contracts-multi-binding.nix
+# allResults exposes the double provider's result for the same request (5 * 2 = 10)
+checkConfigOutput '^10$' config.result.multiDouble ./contracts-multi-binding.nix
+
 # contracts: using a renamed contract name emits a deprecation warning in config.warnings
 checkConfigOutput 'oldName.*renamed.*newName' config.result ./contracts-contract-rename.nix
 # contracts: using a renamed contract name still produces the correct result

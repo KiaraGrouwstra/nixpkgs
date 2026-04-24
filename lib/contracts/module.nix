@@ -525,6 +525,52 @@ in
                   '';
                   readOnly = true;
                 };
+                allResults = mkOption {
+                  description = ''
+                    Multi-binding results: for each `want` entry, the result from
+                    every registered provider, keyed by provider name.
+
+                    Where `results` returns the single result from the selected provider,
+                    `allResults` fans out: `allResults.<consumer>.<instance>.<provider> = result`.
+                    Useful when a consumer wants every implementation to participate
+                    (e.g. metric exporters fanning the same metric to multiple sinks).
+
+                    Each registered provider sees the same `requests`, so this is a
+                    pure read-side pivot of `providers` along the `want` paths.
+                  '';
+                  type = nestedAttrsOf raw;
+                  default =
+                    if upstream ? ${contractName} then
+                      upstream.${contractName}.allResults or { }
+                    else
+                      let
+                        providers = contract.config.providers;
+                        elemType = wantType.nestedTypes.elemType;
+                        # Each `providers.<name>` is a `{ module, contract? }`
+                        # reference; resolve to the provider's instance at the
+                        # current path before extracting `.result`.
+                        resolveAt =
+                          path: prov:
+                          let
+                            contractPath =
+                              if prov.contract or null != null then
+                                prov.contract
+                              else if prov.module.value ? ${contractName} then
+                                [ contractName ]
+                              else
+                                [ ];
+                          in
+                          lib.attrByPath path { } (lib.getAttrFromPath contractPath prov.module.value);
+                        walk =
+                          path: attrs:
+                          if lib.isNestedAttrsLeaf lib.any elemType attrs then
+                            lib.mapAttrs (_: prov: (resolveAt path prov).result or { }) providers
+                          else
+                            lib.mapAttrs (k: walk (path ++ [ k ])) attrs;
+                      in
+                      walk [ ] contract.config.want;
+                  readOnly = true;
+                };
               };
               # Provide the asserting default for `instances` via config rather
               # than on the option itself: the docs build sandbox evaluates option
