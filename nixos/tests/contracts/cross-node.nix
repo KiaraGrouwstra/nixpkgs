@@ -43,7 +43,7 @@ let
       };
       config = {
         contracts.arithmetic.providers.increment.module = options.services.increment.arithmetic;
-        contracts.arithmetic.defaultProvider = config.contracts.arithmetic.providers.increment;
+        contracts.arithmetic.defaultProviderName = "increment";
       };
     };
 

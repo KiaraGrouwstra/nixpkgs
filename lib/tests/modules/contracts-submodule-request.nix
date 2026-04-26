@@ -83,6 +83,6 @@ in
     };
 
     contracts.connection.providers.urlbuilder.module = options.services.urlbuilder.connection;
-    contracts.connection.defaultProvider = config.contracts.connection.providers.urlbuilder;
+    contracts.connection.defaultProviderName = "urlbuilder";
   };
 }

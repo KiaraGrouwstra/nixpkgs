@@ -189,6 +189,14 @@ in
                     namespace keys (consumer names, option names) must not be literally
                     `request` or `result` - otherwise they would be misidentified as leaves.
 
+                    NixOS modules and modular services share the same `want` namespace.
+                    The bridge auto-nests modular service entries under the service tree
+                    name, so a NixOS module that manually picks a consumer name matching
+                    a `system.services` key would collide. To avoid this, NixOS modules
+                    should use their option path as consumer name (e.g. `"stash"` from
+                    `services.stash`), which by convention does not overlap with service
+                    tree names.
+
                     See `providers` for how providers register themselves.
                   '';
                   type = wantType;
@@ -231,13 +239,17 @@ in
                     contracts.${contractName}.providers."<provider>".module = options."<provider>";
                     ```
 
+                    `nixos-contracts-bridge` automatically collects providers
+                    set by modular services into the containing system's
+                    `contracts.${contractName}.providers`.
+
                     Per-instance overrides are written by setting an
                     `instances.<consumer>.<...>` leaf to a provider entry
                     directly; the `instances` option's `apply` resolves the
                     reference at the matching path.
 
                     For an easier way to pick a single provider for every
-                    instance, consider `defaultProvider` / `defaultProviderName`.
+                    instance, consider `defaultProviderName` / `defaultProvider`.
                   '';
                   type = attrsOf raw;
                 };
@@ -288,8 +300,8 @@ in
                     Instances of the `${contractName}` contract.
                     By default extracts the contract instances from
                     `defaultProvider.module.value` (using `defaultProvider.contract`,
-                    defaulting to `[ "${contractName}" ]`), if set, but may be
-                    overridden per instance.
+                    defaulting to `[ "${contractName}" ]`), if set (potentially
+                    by `defaultProviderName`), but may be overridden per instance.
 
                     Each leaf is a provider reference `{ module, contract? }`
                     (same shape as `providers.<name>`); the option's `apply`
@@ -306,7 +318,7 @@ in
                     override at a sibling path.
 
                     ```nix
-                    contracts.${contractName}.defaultProvider = config.contracts.${contractName}.providers."<default>";
+                    contracts.${contractName}.defaultProviderName = "<default>";
                     contracts.${contractName}.instances."<consumer>"."<instance>" =
                       config.contracts.${contractName}.providers."<other>";
                     ```

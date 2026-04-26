@@ -86,7 +86,7 @@ in
 
     # depth 0: option *is* the contract option; inferred `contract = [ ]`.
     contracts.depth0.providers.p.module = options.depth0;
-    contracts.depth0.defaultProvider = config.contracts.depth0.providers.p;
+    contracts.depth0.defaultProviderName = "p";
 
     # depth 1: contract option lives inside a wrapping submodule named
     # `arithmetic`, not matching the contract type name (`depth1`), so
@@ -95,7 +95,7 @@ in
       module = options.depth1;
       contract = [ "arithmetic" ];
     };
-    contracts.depth1.defaultProvider = config.contracts.depth1.providers.p;
+    contracts.depth1.defaultProviderName = "p";
 
     # depth 2: contract option lives two submodules deep.
     contracts.depth2.providers.p = {
@@ -105,6 +105,6 @@ in
         "arithmetic"
       ];
     };
-    contracts.depth2.defaultProvider = config.contracts.depth2.providers.p;
+    contracts.depth2.defaultProviderName = "p";
   };
 }
