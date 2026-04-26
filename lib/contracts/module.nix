@@ -230,10 +230,19 @@ in
                     `services.stash`), which by convention does not overlap with service
                     tree names.
 
-                    **Providers** set `contracts.${contractName}.providers.<name>`:
+                    **Providers** set `contracts.${contractName}.providers.<name>`
+                    to `{ module, contract? }` where `module` is the provider's
+                    option set (so `.loc` is reachable for GUI generation) and
+                    `contract` is the relative path within `module.value` to
+                    the contract instances. `contract` defaults to
+                    `[ "${contractName}" ]` (the conventional sub-option name);
+                    pass `[ ]` if `module` itself is the contract-typed option:
 
                     ```nix
-                    contracts.${contractName}.providers."<provider>" = config."<provider>".${contractName};
+                    contracts.${contractName}.providers."<provider>" = {
+                      module = options."<provider>";
+                      # contract = [ "${contractName}" ];  # the default
+                    };
                     ```
                   '';
                   type = wantType;
@@ -267,8 +276,19 @@ in
                   description = ''
                     Where to find instances of a provider of the `${contractName}` contract that can take request inputs to return results.
 
+                    Each entry is `{ module, contract? }` where `module` is the
+                    provider's option set (so `.loc` is reachable for GUI
+                    generation) and `contract` is the relative path within
+                    `module.value` to the contract instances. When `contract`
+                    is omitted, it defaults to `[ "${contractName}" ]` if
+                    `module.value` has that attribute; otherwise to `[ ]`
+                    (i.e. `module` itself is the contract-typed option).
+
                     ```nix
-                    contracts.${contractName}.providers."<provider>" = config."<provider>".${contractName};
+                    contracts.${contractName}.providers."<provider>" = {
+                      module = options."<provider>";
+                      # contract = [ "${contractName}" ];  # the default
+                    };
                     ```
 
                     `nixos-contracts-bridge` automatically collects providers set by modular services
@@ -277,7 +297,9 @@ in
                     It may then be used where you configure the service consuming the `${contractName}` contract to manually set a provider:
 
                     ```nix
-                    contracts.${contractName}.instances."<consumer>"."<instance>" = config.contracts.${contractName}.providers."<provider>";
+                    contracts.${contractName}.instances."<consumer>"."<instance>" = lib.getAttrFromPath
+                      (config.contracts.${contractName}.providers."<provider>".contract or [ "${contractName}" ])
+                      config.contracts.${contractName}.providers."<provider>".module.value;
                     ```
 
                     For an easier way to set providers, consider setting `defaultProviderName` or `defaultProvider`.
@@ -305,6 +327,9 @@ in
                 defaultProvider = mkOption {
                   description = ''
                     The default provider for the `${contractName}` contract, alongside its configuration.
+                    Like `providers.<name>`, this is conventionally
+                    `{ module, contract? }` (with `module.value`/`module.loc`),
+                    not the resolved config value directly.
 
                     Setting this for a contract means you no longer need to set providers for individual `instances`:
 
@@ -334,11 +359,15 @@ in
                 instances = mkOption {
                   description = ''
                     Instances of the `${contractName}` contract.
-                    By default returns `defaultProvider`, if set (potentially by `defaultProviderName`),
-                    but may be overridden per instance like:
+                    By default extracts the contract instances from
+                    `defaultProvider.module.value` (using `defaultProvider.contract`,
+                    defaulting to `[ "${contractName}" ]`), if set (potentially
+                    by `defaultProviderName`), but may be overridden per instance:
 
                     ```nix
-                    contracts.${contractName}.instances."<consumer>"."<instance>" = config.contracts.${contractName}.providers."<provider>";
+                    contracts.${contractName}.instances."<consumer>"."<instance>" = lib.getAttrFromPath
+                      (config.contracts.${contractName}.providers."<provider>".contract or [ "${contractName}" ])
+                      config.contracts.${contractName}.providers."<provider>".module.value;
                     ```
 
                     Used in the consumer like:
@@ -479,7 +508,25 @@ in
                   provider = contract.config.defaultProvider;
                 in
                 assert lib.assertMsg (provider != null) "contracts.${contractName}.defaultProvider is unset!";
-                provider
+                # `providers.<name>` is conventionally `{ module, contract? }`
+                # where `module` is the provider's option set (so `.loc` is
+                # reachable for GUIs) and `contract` is the relative path
+                # within `module.value` to the contract instances. When
+                # `contract` is omitted we infer: if `module.value` has a
+                # sub-attribute matching the contract type name, use that
+                # path; otherwise treat `module` itself as the contract-typed
+                # option. Tolerate raw values too, for callers that set
+                # `defaultProvider`/`instances` directly to a contract
+                # instance attrset.
+                if provider ? module then
+                  let
+                    contractPath = provider.contract or (
+                      if provider.module.value ? ${contractName} then [ contractName ] else [ ]
+                    );
+                  in
+                  lib.getAttrFromPath contractPath provider.module.value
+                else
+                  provider
               );
             });
           }

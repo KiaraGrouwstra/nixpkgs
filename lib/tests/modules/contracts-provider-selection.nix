@@ -5,7 +5,7 @@
 # - defaultProviderName: selecting a provider by name (enum)
 #
 # Uses two providers (increment: +1, double: *2) to verify the right one is selected.
-{ lib, config, ... }:
+{ lib, config, options, ... }:
 let
   inherit (lib) mkOption types;
 
@@ -75,10 +75,10 @@ in
     services.double.arithmetic = config.contracts.manual.requests;
 
     # Register providers.
-    contracts.manual.providers.increment = config.services.increment.arithmetic;
-    contracts.manual.providers.double = config.services.double.arithmetic;
-    contracts.byDefault.providers.increment = config.services.increment.arithmetic;
-    contracts.byName.providers.increment = config.services.increment.arithmetic;
+    contracts.manual.providers.increment.module = options.services.increment.arithmetic;
+    contracts.manual.providers.double.module = options.services.double.arithmetic;
+    contracts.byDefault.providers.increment.module = options.services.increment.arithmetic;
+    contracts.byName.providers.increment.module = options.services.increment.arithmetic;
 
     # -- Consumers: same request (value = 5) across all contract types --
 
@@ -89,8 +89,10 @@ in
 
     # -- Provider selection --
 
-    # manual: per-instance override, pick "double" (5 * 2 = 10)
-    contracts.manual.instances = config.contracts.manual.providers.double;
+    # manual: per-instance override, pick "double" (5 * 2 = 10).
+    # The provider is `{ module, contract? }`; the resolved instances are
+    # at `module.value` (no `contract` path since the option is flat).
+    contracts.manual.instances = config.contracts.manual.providers.double.module.value;
 
     # byDefault: set defaultProvider reference to increment (5 + 1 = 6)
     contracts.byDefault.defaultProvider = config.contracts.byDefault.providers.increment;

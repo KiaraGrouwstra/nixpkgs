@@ -69,6 +69,7 @@ A provider implements `mkProviderType` and registers itself under `contracts.<ty
 {
   config,
   lib,
+  options,
   pkgs,
   ...
 }:
@@ -76,29 +77,55 @@ let
   inherit (lib.contracts) fileSecrets;
 in
 {
-  options.testing.hardcoded-secret.fileSecrets = lib.mkOption {
-    type = fileSecrets.mkProviderType {
-      overrides.request = {
-        owner.default = "root";
-        group.default = "root";
-      };
-      providerOptions.content = lib.mkOption { type = lib.types.str; };
-      fulfill' =
-        { name, ... }:
-        {
-          path = "/run/hardcodedsecrets/${name}";
+  options.testing.hardcoded-secret = lib.mkOption {
+    type = lib.types.submodule {
+      options.fileSecrets = lib.mkOption {
+        type = fileSecrets.mkProviderType {
+          overrides.request = {
+            owner.default = "root";
+            group.default = "root";
+          };
+          providerOptions.content = lib.mkOption { type = lib.types.str; };
+          fulfill' =
+            { name, ... }:
+            {
+              path = "/run/hardcodedsecrets/${name}";
+            };
         };
+      };
     };
   };
 
-  config.contracts.fileSecrets.providers.hardcoded-secret =
-    config.testing.hardcoded-secret.fileSecrets;
+  config.contracts.fileSecrets.providers.hardcoded-secret.module = options.testing.hardcoded-secret;
 }
 ```
 
 `mkProviderType { fulfill, ... }` produces a `nestedAttrsOf submodule` type whose entries each have `request`, `result`, and any `providerOptions` declared on the provider. `fulfill` (`request -> result`) or its lower-level variant `fulfill'` (`{ request, name } -> result`) computes the result from the request at `mkDefault` priority.
 
-The provider's value (the resolved `nestedAttrsOf` of contract instances) is what gets registered under `providers.<name>`; consumers read it through `instances` / `results` indirectly.
+`providers.<name>` stores `{ module, contract? }`:
+
+- `module` is the provider's *option set* (typically `options.<path>`), so downstream tooling can introspect `.loc`/`.type` for GUI generation, schema export, etc.
+- `contract` is the path within `module.value` that holds the contract instances. It defaults to `[ "<contract-type>" ]` if `module.value` has that attribute (the conventional sub-option naming), and to `[ ]` when `module` itself is the contract-typed option.
+
+For lib-only providers that don't need a wrapping submodule, the option is itself the contract option:
+
+```nix
+{ lib, options, ... }:
+{
+  options.services.increment.arithmetic = lib.mkOption {
+    type = lib.contracts.arithmetic.mkProviderType {
+      fulfill =
+        { value }:
+        {
+          value = value + 1;
+        };
+    };
+  };
+  config.contracts.arithmetic.providers.increment.module = options.services.increment.arithmetic;
+}
+```
+
+The `contract` path is inferred as `[ ]` here, since `module.value` has no `.arithmetic` attribute.
 
 ## Provider Selection {#contracts-provider-selection}
 
@@ -158,6 +185,7 @@ Providers can themselves be consumers. A `databaseConnection` provider can consu
 {
   lib,
   config,
+  options,
   ...
 }:
 {
@@ -172,7 +200,8 @@ Providers can themselves be consumers. A `databaseConnection` provider can consu
   };
 
   config = {
-    contracts.databaseConnection.providers.pgProvider = config.services.pgProvider.databaseConnection;
+    contracts.databaseConnection.providers.pgProvider.module =
+      options.services.pgProvider.databaseConnection;
     contracts.fileSecrets.want.pgProvider.credential = {
       request = {
         owner = "postgres";
