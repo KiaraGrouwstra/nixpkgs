@@ -80,7 +80,7 @@ in
   };
 
   config = {
-    contracts.${contract}.providers.hardcoded-secret = config.testing.hardcoded-secret.${contract};
+    contracts.${contract}.providers.hardcoded-secret.module = options.testing.hardcoded-secret;
 
     system.activationScripts =
       lib.concatMapNestedAttrs' (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
@@ -92,13 +92,19 @@ in
             inherit (cfg') request result;
           in
           {
-            ${"hardcodedsecret_${name}"} = ''
-              mkdir -p "$(dirname "${result.path}")"
-              touch "${result.path}"
-              chmod ${request.mode} "${result.path}"
-              chown ${request.owner}:${request.group} "${result.path}"
-              cp ${source} "${result.path}"
-            '';
+            ${"hardcodedsecret_${name}"} = {
+              deps = [
+                "users"
+                "groups"
+              ];
+              text = ''
+                mkdir -p "$(dirname "${result.path}")"
+                touch "${result.path}"
+                chmod ${request.mode} "${result.path}"
+                chown ${request.owner}:${request.group} "${result.path}"
+                cp ${source} "${result.path}"
+              '';
+            };
           }
         )
         cfg.${contract};
