@@ -937,7 +937,7 @@ checkConfigOutput '^6$' config.contracts.basic.results.consumer.x.value ./contra
 # contracts: provider selection mechanisms
 # byRef: non-overridden instance falls back to defaultProvider (increment: 5 + 1 = 6)
 checkConfigOutput '^6$' config.result.default ./contracts-provider-selection.nix
-# byRef: per-instance override (double: 5 * 2 = 10)
+# byRef: per-instance override via provider reference (double: 5 * 2 = 10)
 checkConfigOutput '^10$' config.result.override ./contracts-provider-selection.nix
 # byName: defaultProviderName enum (increment: 5 + 1 = 6)
 checkConfigOutput '^6$' config.result.byName ./contracts-provider-selection.nix
