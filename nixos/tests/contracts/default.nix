@@ -10,6 +10,7 @@
   ssl-self-signed = runTest ./ssl/self-signed-ssl.nix;
   smtp-hardcoded = runTest ./smtp/hardcoded-smtp.nix;
   ldap-hardcoded = runTest ./ldap/hardcoded-ldap.nix;
+  sso-hardcoded = runTest ./sso/hardcoded-sso.nix;
   collision = runTest ./collision-test.nix;
   modular-services = runTest ./modular-services.nix;
   nested-services = runTest ./nested-services.nix;
