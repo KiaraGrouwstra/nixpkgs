@@ -12,4 +12,5 @@ lib.mapAttrs (
   ldap = ./ldap.nix;
   sso = ./sso.nix;
   s3 = ./s3.nix;
+  streamingBackup = ./streaming-backup.nix;
 }

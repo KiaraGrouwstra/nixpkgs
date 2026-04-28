@@ -12,4 +12,6 @@
   ldap-hardcoded = runTest ./ldap/hardcoded-ldap.nix;
   sso-hardcoded = runTest ./sso/hardcoded-sso.nix;
   s3-hardcoded = runTest ./s3/hardcoded-s3.nix;
+  streamingbackup-hardcoded = runTest ./streamingbackup/hardcoded-streaming-backup.nix;
+  streamingbackup-restic = runTest ./streamingbackup/restic.nix;
 }
