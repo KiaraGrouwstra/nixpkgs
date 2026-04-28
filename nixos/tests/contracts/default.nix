@@ -8,4 +8,5 @@
   filebackup-hardcoded-file-backup = runTest ./filebackup/hardcoded-file-backup.nix;
   filebackup-borgbackup = runTest ./filebackup/borgbackup.nix;
   filebackup-restic = runTest ./filebackup/restic.nix;
+  ssl-self-signed = runTest ./ssl/self-signed-ssl.nix;
 }
