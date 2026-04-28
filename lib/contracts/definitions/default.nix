@@ -10,4 +10,5 @@ lib.mapAttrs (
   ssl = ./ssl.nix;
   smtp = ./smtp.nix;
   ldap = ./ldap.nix;
+  sso = ./sso.nix;
 }
