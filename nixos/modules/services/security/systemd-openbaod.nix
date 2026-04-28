@@ -1,127 +1,209 @@
-# Provider for the fileSecrets contract using systemd-openbaod and vault-agent.
+# systemd-openbaod: broker secrets from OpenBao to systemd services.
 #
-# Retrieves secrets from OpenBao via vault-agent templates and writes them to
-# files on disk with the requested ownership and permissions.
+# This module is a thin bridge to the NixOS modules shipped with the-distro's
+# systemd-openbao, fetched at the same revision that `pkgs.systemd-openbaod` is
+# built from so the daemon and its modules stay in lockstep. Rather than
+# re-implementing the broker here, it imports:
 #
-# Requires:
-# - A running OpenBao server
-# - A vault-agent instance configured with authentication (e.g. AppRole, token)
-#   pointed at the OpenBao server
+#   - systemd-openbaod.nix: the `/run/systemd-openbaod/sock` socket + daemon,
+#     plus (via openbao-secrets.nix) per-service `vault.*` options that deliver
+#     secrets through `LoadCredential` / `EnvironmentFile` and run
+#     `try-reload-or-restart` on rotation.
+#   - openbao-agent.nix: `services.openbao.agents.<name>`, each running
+#     `bao agent` to render the templates the services above declare. An agent
+#     with no templates is disabled, so the unit stays absent until a service
+#     actually targets it.
 #
-# The provider generates vault-agent templates that render each secret to its
-# result path, and activation scripts that set the correct file permissions.
+# On top of the imported broker, this module exposes two contract providers
+# backed by it:
+#
+#   - `envSecrets`: a consumer requests a set of environment variables bound to
+#     a unit; the provider renders them into one `vault.environmentTemplate` and
+#     the broker delivers the resulting `EnvironmentFile` (with reload on
+#     rotation).
+#   - `fileSecrets`: a consumer requests a single secret file; the provider
+#     composes the requested lines into one file rendered through the broker
+#     (as a unit `EnvironmentFile`, so the broker handles ordering and reload)
+#     and returns its path.
+#
+# Both providers are backed by the same daemon agent, so a host runs a single
+# `openbao agent` for all per-service secrets. The broker itself stays
+# contracts-agnostic; the contract glue lives here in nixpkgs.
+#
+# The source is fetched with `builtins.fetchTarball` (a fixed-output fetch, not
+# IFD) mirroring the npins pattern, so eval stays pure. The revision and hash
+# track `pkgs/by-name/sy/systemd-openbaod/package.nix`; bump both together.
+#
+# The daemon's systemd service is socket-activated (it is not wanted by any
+# target), so on a host that declares no agents and no `vault.*` secrets only
+# the unix socket is created and the daemon never starts. Opt-in gating of the
+# socket itself is left to a follow-up PR against the-distro.
 {
-  config,
-  lib,
   pkgs,
+  lib,
+  config,
   options,
   ...
 }:
 let
+  src = builtins.fetchTarball {
+    url = "https://git.lix.systems/kiaragrouwstra/systemd-openbao/archive/bde10de699a3f25834134f7374e3a9f557c19fac.tar.gz";
+    sha256 = "36zy/0Nqpgd7xvwrg/2N+dtQTOT8F8UZbMohueF/jD4=";
+  };
+
   cfg = config.services.systemd-openbaod;
 
-  inherit (lib)
-    contracts
-    mkOption
-    mkEnableOption
-    mkPackageOption
-    ;
-  inherit (lib.types)
-    nestedAttrsOf
+  inherit (lib) mkOption mkIf types;
+  inherit (types)
+    attrsOf
+    bool
     str
     submodule
     ;
-  contract = "fileSecrets";
-  inherit (config.contracts.${contract}) mkProviderType;
+
+  # A `{ path; field; base64Decode; }` line, shared by the envSecrets provider's
+  # request variables and the fileSecrets provider's composed lines.
+  lineType = submodule {
+    options = {
+      path = mkOption {
+        type = str;
+        description = "Provider-specific read path of the secret holding this value.";
+      };
+      field = mkOption {
+        type = str;
+        default = "content";
+        description = "Field within the secret at `path` holding the value.";
+      };
+      base64Decode = mkOption {
+        type = bool;
+        default = true;
+        description = "Whether to base64-decode the field value before writing it.";
+      };
+    };
+  };
+
+  # Go-template line rendering one environment variable from a secret at a KV
+  # read path. The broker feeds these to `bao agent`, which renders them into
+  # the unit's EnvironmentFile.
+  renderLine =
+    varName: line:
+    let
+      value =
+        if line.base64Decode then
+          "{{ .Data.data.${line.field} | base64Decode }}"
+        else
+          "{{ .Data.data.${line.field} }}";
+    in
+    ''
+      {{ with secret "${line.path}" -}}
+      ${varName}=${value}
+      {{- end }}'';
+
+  # An environment-file template: one rendered line per requested variable.
+  envTemplate = lines: lib.concatStringsSep "\n" (lib.mapAttrsToList renderLine lines) + "\n";
+
+  # Broker path the rendered environment file ends up at for a given unit.
+  envFilePath = unit: "/run/systemd-openbaod/secrets/${unit}.service.EnvironmentFile";
+
+  # Flatten a provider's nested instances (`<consumer>.<instance> = { request; ... }`)
+  # to a flat list of leaf instance submodules for iteration.
+  flatten =
+    instances:
+    let
+      go = v: if v ? request then [ v ] else lib.concatMap go (lib.attrValues v);
+    in
+    go instances;
 in
 {
+  imports = [
+    "${src}/nix/modules/systemd-openbaod.nix" # also pulls in openbao-secrets.nix
+    "${src}/nix/modules/openbao-agent.nix"
+  ];
+
   options.services.systemd-openbaod = {
-    enable = mkEnableOption "systemd-openbaod fileSecrets provider";
+    enable = lib.mkEnableOption "the systemd-openbaod contract providers (envSecrets, fileSecrets) backed by the broker";
 
-    package = mkPackageOption pkgs "systemd-openbaod" { };
-
-    vaultAgentInstance = mkOption {
-      type = str;
-      default = "systemd-openbaod";
+    envSecrets = mkOption {
+      default = config.contracts.envSecrets.requests;
+      defaultText = lib.literalExpression "config.contracts.envSecrets.requests";
       description = ''
-        Name of the `services.vault-agent.instances` entry to generate
-        templates into. The vault-agent instance must be configured
-        separately with authentication settings pointing at your
-        OpenBao server.
+        `envSecrets` provider instances. Each request delivers a set of
+        environment variables to its `unit` via a broker-rendered
+        `EnvironmentFile`, reloading the unit on rotation.
       '';
+      type = config.contracts.envSecrets.mkProviderType {
+        fulfill' =
+          { request, ... }:
+          {
+            inherit (request) unit;
+            environmentFile = envFilePath request.unit;
+          };
+      };
     };
 
-    ${contract} = mkOption {
+    fileSecrets = mkOption {
+      default = config.contracts.fileSecrets.requests;
+      defaultText = lib.literalExpression "config.contracts.fileSecrets.requests";
       description = ''
-        Instances of the fileSecrets contract fulfilled by systemd-openbaod.
-
-        Each entry maps to a secret retrieved from OpenBao via vault-agent.
-        The `openbaoPath` option specifies the Vault/OpenBao KV path and
-        `openbaoField` selects which field to extract.
+        `fileSecrets` provider instances. Each request composes the configured
+        `lines` into a single environment-style secret file rendered through the
+        broker, returning its path. The file is delivered to `unit` as an
+        `EnvironmentFile` so the broker handles ordering and reload; consumers
+        that read the file directly point at `result.path`.
       '';
-      type = mkProviderType {
-        overrides.request = {
-          owner.default = "root";
-          group.default = "root";
-        };
+      type = config.contracts.fileSecrets.mkProviderType {
         providerOptions = {
-          openbaoPath = mkOption {
+          unit = mkOption {
             type = str;
             description = ''
-              KV v2 path in OpenBao where this secret is stored
-              (e.g. `"secret/data/myapp/password"`).
+              systemd unit (without `.service`) the rendered file is attached to;
+              the broker wires ordering and reload onto it, and `result.path`
+              resolves to the broker's render path for that unit.
             '';
           };
-          openbaoField = mkOption {
-            type = str;
-            default = "value";
+          lines = mkOption {
+            type = attrsOf lineType;
+            default = { };
             description = ''
-              Field within the OpenBao secret's `.Data.data` to extract.
+              `KEY = { path; field; base64Decode; }` entries composed into the
+              rendered secret file, each read from the secret at `path`.
             '';
           };
         };
         fulfill' =
-          { name, ... }:
+          { request, instance, ... }:
           {
-            path = "/run/systemd-openbaod/files/${name}";
+            path = envFilePath instance.unit;
           };
       };
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    services.systemd-openbaod.${contract} = config.contracts.${contract}.requests;
-    contracts.${contract}.providers.systemd-openbaod.module = options.services.systemd-openbaod.${contract};
+  config = lib.mkMerge [
+    {
+      # One source of truth for the daemon binary: the nixpkgs package built from
+      # the same revision the imported modules come from.
+      services.systemd-openbaod.package = pkgs.systemd-openbaod;
+    }
 
-    # Generate vault-agent templates and activation scripts from flattened secrets.
-    #
-    # We flatten the nestedAttrsOf structure to iterate over leaf secrets,
-    # generating a vault-agent template and an ownership fixup for each.
-    services.vault-agent.instances.${cfg.vaultAgentInstance}.settings.template =
-      let
-        collectTemplates =
-          prefix: attrs:
-          lib.concatLists (
-            lib.mapAttrsToList (
-              name: value:
-              let
-                path = prefix ++ [ name ];
-              in
-              if value ? request && value ? result then
-                [
-                  {
-                    contents = ''{{- with secret "${value.openbaoPath}" }}{{ .Data.data.${value.openbaoField} }}{{- end }}'';
-                    destination = value.result.path;
-                    perms = value.request.mode;
-                    command = "chown ${value.request.owner}:${value.request.group} ${value.result.path}";
-                  }
-                ]
-              else
-                collectTemplates path value
-            ) attrs
-          );
-      in
-      collectTemplates [ ] cfg.${contract};
+    (mkIf cfg.enable {
+      # Register the providers so consumers can select them.
+      contracts.envSecrets.providers.systemd-openbaod.module =
+        options.services.systemd-openbaod.envSecrets;
+      contracts.fileSecrets.providers.systemd-openbaod.module =
+        options.services.systemd-openbaod.fileSecrets;
 
-  };
+      # Translate each provider instance into the broker's per-service `vault.*`.
+      # Both contracts render a unit `environmentTemplate`; the broker emits the
+      # `<unit>-envfile.service` ordering shim and reloads on rotation.
+      systemd.services = lib.mkMerge (
+        (map (inst: {
+          ${inst.request.unit}.vault.environmentTemplate = envTemplate inst.request.variables;
+        }) (flatten cfg.envSecrets))
+        ++ (map (inst: {
+          ${inst.unit}.vault.environmentTemplate = envTemplate inst.lines;
+        }) (lib.filter (inst: inst.lines != { }) (flatten cfg.fileSecrets)))
+      );
+    })
+  ];
 }
