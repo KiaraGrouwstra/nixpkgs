@@ -432,6 +432,10 @@ in
     Scrumplex
   ];
   meta.doc = ./borgbackup.md;
+  # The fileBackup contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
 
   ###### interface
 

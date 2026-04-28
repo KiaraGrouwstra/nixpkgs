@@ -23,6 +23,11 @@ let
   issuerUrl = "http://127.0.0.1:${toString cfg.port}/dex";
 in
 {
+  # The contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
+
   options.testing.hardcoded-sso = mkOption {
     description = ''
       Hardcoded SSO/OIDC provider for testing.

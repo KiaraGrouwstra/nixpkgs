@@ -21,6 +21,11 @@ let
   inherit (lib.contract.forModule config) fileSecrets;
 in
 {
+  # The contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
+
   options.testing.hardcoded-secret = mkOption {
     description = ''
       Hardcoded file secrets. These should only be used in tests.

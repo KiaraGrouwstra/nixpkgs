@@ -20,6 +20,11 @@ let
   inherit (config.contracts.${contract}) mkProviderType;
 in
 {
+  # The contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
+
   options.testing.hardcoded-smtp = mkOption {
     description = ''
       Hardcoded SMTP provider for testing.
