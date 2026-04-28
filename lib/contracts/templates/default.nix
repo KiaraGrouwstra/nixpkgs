@@ -21,4 +21,6 @@ lib.mapAttrs
     sso = ./sso.nix;
     s3 = ./s3.nix;
     streamingBackup = ./streaming-backup.nix;
+    generateFiles = ./generate-files.nix;
+    varsBackend = ./vars-backend.nix;
   }

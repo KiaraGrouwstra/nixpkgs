@@ -14,6 +14,7 @@
   s3-hardcoded = runTest ./s3/hardcoded-s3.nix;
   streamingbackup-hardcoded = runTest ./streamingbackup/hardcoded-streaming-backup.nix;
   streamingbackup-restic = runTest ./streamingbackup/restic.nix;
+  generatefiles-vars = runTest ./generatefiles/vars.nix;
   collision = runTest ./collision-test.nix;
   modular-services = runTest ./modular-services.nix;
   nested-services = runTest ./nested-services.nix;
