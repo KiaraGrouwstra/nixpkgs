@@ -24,6 +24,11 @@ let
   secretKey = "minioadmin";
 in
 {
+  # The contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
+
   options.testing.hardcoded-s3 = mkOption {
     description = ''
       Hardcoded S3 provider for testing.
