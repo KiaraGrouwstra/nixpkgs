@@ -53,6 +53,33 @@ let
       '';
     };
 
+  mkStreamRestoreScript =
+    name: instance:
+    pkgs.writeShellScript "restic-stream-restore-${name}" ''
+      set -euo pipefail
+      ${mkEnvSetup instance}
+      case "''${1:-}" in
+        snapshots)
+          ${lib.getExe instance.package} snapshots
+          ;;
+        restore)
+          shift
+          case "''${1:-}" in
+            latest)
+              ${lib.getExe instance.package} dump latest ${lib.escapeShellArg instance.request.backupName} \
+                | ${instance.request.restoreCmd}
+              ;;
+            *)
+              echo "Usage: $0 restore latest" >&2; exit 1
+              ;;
+          esac
+          ;;
+        *)
+          echo "Usage: $0 {snapshots|restore latest}" >&2; exit 1
+          ;;
+      esac
+    '';
+
   # Shared restic settings for contract instances
   mkContractResticOptions = {
     repository = lib.mkOption {
@@ -450,6 +477,19 @@ in
     };
   };
 
+  options.services.restic.contracts.streamingBackup = lib.mkOption {
+    description = "Instances of the streamingBackup contract fulfilled by restic.";
+    default = config.contracts.streamingBackup.requests;
+    defaultText = lib.literalExpression "config.contracts.streamingBackup.requests";
+    type = lib.contracts.streamingBackup.mkProviderType {
+      providerOptions = mkContractResticOptions;
+      fulfill' = { name, instance, ... }: {
+        backupService = "restic-backups-${name}";
+        restoreScript = mkStreamRestoreScript name instance;
+      };
+    };
+  };
+
   config = {
     assertions = lib.flatten (
       lib.mapAttrsToList (name: backup: [
@@ -619,34 +659,60 @@ in
     ) (lib.filterAttrs (_: v: v.createWrapper) config.services.restic.backups);
 
     # Contract provider wiring
-    services.restic.backups =
-      lib.concatMapNestedAttrs' options.services.restic.contracts.fileBackup.type
-        (
-          path: instance:
-          let
-            name = lib.concatStringsSep "_" path;
-            inherit (instance) request;
-          in
-          {
-            ${name} = {
-              inherit (instance)
-                repository
-                passwordFile
-                initialize
-                timerConfig
-                pruneOpts
-                package
-                ;
-              paths = request.sourceDirectories;
-              exclude = request.excludePatterns;
-              user = request.user;
-              backupPrepareCommand = lib.concatMapStringsSep "\n" toString request.hooks.beforeBackup;
-              backupCleanupCommand = lib.concatMapStringsSep "\n" toString request.hooks.afterBackup;
-            };
-          }
-        )
-        resticCfg.contracts.fileBackup;
+    services.restic.backups = lib.mkMerge [
+      (lib.concatMapNestedAttrs' options.services.restic.contracts.fileBackup.type (
+        path: instance:
+        let
+          name = lib.concatStringsSep "_" path;
+          inherit (instance) request;
+        in
+        {
+          ${name} = {
+            inherit (instance)
+              repository
+              passwordFile
+              initialize
+              timerConfig
+              pruneOpts
+              package
+              ;
+            paths = request.sourceDirectories;
+            exclude = request.excludePatterns;
+            user = request.user;
+            backupPrepareCommand = lib.concatMapStringsSep "\n" toString request.hooks.beforeBackup;
+            backupCleanupCommand = lib.concatMapStringsSep "\n" toString request.hooks.afterBackup;
+          };
+        }
+      ) resticCfg.contracts.fileBackup)
+      (lib.concatMapNestedAttrs' options.services.restic.contracts.streamingBackup.type (
+        path: instance:
+        let
+          name = lib.concatStringsSep "_" path;
+          inherit (instance) request;
+        in
+        {
+          ${name} = {
+            inherit (instance)
+              repository
+              passwordFile
+              initialize
+              timerConfig
+              pruneOpts
+              package
+              ;
+            command = lib.splitString " " request.backupCmd;
+            extraBackupArgs = [
+              "--stdin-filename"
+              request.backupName
+            ];
+            user = "root";
+          };
+        }
+      ) resticCfg.contracts.streamingBackup)
+    ];
 
     contracts.fileBackup.providers.restic.module = options.services.restic.contracts.fileBackup;
+    contracts.streamingBackup.providers.restic.module =
+      options.services.restic.contracts.streamingBackup;
   };
 }
