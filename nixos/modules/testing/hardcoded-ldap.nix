@@ -27,6 +27,11 @@ let
   userBaseDN = "ou=people,${baseDN}";
 in
 {
+  # The contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
+
   options.testing.hardcoded-ldap = mkOption {
     description = ''
       Hardcoded LDAP provider for testing.
