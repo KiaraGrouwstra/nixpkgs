@@ -9,4 +9,5 @@
   filebackup-restic = runTest ./filebackup/restic.nix;
   ssl-self-signed = runTest ./ssl/self-signed-ssl.nix;
   smtp-hardcoded = runTest ./smtp/hardcoded-smtp.nix;
+  ldap-hardcoded = runTest ./ldap/hardcoded-ldap.nix;
 }
