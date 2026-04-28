@@ -7,16 +7,17 @@ buildGoModule {
   pname = "systemd-openbaod";
   version = "0.0.0-unstable-2026-05-29";
   # Sourced from a fork of the-distro/systemd-openbao that gates empty-template
-  # openbao agents and makes the agent package configurable, pending an upstream
-  # PR back to the-distro. The NixOS modules under nix/modules/ are imported
-  # from this same revision by services/security/systemd-openbaod.nix, so the
-  # daemon and the modules stay in lockstep.
+  # openbao agents, makes the agent package configurable, and adds the
+  # `services.openbao.agents.<name>.extraTemplates` merge point, pending an
+  # upstream PR back to the-distro. The NixOS modules under nix/modules/ are
+  # imported from this same revision by services/security/systemd-openbaod.nix,
+  # so the daemon and the modules stay in lockstep.
   src = fetchFromGitea {
     domain = "git.lix.systems";
     owner = "kiaragrouwstra";
     repo = "systemd-openbao";
-    rev = "d4baef0f4904dce66a70993593c114ff7e8b13e6";
-    hash = "sha256-4BK35mtXFHHkrRZ+pxdjb+pKzsuLYy/E4fURgqk6oQE=";
+    rev = "bde10de699a3f25834134f7374e3a9f557c19fac";
+    hash = "sha256-36zy/0Nqpgd7xvwrg/2N+dtQTOT8F8UZbMohueF/jD4=";
   };
   vendorHash = null;
   meta = {

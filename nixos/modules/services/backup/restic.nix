@@ -111,6 +111,11 @@ let
   };
 in
 {
+  # The fileBackup/streamingBackup contract provider options read
+  # `config.contracts` for their `type`/`default`, which cannot be evaluated in
+  # the sandboxed split options doc build. Document them in the eager build.
+  meta.buildDocsInSandbox = false;
+
   options.services.restic.backups = lib.mkOption {
     description = ''
       Periodic backups to create with Restic.
