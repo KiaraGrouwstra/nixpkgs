@@ -8,4 +8,5 @@ lib.mapAttrs (
   fileSecrets = ./file-secrets.nix;
   fileBackup = ./file-backup.nix;
   ssl = ./ssl.nix;
+  smtp = ./smtp.nix;
 }
