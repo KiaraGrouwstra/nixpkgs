@@ -19,4 +19,5 @@ lib.mapAttrs
     smtp = ./smtp.nix;
     ldap = ./ldap.nix;
     sso = ./sso.nix;
+    s3 = ./s3.nix;
   }
