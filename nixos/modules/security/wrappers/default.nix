@@ -119,6 +119,13 @@ let
     }
   );
 
+  # Unprivileged nspawn user namespaces cannot grant CAP_SETFCAP or set
+  # setuid/setgid bits via `chmod`, so attempting either makes
+  # `suid-sgid-wrappers.service` fail at boot. In containers, fall back
+  # to a plain symlink to the source binary; tests that rely on these
+  # wrappers run as root and can drop privileges without a setuid bit.
+  inherit (config.boot) isNspawnContainer;
+
   ###### Activation script for the setcap wrappers
   mkSetcapProgram =
     {
@@ -130,21 +137,26 @@ let
       permissions,
       ...
     }:
-    ''
-      cp ${securityWrapper source}/bin/security-wrapper "$wrapperDir/${program}"
+    if isNspawnContainer then
+      ''
+        ln --symbolic --force ${source} "$wrapperDir/${program}"
+      ''
+    else
+      ''
+        cp ${securityWrapper source}/bin/security-wrapper "$wrapperDir/${program}"
 
-      # Prevent races
-      chmod 0000 "$wrapperDir/${program}"
-      chown ${owner}:${group} "$wrapperDir/${program}"
+        # Prevent races
+        chmod 0000 "$wrapperDir/${program}"
+        chown ${owner}:${group} "$wrapperDir/${program}"
 
-      # Set desired capabilities on the file plus cap_setpcap so
-      # the wrapper program can elevate the capabilities set on
-      # its file into the Ambient set.
-      ${pkgs.libcap.out}/bin/setcap "cap_setpcap,${capabilities}" "$wrapperDir/${program}"
+        # Set desired capabilities on the file plus cap_setpcap so
+        # the wrapper program can elevate the capabilities set on
+        # its file into the Ambient set.
+        ${pkgs.libcap.out}/bin/setcap "cap_setpcap,${capabilities}" "$wrapperDir/${program}"
 
-      # Set the executable bit
-      chmod ${permissions} "$wrapperDir/${program}"
-    '';
+        # Set the executable bit
+        chmod ${permissions} "$wrapperDir/${program}"
+      '';
 
   ###### Activation script for the setuid wrappers
   mkSetuidProgram =
@@ -158,15 +170,20 @@ let
       permissions,
       ...
     }:
-    ''
-      cp ${securityWrapper source}/bin/security-wrapper "$wrapperDir/${program}"
+    if isNspawnContainer then
+      ''
+        ln --symbolic --force ${source} "$wrapperDir/${program}"
+      ''
+    else
+      ''
+        cp ${securityWrapper source}/bin/security-wrapper "$wrapperDir/${program}"
 
-      # Prevent races
-      chmod 0000 "$wrapperDir/${program}"
-      chown ${owner}:${group} "$wrapperDir/${program}"
+        # Prevent races
+        chmod 0000 "$wrapperDir/${program}"
+        chown ${owner}:${group} "$wrapperDir/${program}"
 
-      chmod "u${if setuid then "+" else "-"}s,g${if setgid then "+" else "-"}s,${permissions}" "$wrapperDir/${program}"
-    '';
+        chmod "u${if setuid then "+" else "-"}s,g${if setgid then "+" else "-"}s,${permissions}" "$wrapperDir/${program}"
+      '';
 
   mkWrappedPrograms = map (
     opts: if opts.capabilities != "" then mkSetcapProgram opts else mkSetuidProgram opts
