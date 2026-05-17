@@ -907,6 +907,12 @@ checkConfigError 'Did you mean .services\.nginx\.virtualHosts\."example\.com"\.s
 # contracts: basic want -> instances -> results round-trip (no mkContract or mkProviderType)
 checkConfigOutput '^6$' config.contracts.basic.results.consumer.x.value ./contracts-basic.nix
 
+# contracts: provider selection mechanisms
+checkConfigOutput '^6$' config.result.default ./contracts-provider-selection.nix
+checkConfigOutput '^10$' config.result.override ./contracts-provider-selection.nix
+checkConfigOutput '^6$' config.result.byName ./contracts-provider-selection.nix
+checkConfigError 'contracts\.noProvider\.defaultProvider is unset' config.contracts.noProvider.results.consumer.instance.value ./contracts-provider-selection.nix
+
 cat <<EOF
 ====== module tests ======
 $pass Pass

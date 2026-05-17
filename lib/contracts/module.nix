@@ -3,7 +3,9 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrsOf
+    enum
     nestedAttrsOf
+    nullOr
     raw
     submodule
     ;
@@ -270,13 +272,63 @@ in
                     ```nix
                     contracts.${contractName}.instances."<consumer>"."<instance>" = config.contracts.${contractName}.providers."<provider>";
                     ```
+
+                    For an easier way to set providers, consider setting `defaultProviderName` or `defaultProvider`.
                   '';
                   type = attrsOf raw;
+                };
+                defaultProviderName = mkOption {
+                  description = ''
+                    Select the name of the default provider to use for the `${contractName}` contract.
+                    Useful as a way to configure `defaultProvider` more amenable to UI generation.
+
+                    Setting this for a contract means you no longer need to set providers for individual `instances`:
+
+                    ```nix
+                    contracts.${contractName}.defaultProviderName = "<provider>";
+                    ```
+
+                    For an alternate way to set a default provider, consider `defaultProvider`.
+
+                    Note this options lacks `defaultProvider`'s graceful handling of contract renames.
+                  '';
+                  type = nullOr (enum (lib.attrNames contract.config.providers));
+                  example = lib.literalExpression ''"hardcoded-secret"'';
+                };
+                defaultProvider = mkOption {
+                  description = ''
+                    The default provider for the `${contractName}` contract, alongside its configuration.
+
+                    Setting this for a contract means you no longer need to set providers for individual `instances`:
+
+                    ```nix
+                    contracts.${contractName}.defaultProvider = config.contracts.${contractName}.providers."<provider>";
+                    ```
+
+                    For an alternate way to set a default provider, consider `defaultProviderName`.
+                  '';
+                  type = nullOr raw;
+                  default =
+                    let
+                      inherit (contract.config) defaultProviderName;
+                    in
+                    if defaultProviderName == null then null else contract.config.providers.${defaultProviderName};
+                  defaultText = lib.literalExpression ''
+                    let
+                      contract = config.contracts.${contractName};
+                      inherit (contract) defaultProviderName;
+                    in
+                    if defaultProviderName == null then null else contract.providers.''${defaultProviderName}
+                  '';
+                  example = lib.literalExpression ''
+                    config.contracts.fileSecrets.providers.hardcoded-secret
+                  '';
                 };
                 instances = mkOption {
                   description = ''
                     Instances of the `${contractName}` contract.
-                    Manually wires the provider for each consumer's contract instance:
+                    By default returns `defaultProvider`, if set (potentially by `defaultProviderName`),
+                    but may be overridden per instance like:
 
                     ```nix
                     contracts.${contractName}.instances."<consumer>"."<instance>" = config.contracts.${contractName}.providers."<provider>";
@@ -318,6 +370,7 @@ in
                     ```
                   '';
                   type = nestedAttrsOf raw;
+                  default = { };
                 };
                 results = mkOption {
                   description = ''
@@ -361,7 +414,15 @@ in
                     ```
                   '';
                   type = nestedAttrsOf raw;
-                  default = lib.mapNestedAttrs' wantType (v: v.result) contract.config.instances;
+                  default =
+                    if contract.config.defaultProvider == null && contract.config.want == { } then
+                      # No consumers and no provider (e.g. docs sandbox) -- safe empty.
+                      { }
+                    else
+                      assert lib.assertMsg
+                        (contract.config.instances != { } || contract.config.defaultProvider != null)
+                        "contracts.${contractName}.defaultProvider is unset!";
+                      lib.mapNestedAttrs' wantType (v: v.result) contract.config.instances;
                   defaultText = lib.literalExpression ''
                     lib.mapNestedAttrs' wantType
                       (v: v.result)
@@ -370,6 +431,9 @@ in
                   readOnly = true;
                 };
               };
+              config.instances = lib.mkIf (contract.config.defaultProvider != null) (
+                lib.mapNestedAttrs' wantType (leaf: lib.mkOptionDefault leaf) contract.config.defaultProvider
+              );
             });
           }
         ) contractTypes;
