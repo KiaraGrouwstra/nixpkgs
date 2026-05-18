@@ -64,6 +64,7 @@ in
                     Must match the `${contractName}` contract interface's request type.
                   '';
                   type = submodule {
+                    imports = interface.extraImports.request;
                     options = interface.request;
                   };
                 };
@@ -73,6 +74,7 @@ in
                     Must match the `${contractName}` contract interface's result type.
                   '';
                   type = submodule {
+                    imports = interface.extraImports.result;
                     options = interface.result;
                   };
                 };
@@ -243,6 +245,7 @@ in
                     Providers read from this option to get consumer requests.
 
                     Only canonical request options (those declared in `interface.request`) are included.
+                    Deprecated aliases added via `interface.extraImports.request` are intentionally excluded.
                   '';
                   type = nestedAttrsOf raw;
                   default =

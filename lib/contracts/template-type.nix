@@ -8,6 +8,7 @@ let
     listOf
     optionDeclaration
     optionType
+    raw
     str
     submodule
     ;
@@ -54,6 +55,20 @@ submodule (contract: {
             result = mkOption {
               description = "Result type of the contract.";
               inherit type default;
+            };
+            extraImports = mkOption {
+              description = "Extra imports for the request and result submodules (e.g. rename shims).";
+              default = { };
+              type = submodule {
+                options = lib.genAttrs [ "request" "result" ] (
+                  k:
+                  mkOption {
+                    description = "Extra imports for the ${k} submodule.";
+                    type = listOf raw;
+                    default = [ ];
+                  }
+                );
+              };
             };
           };
         };
@@ -104,6 +119,7 @@ submodule (contract: {
             mkOption {
               description = "The ${k} of the contract instance.";
               type = submodule {
+                imports = interface.extraImports.${k};
                 inherit options;
               };
             }
@@ -186,6 +202,7 @@ submodule (contract: {
           mkExtended =
             k:
             lib.extendSubmodule (overrides.${k} or { }) (submodule {
+              imports = interface.extraImports.${k};
               options = interface.${k};
             });
         in
