@@ -924,6 +924,24 @@ checkConfigError 'contracts\.noProvider\.defaultProvider is unset' config.contra
 # contracts: mkContract propagates request option defaults via extendSubmodule
 checkConfigOutput '^42$' config.result ./contracts-mkcontract.nix
 
+# contracts: varying nesting depths in want (flat, grouped, deeply nested)
+checkConfigOutput '^2$' config.contracts.arithmetic.results.myapp.simple.value ./contracts-nesting-consumer.nix
+checkConfigOutput '^11$' config.contracts.arithmetic.results.myapp.db.primary.value ./contracts-nesting-consumer.nix
+checkConfigOutput '^21$' config.contracts.arithmetic.results.myapp.db.replica.value ./contracts-nesting-consumer.nix
+checkConfigOutput '^101$' config.contracts.arithmetic.results.myapp.caches.region-a.fast.value ./contracts-nesting-consumer.nix
+checkConfigOutput '^201$' config.contracts.arithmetic.results.myapp.caches.region-b.fast.value ./contracts-nesting-consumer.nix
+
+# contracts: providers' contract option may live at any nesting depth
+checkConfigOutput '^6$' config.contracts.depth0.results.consumer.instance.value ./contracts-nesting-provider.nix
+checkConfigOutput '^15$' config.contracts.depth1.results.consumer.instance.value ./contracts-nesting-provider.nix
+checkConfigOutput '^105$' config.contracts.depth2.results.consumer.instance.value ./contracts-nesting-provider.nix
+
+# contracts: request values are type-checked (string where int expected)
+checkConfigError 'is not of type.*signed integer' config.contracts.arithmetic.results.consumer.instance.value ./contracts-request-typecheck.nix
+
+# contracts: submodule-typed request options survive the want -> requests -> results round-trip
+checkConfigOutput '^"postgresql://db.example.com:5432"$' config.contracts.connection.results.myapp.db.url ./contracts-submodule-request.nix
+
 cat <<EOF
 ====== module tests ======
 $pass Pass
