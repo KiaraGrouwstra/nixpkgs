@@ -82,8 +82,9 @@ in
   config = {
     contracts.${contract}.providers.hardcoded-secret.module = options.testing.hardcoded-secret;
 
-    system.activationScripts =
-      lib.concatMapNestedAttrs' (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
+    systemd.services = lib.mkMerge [
+      # Oneshot services that materialize each secret after users and sysusers are ready.
+      (lib.concatMapNestedAttrs' (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
         (
           path: cfg':
           let
@@ -92,21 +93,41 @@ in
             inherit (cfg') request result;
           in
           {
-            ${"hardcodedsecret_${name}"} = {
-              deps = [
-                "users"
-                "groups"
+            "hardcoded-secret-${name}" = {
+              description = "Materialize hardcoded test secret ${name}";
+              wantedBy = [ "multi-user.target" ];
+              before = [ "multi-user.target" ];
+              after = [
+                "systemd-sysusers.service"
+                "nixos-activation.service"
               ];
-              text = ''
-                mkdir -p "$(dirname "${result.path}")"
-                touch "${result.path}"
-                chmod ${request.mode} "${result.path}"
-                chown ${request.owner}:${request.group} "${result.path}"
-                cp ${source} "${result.path}"
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+              };
+              script = ''
+                install -D -m ${request.mode} -o ${request.owner} -g ${request.group} \
+                  ${source} "${result.path}"
               '';
             };
           }
         )
-        cfg.${contract};
+        cfg.${contract})
+
+      # Make each top-level consumer service wait for all its secret services.
+      # Assumes secrets are keyed as `<appName>.<secretName>` matching `<appName>.service`.
+      (lib.mapAttrs (
+        appName: appSecrets:
+        let
+          secretSvcs = lib.mapAttrsToList (
+            secretName: _: "hardcoded-secret-${appName}_${secretName}.service"
+          ) appSecrets;
+        in
+        {
+          after = secretSvcs;
+          requires = secretSvcs;
+        }
+      ) cfg.${contract})
+    ];
   };
 }
