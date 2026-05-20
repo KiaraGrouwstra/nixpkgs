@@ -29,7 +29,7 @@ in
 
         **Integrating into a new module system** (e.g. home-manager, nix-darwin):
 
-        1\. Import this module (`lib/contracts/module.nix`).
+        1\. Import this module (`lib.contract.module`).
 
         2\. Seed `config.contractDefinitions` with `lib.contracts` so that nixpkgs-shipped
         contract definitions are available alongside any user-defined types.
@@ -45,7 +45,7 @@ in
         Contract instances, keyed by contract type.
 
         This option is system-agnostic - it works identically in NixOS
-        and any module system that imports `lib/contracts/module.nix`.
+        and any module system that imports `lib.contract.module`.
 
         Consumers set `contracts.<type>.want`, providers set `contracts.<type>.providers`,
         and results are read from `contracts.<type>.results`.
@@ -441,6 +441,9 @@ in
                       lib.mapAttrs (_: buildDefaultTree) subWant;
                 in
                 if provider != null then
+                  assert lib.assertMsg (
+                    provider ? module
+                  ) "contracts.${contractName}.defaultProvider must be a provider reference `{ module, contract? }`.";
                   buildDefaultTree contract.config.want
                 else
                   lib.mkOptionDefault (
