@@ -491,6 +491,12 @@ in
       }
     ];
 
+
+    contracts.fileSecrets.want.stash = {
+      passwordFile = if isInstance cfg.passwordFile then cfg.passwordFile else { };
+      jwtSecretKey = if isInstance cfg.jwtSecretKey then cfg.jwtSecretKey else { };
+      sessionStoreKey = if isInstance cfg.sessionStoreKey then cfg.sessionStoreKey else { };
+    };
     services.stash.settings = {
       username = mkIf (cfg.username != null) cfg.username;
       plugins_path = mkIf (!cfg.mutablePlugins) cfg.plugins;
