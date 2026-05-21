@@ -8,7 +8,8 @@
 # the two peer services without a parent system. Each node then bakes the
 # eval-time `resultValue` into static config.
 #
-# Exercises the `defaultProvider` code path in `lib/services/lib.nix::evalServices`.
+# Exercises the `defaultProviderName` code path in `lib/services/lib.nix::evalServices`.
+# See `cross-node-modular-services-direct.nix` for the `defaultProvider` path.
 { lib, ... }:
 let
   portable-lib = import ../../../lib/services/lib.nix { inherit lib; };
@@ -35,7 +36,7 @@ let
     imports = [ arithmeticContract ];
     system.services.increment.imports = [
       ./arithmetic-increment-provider.nix
-      ({ config, ... }: { contracts.arithmetic.defaultProvider = config.contracts.arithmetic.providers.increment; })
+      { contracts.arithmetic.defaultProviderName = "increment"; }
     ];
   };
 
