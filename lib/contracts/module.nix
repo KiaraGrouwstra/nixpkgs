@@ -3,6 +3,7 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrsOf
+    enum
     nestedAttrsOf
     nullOr
     raw
@@ -236,7 +237,7 @@ in
                     reference at the matching path.
 
                     For an easier way to pick a single provider for every
-                    instance, consider `defaultProvider`.
+                    instance, consider `defaultProvider` / `defaultProviderName`.
                   '';
                   type = attrsOf raw;
                 };
@@ -252,12 +253,35 @@ in
                     ```nix
                     contracts.${contractName}.defaultProvider = config.contracts.${contractName}.providers."<provider>";
                     ```
+
+                    May also be set indirectly via `defaultProviderName`.
                   '';
                   type = nullOr raw;
-                  default = null;
+                  default =
+                    if contract.config.defaultProviderName == null then
+                      null
+                    else
+                      contract.config.providers.${contract.config.defaultProviderName};
+                  defaultText = lib.literalExpression ''
+                    if contracts.${contractName}.defaultProviderName == null then null
+                    else contracts.${contractName}.providers.''${contracts.${contractName}.defaultProviderName}
+                  '';
                   example = lib.literalExpression ''
                     config.contracts.fileSecrets.providers.hardcoded-secret
                   '';
+                };
+                defaultProviderName = mkOption {
+                  description = ''
+                    The name of the default provider for the `${contractName}` contract.
+                    Convenience alias for `defaultProvider`: picks `providers."<name>"` by
+                    name rather than reference.
+
+                    ```nix
+                    contracts.${contractName}.defaultProviderName = "<provider>";
+                    ```
+                  '';
+                  type = nullOr (enum (lib.attrNames contract.config.providers));
+                  default = null;
                 };
                 instances = mkOption {
                   description = ''
