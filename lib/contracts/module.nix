@@ -181,6 +181,38 @@ in
                     }
                     ```
 
+                    **Modular service consumer:**
+
+                    ```nix
+                    { lib, config, ... }:
+                    let
+                      cfg = config."<consumer>";
+                      inherit (lib.contracts) ${contractName};
+                    in
+                    {
+                      _class = "service";
+                      options."<consumer>"."<option>" = lib.mkOption {
+                        default = config.contracts.${contractName}.requests;
+                        type = ${contractName}.mkContract {
+                          request = {
+                            # "<attr>".default = ...;
+                          };
+                        };
+                      };
+
+                      config = {
+                        # No manual prefix - the bridge auto-nests under the service tree path:
+                        contracts.${contractName}.want = {
+                          inherit (cfg) <option>;
+                        };
+
+                        # Results are scoped automatically:
+                        cfg."<option>".result =
+                          config.contracts.${contractName}.results."<option>";
+                      };
+                    }
+                    ```
+
                     **Naming restrictions:**
 
                     `want` uses `nestedAttrsOf`, which distinguishes namespace keys from leaf
@@ -188,6 +220,14 @@ in
                     option names. Because each leaf has options `request` and `result`,
                     namespace keys (consumer names, option names) must not be literally
                     `request` or `result` - otherwise they would be misidentified as leaves.
+
+                    NixOS modules and modular services share the same `want` namespace.
+                    The bridge auto-nests modular service entries under the service tree
+                    name, so a NixOS module that manually picks a consumer name matching
+                    a `system.services` key would collide. To avoid this, NixOS modules
+                    should use their option path as consumer name (e.g. `"stash"` from
+                    `services.stash`), which by convention does not overlap with service
+                    tree names.
 
                     See `providers` for how providers register themselves.
                   '';
@@ -230,6 +270,10 @@ in
                     ```nix
                     contracts.${contractName}.providers."<provider>".module = options."<provider>";
                     ```
+
+                    `nixos-contracts-bridge` automatically collects providers
+                    set by modular services into the containing system's
+                    `contracts.${contractName}.providers`.
 
                     Per-instance overrides are written by setting an
                     `instances.<consumer>.<...>` leaf to a provider entry
@@ -386,6 +430,8 @@ in
 
                     A computed option that extracts the result values from fulfilled contracts.
                     It mirrors `requests` which filters to just request data for providers.
+                    May be set directly to inject pre-resolved results (e.g. for per-service
+                    sub-evaluation).
 
                     **NixOS module consumer** - results are under the consumer name chosen in `want`:
 
@@ -418,6 +464,37 @@ in
                         };
                       };
                     }
+                    ```
+
+                    **Modular service consumer** - results are scoped automatically,
+                    so no prefix is needed:
+
+                    ```nix
+                    { lib, config, ... }:
+                    {
+                      _class = "service";
+                      options."<consumer>"."<option>" = lib.mkOption {
+                        type = lib.contracts.${contractName}.mkContract { ... };
+                      };
+                      config = {
+                        contracts.${contractName}.want = { inherit (config."<consumer>") "<option>"; };
+                        "<consumer>"."<option>".result =
+                          config.contracts.${contractName}.results."<option>";
+                      };
+                    }
+                    ```
+
+                    The same scoped API applies to sub-services at any nesting depth.
+
+                    **At the NixOS level** (e.g. in assertions), results include the full
+                    service tree path added by the bridge:
+
+                    ```nix
+                    # root service "myService":
+                    config.contracts.${contractName}.results.myService."<option>"
+
+                    # sub-service "inner" under "outer":
+                    config.contracts.${contractName}.results.outer.inner."<option>"
                     ```
                   '';
                   type = nestedAttrsOf raw;

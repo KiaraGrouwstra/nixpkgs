@@ -6,7 +6,7 @@ Status: in development. This functionality is new in NixOS 26.05, and significan
 
 The motivating example is secrets. A web app may need a password file owned by a specific user with `0400` permissions; it shouldn't have to know whether that file was produced by [`agenix`](https://github.com/ryantm/agenix), [`sops-nix`](https://github.com/Mic92/sops-nix), or written out at activation time. With a `fileSecrets` contract, the web app declares the request (owner, mode, etc.) and reads the resulting `result.path`; switching providers becomes a one-line `defaultProvider` change.
 
-The same machinery works in [Home Manager](https://github.com/nix-community/home-manager) and any other module system that imports the generic contracts module.
+The same machinery works in [modular services](#modular-services), [Home Manager](https://github.com/nix-community/home-manager), and any other module system that imports the generic contracts module.
 
 ## Concepts {#contracts-concepts}
 
@@ -57,6 +57,8 @@ in
 ```
 
 `mkContract` returns a `submodule` type with the contract's `request` and `result` fields. `nestedAttrsOf` lets `want` be flat (`want.stash.secret`), grouped (`want.stash.db.primary`), or arbitrarily deep — `results` mirrors the same structure.
+
+[Modular services](#modular-services) follow the same pattern, but the bridge automatically nests each service's `want` entries under the service's tree path, so services set `contracts.<type>.want` without a manual prefix and read results scoped to themselves.
 
 ## Providers {#contracts-providers}
 
@@ -255,4 +257,5 @@ Renaming a request option is done with an alias module in `interface.extraImport
 
 - Generic module: [`lib/contracts/module.nix`](https://github.com/NixOS/nixpkgs/blob/master/lib/contracts/module.nix)
 - NixOS wrapper: [`nixos/modules/contracts/default.nix`](https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/contracts/default.nix)
+- Modular services bridge: [`nixos/modules/system/service/contracts-bridge.nix`](https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/system/service/contracts-bridge.nix)
 - Test reference: [`lib/tests/modules/contracts-*.nix`](https://github.com/NixOS/nixpkgs/tree/master/lib/tests/modules) and [`nixos/tests/contracts/`](https://github.com/NixOS/nixpkgs/tree/master/nixos/tests/contracts)
