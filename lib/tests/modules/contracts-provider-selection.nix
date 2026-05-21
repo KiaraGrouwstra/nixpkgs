@@ -2,6 +2,7 @@
 # - no provider: accessing results errors with a clear message
 # - byRef: `defaultProvider` reference for the default + a per-instance
 #   override at one `instances` leaf (the other falls through to the default)
+# - byName: `defaultProviderName` enum
 {
   lib,
   config,
@@ -61,16 +62,23 @@ in
     contractDefinitions = lib.genAttrs [
       "noProvider"
       "byRef"
+      "byName"
     ] (_: arithmeticInterface);
 
     # -- Providers: feed requests, compute results --
 
-    services.increment.arithmetic = config.contracts.byRef.requests;
+    services.increment.arithmetic = lib.mkMerge (
+      map (ct: config.contracts.${ct}.requests) [
+        "byRef"
+        "byName"
+      ]
+    );
     services.double.arithmetic = config.contracts.byRef.requests;
 
     # Register providers.
     contracts.byRef.providers.increment.module = options.services.increment.arithmetic;
     contracts.byRef.providers.double.module = options.services.double.arithmetic;
+    contracts.byName.providers.increment.module = options.services.increment.arithmetic;
 
     # -- Consumers --
 
@@ -78,6 +86,7 @@ in
     # Two instances under one consumer so the override only touches one of them.
     contracts.byRef.want.consumer.fast.request.value = 5;
     contracts.byRef.want.consumer.slow.request.value = 5;
+    contracts.byName.want.consumer.instance.request.value = 5;
 
     # -- Provider selection --
 
@@ -90,10 +99,14 @@ in
     contracts.byRef.defaultProvider = config.contracts.byRef.providers.increment;
     contracts.byRef.instances.consumer.fast = config.contracts.byRef.providers.double;
 
+    # byName: set defaultProviderName to "increment" (5 + 1 = 6)
+    contracts.byName.defaultProviderName = "increment";
+
     # -- Collect results --
     result = {
       default = config.contracts.byRef.results.consumer.slow.value;
       override = config.contracts.byRef.results.consumer.fast.value;
+      byName = config.contracts.byName.results.consumer.instance.value;
     };
   };
 }
