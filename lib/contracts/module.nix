@@ -8,8 +8,8 @@ let
     raw
     submodule
     ;
-  # `or` fallbacks allow the docs build sandbox to evaluate this module:
-  # the sandbox passes a fake `config` via `specialArgs` that lacks these attributes.
+  # `or` fallback allows the docs build sandbox to evaluate this module:
+  # the sandbox passes a fake `config` via `specialArgs` that lacks this attribute.
   contractDefinitions = config.contractDefinitions or lib.contracts;
 in
 {
@@ -202,14 +202,13 @@ in
                   type = nestedAttrsOf raw;
                   default =
                     lib.mapNestedAttrs' wantType (v: {
-                        request = lib.getAttrs (lib.attrNames interface.request) v.request;
-                      }) contract.config.want;
+                      request = lib.getAttrs (lib.attrNames interface.request) v.request;
+                    }) contract.config.want;
                   defaultText = lib.literalExpression ''
                     lib.mapNestedAttrs' wantType
                       (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
                       contract.config.want
                   '';
-                  readOnly = true;
                 };
                 providers = mkOption {
                   description = ''
@@ -358,9 +357,8 @@ in
                   description = ''
                     Result data for the `${contractName}` contract, with `request` attributes filtered out.
 
-                    This is a read-only calculated option that extracts the result values from
-                    fulfilled contracts. It mirrors `requests` which filters to just request data
-                    for providers.
+                    A computed option that extracts the result values from fulfilled contracts.
+                    It mirrors `requests` which filters to just request data for providers.
 
                     **NixOS module consumer** - results are under the consumer name chosen in `want`:
 
@@ -407,7 +405,6 @@ in
                       (v: v.result)
                       config.contracts.${contractName}.instances
                   '';
-                  readOnly = true;
                 };
               };
               # Provide the asserting default for `instances` via config rather
