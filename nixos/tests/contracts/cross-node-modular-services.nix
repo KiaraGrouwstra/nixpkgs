@@ -3,24 +3,23 @@
 #
 # Mirrors `cross-node.nix` but demonstrates that the cross-node pattern works
 # equally well when each side is a modular service rather than a plain NixOS module.
+#
+# The shared eval uses `lib.services.evalServices` to resolve contracts across
+# the two peer services without a parent system. Each node then bakes the
+# eval-time `resultValue` into static config.
+#
+# Exercises the `defaultProvider` code path in `lib/services/lib.nix::evalServices`.
 { lib, ... }:
 let
   portable-lib = import ../../../lib/services/lib.nix { inherit lib; };
 
-  # `configured` references `rootContracts` which is resolved from the shared eval,
-  # and the shared eval uses `configured.serviceSubmodule`. This is safe under Nix
-  # lazy evaluation: consumer `want` is static, so `requests` can be computed before
-  # any `result` is forced. No data cycle exists.
-  configured = portable-lib.configure {
-    serviceManagerPkgs = throw "shared eval does not need pkgs";
-    contracts = rootContracts;
-    upstreamContractDefinitions = rootContractDefs;
-  };
+  arithmeticContract = ./arithmetic-contract.nix;
 
   consumerServiceModule =
     { lib, config, ... }:
     {
       _class = "service";
+      imports = [ arithmeticContract ];
       options.consumer.operation = lib.mkOption {
         default.result = config.contracts.arithmetic.results.operation;
         type = config.contractDefinitions.arithmetic.mkContract { };
@@ -32,48 +31,22 @@ let
       };
     };
 
-  providerServiceModule = ./arithmetic-increment-provider.nix;
+  providerNode = {
+    imports = [ arithmeticContract ];
+    system.services.increment.imports = [
+      ./arithmetic-increment-provider.nix
+      ({ config, ... }: { contracts.arithmetic.defaultProvider = config.contracts.arithmetic.providers.increment; })
+    ];
+  };
 
-  sharedContracts =
-    (lib.evalModules {
-      modules = [
-        # Bundles `lib.contract.module` + meta stub + arithmetic contract definition.
-        ../../../lib/tests/modules/contracts-arithmetic-contract.nix
-        (
-          { lib, ... }:
-          {
-            options.services = lib.mkOption {
-              type = lib.types.attrsOf configured.serviceSubmodule;
-              default = { };
-            };
-          }
-        )
-        # Manual lift: surfaces each service's want/providers at the root contracts
-        # namespace. This is the same job the bridge does, written inline to show
-        # that the bridge is just a small piece of Nix, not a hard requirement.
-        (
-          { config, lib, ... }:
-          {
-            contracts.arithmetic = {
-              want = lib.mapAttrs (_: svc: svc.contracts.arithmetic.want) config.services;
-              providers = lib.foldl' (acc: svc: acc // svc.contracts.arithmetic.providers) { } (
-                lib.attrValues config.services
-              );
-            };
-            contracts.arithmetic.defaultProviderName = "increment";
-          }
-        )
-        {
-          services.consumer.imports = [ consumerServiceModule ];
-          services.increment.imports = [ providerServiceModule ];
-        }
-      ];
-    }).config;
+  evaluated = portable-lib.evalServices {
+    services = {
+      consumer = consumerServiceModule;
+      increment = providerNode.system.services.increment;
+    };
+  };
 
-  rootContracts = sharedContracts.contracts;
-  rootContractDefs = sharedContracts.contractDefinitions;
-
-  resultValue = sharedContracts.contracts.arithmetic.results.consumer.operation.value;
+  resultValue = evaluated.contracts.arithmetic.results.consumer.operation.value;
 in
 {
   name = "contracts-cross-node-modular-services";
@@ -82,23 +55,26 @@ in
     provider =
       { pkgs, ... }:
       {
-        imports = [ ./arithmetic-contract.nix ];
-        system.services.increment.imports = [ providerServiceModule ];
-        systemd.services.arithmetic-server = {
-          wantedBy = [ "multi-user.target" ];
-          script = ''
-            mkdir -p /run/arithmetic
-            echo -n ${lib.escapeShellArg (toString resultValue)} > /run/arithmetic/result
-            exec ${pkgs.python3}/bin/python3 -m http.server 8080 --directory /run/arithmetic
-          '';
-        };
-        networking.firewall.allowedTCPPorts = [ 8080 ];
+        imports = [
+          providerNode
+          {
+            systemd.services.arithmetic-server = {
+              wantedBy = [ "multi-user.target" ];
+              script = ''
+                mkdir -p /run/arithmetic
+                echo -n ${lib.escapeShellArg (toString resultValue)} > /run/arithmetic/result
+                exec ${pkgs.python3}/bin/python3 -m http.server 8080 --directory /run/arithmetic
+              '';
+            };
+            networking.firewall.allowedTCPPorts = [ 8080 ];
+          }
+        ];
       };
 
     consumer =
       { ... }:
       {
-        imports = [ ./arithmetic-contract.nix ];
+        imports = [ arithmeticContract ];
         system.services.instance.imports = [ consumerServiceModule ];
         environment.etc."arithmetic-expected".text = toString resultValue;
       };
