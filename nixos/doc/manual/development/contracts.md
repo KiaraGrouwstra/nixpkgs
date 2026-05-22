@@ -106,14 +106,13 @@ in
 
 However, provider entries set directly — without going through `want` — are not present in `requests`. The `behaviorTest` framework (used in NixOS tests) writes entries directly onto the provider option rather than via `want`, so `requests` will not contain them. In that case, falling back to `cfg'.request` is correct: the values were explicitly set on the provider entry and there is no competing want-derived default to override them.
 
-A robust pattern that handles both cases:
+Use `lib.contract.readRequest` to handle both cases:
 
 ```nix
 (lib.concatMapNestedAttrs' cfg.fileSecrets.type
   (path: cfg':
     let
-      fromRequests = lib.attrByPath path null config.contracts.fileSecrets.requests;
-      request = if fromRequests != null then fromRequests.request else cfg'.request;
+      request = lib.contract.readRequest config.contracts.fileSecrets.requests path cfg';
     in
     {
       # use request.owner, request.group, request.mode …
@@ -121,7 +120,7 @@ A robust pattern that handles both cases:
   cfg.fileSecrets)
 ```
 
-Do not add `overrides.request = { owner.default = …; }` to `mkProviderType` as a fallback for owner or group: such defaults apply to the provider submodule's `request` option, which is not what providers should read.
+`readRequest` prefers the entry from `requests` (populated from `want`, authoritative) and falls back to `cfg'.request` (used for direct provider-entry writes such as `behaviorTest`).
 
 `providers.<name>` stores `{ module, contract? }`:
 
