@@ -90,7 +90,11 @@ in
           let
             name = lib.concatStringsSep "_" path;
             source = writeText "hardcodedsecret_${name}_content" cfg'.content;
-            request = (lib.getAttrFromPath path config.contracts.${contract}.requests).request;
+            request =
+              let
+                fromRequests = lib.attrByPath path null config.contracts.${contract}.requests;
+              in
+              if fromRequests != null then fromRequests.request else cfg'.request;
             inherit (cfg') result;
           in
           {

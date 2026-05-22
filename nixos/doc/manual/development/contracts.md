@@ -102,13 +102,18 @@ in
 
 `mkProviderType { fulfill, ... }` produces a `nestedAttrsOf submodule` type whose entries each have `request`, `result`, and any `providerOptions` declared on the provider. `fulfill` (`request -> result`) or its lower-level variant `fulfill'` (`{ request, name } -> result`) computes the result from the request at `mkDefault` priority.
 
-**Reading request fields in `config` blocks.** When a provider's `config` section needs request fields (for example, to pass owner/group to `install`), it must read from `config.contracts.<type>.requests` — not from the provider submodule's own `request` option. The reason: when an operator sets only a provider-specific option (e.g. `content`) without repeating the `request` block, the submodule's `request` option falls back to its declared defaults, silently overriding the consumer's `want`. The `requests` attrset is derived directly from `want` declarations and is always authoritative:
+**Reading request fields in `config` blocks.** When a provider's `config` section needs request fields (for example, to pass owner/group to `install`), prefer reading from `config.contracts.<type>.requests` over the provider submodule's own `request` option. The reason: when an operator sets only a provider-specific option (e.g. `content`) without repeating the `request` block, the submodule's `request` option falls back to its declared defaults, silently overriding the consumer's `want`. The `requests` attrset is derived directly from `want` declarations and is authoritative for want-driven entries.
+
+However, provider entries set directly — without going through `want` — are not present in `requests`. The `behaviorTest` framework (used in NixOS tests) writes entries directly onto the provider option rather than via `want`, so `requests` will not contain them. In that case, falling back to `cfg'.request` is correct: the values were explicitly set on the provider entry and there is no competing want-derived default to override them.
+
+A robust pattern that handles both cases:
 
 ```nix
 (lib.concatMapNestedAttrs' cfg.fileSecrets.type
   (path: cfg':
     let
-      request = (lib.getAttrFromPath path config.contracts.fileSecrets.requests).request;
+      fromRequests = lib.attrByPath path null config.contracts.fileSecrets.requests;
+      request = if fromRequests != null then fromRequests.request else cfg'.request;
     in
     {
       # use request.owner, request.group, request.mode …
