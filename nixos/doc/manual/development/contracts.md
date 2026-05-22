@@ -122,6 +122,8 @@ Use `lib.contract.readRequest` to handle both cases:
 
 `readRequest` prefers the entry from `requests` (populated from `want`, authoritative) and falls back to `cfg'.request` (used for direct provider-entry writes such as `behaviorTest`).
 
+`overrides.request` on `mkProviderType` is appropriate for providing **ambient defaults on the fallback path** — for example, a test-only provider whose entries may omit `owner`/`group` can supply `overrides.request = { owner.default = "root"; group.default = "root"; }` as a convenience. These defaults apply only on the fallback branch (`cfg'.request`); the want-derived `requests` entry is returned directly and is unaffected.
+
 `providers.<name>` stores `{ module, contract? }`:
 
 - `module` is the provider's *option set* (typically `options.services.<service>`), so downstream tooling can introspect `.loc`/`.type` for GUI generation, schema export, etc.
