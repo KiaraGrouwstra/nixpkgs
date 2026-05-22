@@ -102,6 +102,22 @@ in
 
 `mkProviderType { fulfill, ... }` produces a `nestedAttrsOf submodule` type whose entries each have `request`, `result`, and any `providerOptions` declared on the provider. `fulfill` (`request -> result`) or its lower-level variant `fulfill'` (`{ request, name } -> result`) computes the result from the request at `mkDefault` priority.
 
+**Reading request fields in `config` blocks.** When a provider's `config` section needs request fields (for example, to pass owner/group to `install`), it must read from `config.contracts.<type>.requests` — not from the provider submodule's own `request` option. The reason: when an operator sets only a provider-specific option (e.g. `content`) without repeating the `request` block, the submodule's `request` option falls back to its declared defaults, silently overriding the consumer's `want`. The `requests` attrset is derived directly from `want` declarations and is always authoritative:
+
+```nix
+(lib.concatMapNestedAttrs' cfg.fileSecrets.type
+  (path: cfg':
+    let
+      request = (lib.getAttrFromPath path config.contracts.fileSecrets.requests).request;
+    in
+    {
+      # use request.owner, request.group, request.mode …
+    })
+  cfg.fileSecrets)
+```
+
+Do not add `overrides.request = { owner.default = …; }` to `mkProviderType` as a fallback for owner or group: such defaults apply to the provider submodule's `request` option, which is not what providers should read.
+
 `providers.<name>` stores `{ module, contract? }`:
 
 - `module` is the provider's *option set* (typically `options.services.<service>`), so downstream tooling can introspect `.loc`/`.type` for GUI generation, schema export, etc.
