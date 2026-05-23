@@ -102,27 +102,9 @@ in
 
 `mkProviderType { fulfill, ... }` produces a `nestedAttrsOf submodule` type whose entries each have `request`, `result`, and any `providerOptions` declared on the provider. `fulfill` (`request -> result`) or its lower-level variant `fulfill'` (`{ request, name } -> result`) computes the result from the request at `mkDefault` priority.
 
-**Reading request fields in `config` blocks.** When a provider's `config` section needs request fields (for example, to pass owner/group to `install`), prefer reading from `config.contracts.<type>.requests` over the provider submodule's own `request` option. The reason: when an operator sets only a provider-specific option (e.g. `content`) without repeating the `request` block, the submodule's `request` option falls back to its declared defaults, silently overriding the consumer's `want`. The `requests` attrset is derived directly from `want` declarations and is authoritative for want-driven entries.
+**Reading request fields in `config` blocks.** When a provider's `config` section needs request fields (for example, to pass owner/group to `install`), read from `cfg'.request`. Because the provider option's `default = config.contracts.<type>.requests`, each entry's `request` is populated from the consumer's `want` declaration via the canonical flow: `want` → `requests` → provider default → `cfg'.request`. The `behaviorTest` framework follows the same path, so `cfg'.request` is always authoritative.
 
-However, provider entries set directly — without going through `want` — are not present in `requests`. The `behaviorTest` framework (used in NixOS tests) writes entries directly onto the provider option rather than via `want`, so `requests` will not contain them. In that case, falling back to `cfg'.request` is correct: the values were explicitly set on the provider entry and there is no competing want-derived default to override them.
-
-Use `lib.contract.readRequest` to handle both cases:
-
-```nix
-(lib.concatMapNestedAttrs' cfg.fileSecrets.type
-  (path: cfg':
-    let
-      request = lib.contract.readRequest config.contracts.fileSecrets.requests path cfg';
-    in
-    {
-      # use request.owner, request.group, request.mode …
-    })
-  cfg.fileSecrets)
-```
-
-`readRequest` prefers the entry from `requests` (populated from `want`, authoritative) and falls back to `cfg'.request` (used for direct provider-entry writes such as `behaviorTest`).
-
-`overrides.request` on `mkProviderType` is appropriate for providing **ambient defaults on the fallback path** — for example, a test-only provider whose entries may omit `owner`/`group` can supply `overrides.request = { owner.default = "root"; group.default = "root"; }` as a convenience. These defaults apply only on the fallback branch (`cfg'.request`); the want-derived `requests` entry is returned directly and is unaffected.
+`overrides.request` on `mkProviderType` provides **ambient defaults** for entries written directly onto the provider option without a corresponding `want` declaration — for example, `overrides.request = { owner.default = "root"; group.default = "root"; }` is a convenience for a test-only provider whose entries may omit `owner`/`group`.
 
 `providers.<name>` stores `{ module, contract? }`:
 
