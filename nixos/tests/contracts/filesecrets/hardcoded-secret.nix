@@ -7,12 +7,7 @@
 }
 // lib.contracts.fileSecrets.behaviorTest {
   name = "hardcoded-secret";
-  providerRoot = [
-    "testing"
-    "hardcoded-secret"
-    "fileSecrets"
-    "mysecret"
-  ];
+  wantPath = [ "mysecret" ];
   extraModules = [
     ../../../modules/testing/hardcoded-secret.nix
     (
