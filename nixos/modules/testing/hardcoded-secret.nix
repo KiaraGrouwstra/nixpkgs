@@ -17,7 +17,8 @@ let
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
-  mkProviderType = lib.contracts.${contract}.mkProviderTypeFor config;
+  inherit (lib.contract.forModule config) fileSecrets;
+  inherit (fileSecrets) mkProviderType;
 in
 {
   options.testing.hardcoded-secret = mkOption {

@@ -451,11 +451,13 @@ in
                     NixOS modules whose options must be cacheable by the manual
                     docs build (`nixos/modules/misc/documentation.nix`) are
                     evaluated in a per-module sandbox where `config` is a stub
-                    lacking `contracts`. Use the `mkProviderTypeFor` helper,
-                    which falls back to the lib version automatically:
+                    lacking `contracts`. Use the `lib.contract.forModule`
+                    helper, which falls back to the lib version automatically
+                    and binds one or more contracts in a single line:
 
                     ```nix
-                    mkProviderType = lib.contracts.${contractName}.mkProviderTypeFor config;
+                    inherit (lib.contract.forModule config) ${contractName};
+                    # then: type = ${contractName}.mkProviderType { ... };
                     ```
 
                     The lib version produces an identical option type shape;
