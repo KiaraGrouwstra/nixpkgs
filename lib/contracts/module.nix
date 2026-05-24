@@ -445,6 +445,23 @@ in
                     `nestedAttrsOf` leaf-level priority filtering.
 
                     `contracts.${contractName}.mkProviderType :: { providerOptions?, overrides?, fulfill?, fulfill'? } -> optionType`
+
+                    **Sandbox-safe use in NixOS modules:**
+
+                    NixOS modules whose options must be cacheable by the manual
+                    docs build (`nixos/modules/misc/documentation.nix`) are
+                    evaluated in a per-module sandbox where `config` is a stub
+                    lacking `contracts`. Use an `or` fallback to the lib version:
+
+                    ```nix
+                    mkProviderType =
+                      config.contracts.${contractName}.mkProviderType
+                        or lib.contracts.${contractName}.mkProviderType;
+                    ```
+
+                    The lib version produces an identical option type shape;
+                    only the runtime `_requests` pre-binding differs, which
+                    does not affect rendered docs.
                   '';
                   type = types.functionTo types.optionType;
                   readOnly = true;

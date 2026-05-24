@@ -15,7 +15,11 @@ let
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
-  mkProviderType = config.contracts.${contract}.mkProviderType;
+  # `or` fallback for the manual docs sandbox, which evaluates this module with
+  # a stub `config` that has no `contracts`. The lib version produces an identical
+  # option type shape; only the runtime `_requests` pre-binding differs.
+  mkProviderType =
+    config.contracts.${contract}.mkProviderType or lib.contracts.${contract}.mkProviderType;
 in
 {
   options.testing.hardcoded-secret = mkOption {
