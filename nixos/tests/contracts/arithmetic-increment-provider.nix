@@ -9,7 +9,7 @@
 }:
 let
   inherit (lib) mkOption;
-  inherit (config.contractDefinitions.arithmetic) mkProviderType;
+  mkProviderType = config.contracts.arithmetic.mkProviderType;
 in
 {
   _class = "service";

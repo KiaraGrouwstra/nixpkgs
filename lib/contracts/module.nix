@@ -433,6 +433,23 @@ in
                       config.contracts.${contractName}.instances
                   '';
                 };
+                mkProviderType = mkOption {
+                  description = ''
+                    Like `contractDefinitions.${contractName}.mkProviderType`, but with
+                    `_requests` pre-bound to `config.contracts.${contractName}.requests`.
+
+                    Prefer this over `contractDefinitions.${contractName}.mkProviderType`
+                    when defining provider options: it automatically forwards consumer
+                    `want` request data into each leaf at `mkDefault` priority (1000),
+                    so provider-specific options do not silently mask consumer wants via
+                    `nestedAttrsOf` leaf-level priority filtering.
+
+                    `contracts.${contractName}.mkProviderType :: { providerOptions?, overrides?, fulfill?, fulfill'? } -> optionType`
+                  '';
+                  type = types.functionTo types.optionType;
+                  readOnly = true;
+                  default = args: contractType.mkProviderType (args // { _requests = contract.config.requests; });
+                };
               };
               # Provide the asserting default for `instances` via config rather
               # than on the option itself: the docs build sandbox evaluates option
@@ -482,4 +499,5 @@ in
       };
     };
   };
+
 }

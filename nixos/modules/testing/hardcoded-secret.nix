@@ -8,17 +8,14 @@
 let
   cfg = config.testing.hardcoded-secret;
 
-  inherit (lib)
-    contracts
-    mkOption
-    ;
+  inherit (lib) mkOption;
   inherit (lib.types)
     str
     submodule
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
-  inherit (contracts.${contract}) mkProviderType;
+  mkProviderType = config.contracts.${contract}.mkProviderType;
 in
 {
   options.testing.hardcoded-secret = mkOption {

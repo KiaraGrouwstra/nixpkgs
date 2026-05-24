@@ -158,6 +158,13 @@ submodule (contract: {
         variant of `fulfill` exposing the instance `name`. At most one of
         `fulfill` / `fulfill'` may be set.
 
+        `_requests`
+
+        : 5\. Internal. Pre-bound by `contracts.<contract>.mkProviderType`, which is the
+        recommended call site for providers. Forwards consumer `want` request data
+        into each leaf at `mkDefault` priority (1000) so provider-specific options
+        do not silently mask consumer wants via `nestedAttrsOf` leaf-priority filtering.
+
         **Example:**
 
         ```nix
@@ -192,6 +199,7 @@ submodule (contract: {
           overrides ? { },
           fulfill ? null,
           fulfill' ? null,
+          _requests ? null,
         }:
         assert lib.assertMsg (
           fulfill == null || fulfill' == null
@@ -223,6 +231,43 @@ submodule (contract: {
                 }
                 // providerOptions;
               }
+              # Forward consumer `want` request data at `mkDefault` (priority 1000)
+              # so it beats `overrides.request.<field>.default` (`mkOptionDefault`,
+              # priority 1500) but loses to explicit deployer writes (normal, 100).
+              # Without this, writing any provider-specific option (e.g. `content`)
+              # causes `nestedAttrsOf`'s leaf-level priority filtering to drop the
+              # outer `mkOptionDefault` default that carried the consumer's want,
+              # leaving `overrides.request.<field>.default` as the only surviving
+              # value -- silently masking the consumer's declared owner/group/mode.
+              #
+              # The path-split search strips the provider option path prefix from
+              # `options.request.loc` to recover the leaf's position within
+              # `_requests` (the want-derived request tree pre-bound by the caller).
+              (
+                { options, ... }:
+                if _requests == null then
+                  { }
+                else
+                  {
+                    config.request =
+                      let
+                        leafPath = lib.init options.request.loc;
+                        matchN = lib.findFirst (
+                          n:
+                          let
+                            v = lib.attrByPath (lib.drop n leafPath) null _requests;
+                          in
+                          v != null && v ? request
+                        ) null (lib.range 0 (lib.length leafPath));
+                        wantRequest =
+                          if matchN != null then
+                            (lib.attrByPath (lib.drop matchN leafPath) null _requests).request
+                          else
+                            null;
+                      in
+                      lib.mkIf (wantRequest != null) (lib.mkDefault wantRequest);
+                  }
+              )
             ]
             ++ lib.optional (fulfill'' != null) (
               { config, name, ... }:
