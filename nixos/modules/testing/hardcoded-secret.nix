@@ -17,15 +17,7 @@ let
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
-  # Use the bridge (which pre-binds `_requests`) at runtime so consumer
-  # `want` request data wins over `overrides.request.<f>.default`.
-  # Fall back to the lib version only inside the manual docs sandbox,
-  # where `config.contracts` is unset; the lib version produces an
-  # identical option type shape, only without runtime want forwarding,
-  # which is irrelevant to rendered docs.
-  mkProviderType =
-    config.contracts.${contract}.mkProviderType
-      or lib.contracts.${contract}.mkProviderType;
+  mkProviderType = lib.contracts.${contract}.mkProviderTypeFor config;
 in
 {
   options.testing.hardcoded-secret = mkOption {
