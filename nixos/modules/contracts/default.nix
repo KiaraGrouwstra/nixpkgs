@@ -9,7 +9,7 @@
 # To add contracts support to another module system (home-manager, nix-darwin),
 # create an equivalent module:
 #
-#   { lib, config, ... }:
+#   { lib, ... }:
 #   {
 #     imports = [ lib.contract.module ];
 #     config.contractDefinitions = lib.mapAttrs (_: contract: {
@@ -26,7 +26,6 @@
   meta.doc = ./contracts.md;
   # Seed nixpkgs-shipped contract types so they appear in `config.contractDefinitions`
   # alongside any user-defined types.
-  #
   # Only settable fields are listed here; `mkProviderType` and `mkContract` are
   # `readOnly` options whose defaults must not be overridden from config.
   config.contractDefinitions = lib.mapAttrs (_: contract: {
