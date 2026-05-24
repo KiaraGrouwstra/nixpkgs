@@ -18,7 +18,6 @@ let
   inherit (pkgs) writeText;
   contract = "fileSecrets";
   inherit (lib.contract.forModule config) fileSecrets;
-  inherit (fileSecrets) mkProviderType;
 in
 {
   options.testing.hardcoded-secret = mkOption {
@@ -55,7 +54,7 @@ in
           '';
           default = config.contracts.${contract}.requests;
           defaultText = lib.literalExpression "config.contracts.${contract}.requests";
-          type = mkProviderType {
+          type = fileSecrets.mkProviderType {
             overrides.request = {
               owner.default = "root";
               group.default = "root";
