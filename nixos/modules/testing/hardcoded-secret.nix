@@ -8,18 +8,17 @@
 let
   cfg = config.testing.hardcoded-secret;
 
-  inherit (lib) mkOption;
+  inherit (lib)
+    contracts
+    mkOption
+    ;
   inherit (lib.types)
     str
     submodule
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
-  # `or` fallback for the manual docs sandbox, which evaluates this module with
-  # a stub `config` that has no `contracts`. The lib version produces an identical
-  # option type shape; only the runtime `_requests` pre-binding differs.
-  mkProviderType =
-    config.contracts.${contract}.mkProviderType or lib.contracts.${contract}.mkProviderType;
+  inherit (contracts.${contract}) mkProviderType;
 in
 {
   options.testing.hardcoded-secret = mkOption {
