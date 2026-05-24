@@ -9,15 +9,15 @@
 }:
 let
   inherit (lib) mkOption;
-  mkProviderType = config.contracts.arithmetic.mkProviderType;
+  inherit (config.contracts) arithmetic;
 in
 {
   _class = "service";
   imports = [ ./arithmetic-contract.nix ];
   options.arithmetic = mkOption {
     description = "Arithmetic contract instances fulfilled by this increment provider.";
-    default = config.contracts.arithmetic.requests;
-    type = mkProviderType {
+    default = arithmetic.requests;
+    type = arithmetic.mkProviderType {
       fulfill =
         { value }:
         {
