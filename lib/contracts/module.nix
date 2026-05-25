@@ -3,13 +3,14 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrsOf
+    enum
     nestedAttrsOf
     nullOr
     raw
     submodule
     ;
-  # `or` fallbacks allow the docs build sandbox to evaluate this module:
-  # the sandbox passes a fake `config` via `specialArgs` that lacks these attributes.
+  # `or` fallback allows the docs build sandbox to evaluate this module:
+  # the sandbox passes a fake `config` via `specialArgs` that lacks this attribute.
   contractDefinitions = config.contractDefinitions or lib.contracts;
 in
 {
@@ -63,6 +64,7 @@ in
                     Must match the `${contractName}` contract interface's request type.
                   '';
                   type = submodule {
+                    imports = interface.extraImports.request;
                     options = interface.request;
                   };
                 };
@@ -72,6 +74,7 @@ in
                     Must match the `${contractName}` contract interface's result type.
                   '';
                   type = submodule {
+                    imports = interface.extraImports.result;
                     options = interface.result;
                   };
                 };
@@ -85,9 +88,11 @@ in
               Providers for the contract may be implemented by defining an option as follows:
 
               ```nix
-              { lib, ... }:
+              { lib, config, ... }:
               let
-                inherit (lib.contracts.${contractName}) mkProviderType;
+                inherit (lib.contract.forModule config) ${contractName};
+                # or, outside of modules NixOS wants to build sandboxed for the manual:
+                # inherit (config.contracts) ${contractName};
               in
               {
                 options = {
@@ -109,7 +114,7 @@ in
                         };
                       }
                     ${"'"}';
-                    type = mkProviderType {
+                    type = ${contractName}.mkProviderType {
                       # overrides.request = { "<attr>".default = ...; };
                       # overrides.result  = { "<attr>".default = ...; };
                       # providerOptions = {
@@ -198,18 +203,18 @@ in
                     Providers read from this option to get consumer requests.
 
                     Only canonical request options (those declared in `interface.request`) are included.
+                    Deprecated aliases added via `interface.extraImports.request` are intentionally excluded.
                   '';
                   type = nestedAttrsOf raw;
                   default =
                     lib.mapNestedAttrs' wantType (v: {
-                        request = lib.getAttrs (lib.attrNames interface.request) v.request;
-                      }) contract.config.want;
+                      request = lib.getAttrs (lib.attrNames interface.request) v.request;
+                    }) contract.config.want;
                   defaultText = lib.literalExpression ''
                     lib.mapNestedAttrs' wantType
                       (v: { request = lib.getAttrs (lib.attrNames interface.request) v.request; })
                       contract.config.want
                   '';
-                  readOnly = true;
                 };
                 providers = mkOption {
                   description = ''
@@ -234,7 +239,7 @@ in
                     reference at the matching path.
 
                     For an easier way to pick a single provider for every
-                    instance, consider `defaultProvider`.
+                    instance, consider `defaultProvider` / `defaultProviderName`.
                   '';
                   type = attrsOf raw;
                 };
@@ -250,12 +255,35 @@ in
                     ```nix
                     contracts.${contractName}.defaultProvider = config.contracts.${contractName}.providers."<provider>";
                     ```
+
+                    May also be set indirectly via `defaultProviderName`.
                   '';
                   type = nullOr raw;
-                  default = null;
+                  default =
+                    if contract.config.defaultProviderName == null then
+                      null
+                    else
+                      contract.config.providers.${contract.config.defaultProviderName};
+                  defaultText = lib.literalExpression ''
+                    if contracts.${contractName}.defaultProviderName == null then null
+                    else contracts.${contractName}.providers.''${contracts.${contractName}.defaultProviderName}
+                  '';
                   example = lib.literalExpression ''
                     config.contracts.fileSecrets.providers.hardcoded-secret
                   '';
+                };
+                defaultProviderName = mkOption {
+                  description = ''
+                    The name of the default provider for the `${contractName}` contract.
+                    Convenience alias for `defaultProvider`: picks `providers."<name>"` by
+                    name rather than reference.
+
+                    ```nix
+                    contracts.${contractName}.defaultProviderName = "<provider>";
+                    ```
+                  '';
+                  type = nullOr (enum (lib.attrNames contract.config.providers));
+                  default = null;
                 };
                 instances = mkOption {
                   description = ''
@@ -358,9 +386,8 @@ in
                   description = ''
                     Result data for the `${contractName}` contract, with `request` attributes filtered out.
 
-                    This is a read-only calculated option that extracts the result values from
-                    fulfilled contracts. It mirrors `requests` which filters to just request data
-                    for providers.
+                    A computed option that extracts the result values from fulfilled contracts.
+                    It mirrors `requests` which filters to just request data for providers.
 
                     **NixOS module consumer** - results are under the consumer name chosen in `want`:
 
@@ -407,7 +434,80 @@ in
                       (v: v.result)
                       config.contracts.${contractName}.instances
                   '';
+                };
+                mkProviderType = mkOption {
+                  description = ''
+                    Make the type for an option to provider for the ${contractName} contract.
+
+                    Note that, for options that must work in the sandbox of the NixOS manual builds,
+                    one should instead use `(lib.contract.forModule config).${contractName}.mkProviderType`.
+
+                    Unlike `contractDefinitions.${contractName}._mkProviderType`, automatically
+                    forwards consumer `want` request data into each leaf at `mkDefault` priority (1000),
+                    so provider-specific options do not silently mask consumer `want`s via
+                    `nestedAttrsOf` leaf-level priority filtering.
+
+                    `config.contracts.<contract>.mkProviderType :: { providerOptions?, overrides?, fulfill?, fulfill'? } -> optionType`
+
+                    **Inputs:**
+
+                    `overrides`
+
+                    : 1\. Overrides for `{ request, result }` submodule types (to e.g. add defaults)
+
+                    `providerOptions`
+
+                    : 2\. Additional option declarations of the provider outside of the contract's request/result.
+
+                    `fulfill`
+
+                    : 3\. Optional function `request -> result` that derives result values
+                    from request values. Applied with `mkDefault` priority so explicit
+                    result settings take precedence. Use `fulfill'` if the result also
+                    needs the instance `name`.
+
+                    `fulfill'`
+
+                    : 4\. Optional function `{ request, name } -> result`. Lower-level
+                    variant of `fulfill` exposing the instance `name`. At most one of
+                    `fulfill` / `fulfill'` may be set.
+
+                    `_requests`
+
+                    : 5\. Internal. Pre-bound by `contracts.<contract>.mkProviderType`, which is the
+                    recommended call site for providers. Forwards consumer `want` request data
+                    into each leaf at `mkDefault` priority (1000) so provider-specific options
+                    do not silently mask consumer wants via `nestedAttrsOf` leaf-priority filtering.
+
+                    **Example:**
+
+                    ```nix
+                    { lib, config, options, ... }:
+                    let
+                      inherit (config.contracts) arithmetic;
+                    in
+                    {
+                      imports = [
+                        # simple dummy contract with request/result both shaped `{ value: int }`
+                        <nixpkgs/nixos/tests/contracts/arithmetic-contract.nix>
+                      ];
+                      options.services.increment.arithmetic = lib.mkOption {
+                        default = arithmetic.requests;
+                        type = arithmetic.mkProviderType {
+                          fulfill = request: {
+                            value = request.value + 1;
+                          # };
+                        };
+                      };
+                      config = {
+                        contracts.arithmetic.providers.increment.module = options.services.increment.arithmetic;
+                      };
+                    }
+                    ```
+                  '';
+                  type = types.functionTo types.optionType;
                   readOnly = true;
+                  default = args: contractType._mkProviderType (args // { _requests = contract.config.requests; });
                 };
               };
               # Provide the asserting default for `instances` via config rather
@@ -458,4 +558,5 @@ in
       };
     };
   };
+
 }
