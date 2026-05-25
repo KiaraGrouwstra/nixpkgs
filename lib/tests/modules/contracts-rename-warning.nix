@@ -9,7 +9,7 @@
 }:
 let
   inherit (lib) mkOption types;
-  inherit (config.contractDefinitions.versioned) mkProviderType;
+  inherit (config.contracts) versioned;
 in
 {
   imports = [ lib.contract.module ];
@@ -55,8 +55,8 @@ in
   };
 
   options.services.increment.versioned = mkOption {
-    default = config.contracts.versioned.requests;
-    type = mkProviderType {
+    default = versioned.requests;
+    type = versioned.mkProviderType {
       fulfill =
         { newValue }:
         {
@@ -70,6 +70,6 @@ in
     contracts.versioned.want.consumer.instance.request.oldValue = 5;
 
     contracts.versioned.providers.increment.module = options.services.increment.versioned;
-    contracts.versioned.defaultProvider = config.contracts.versioned.providers.increment;
+    contracts.versioned.defaultProvider = versioned.providers.increment;
   };
 }

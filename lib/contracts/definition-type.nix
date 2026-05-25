@@ -170,7 +170,7 @@ submodule (contract: {
         ```nix
         { lib, config, options, ... }:
         let
-          inherit (config.contractDefinitions.arithmetic) mkProviderType;
+          inherit (config.contracts) arithmetic;
         in
         {
           imports = [
@@ -178,8 +178,8 @@ submodule (contract: {
             <nixpkgs/nixos/tests/contracts/arithmetic-contract.nix>
           ];
           options.services.increment.arithmetic = lib.mkOption {
-            default = config.contracts.arithmetic.requests;
-            type = mkProviderType {
+            default = arithmetic.requests;
+            type = arithmetic.mkProviderType {
               fulfill = request: {
                 value = request.value + 1;
               };
