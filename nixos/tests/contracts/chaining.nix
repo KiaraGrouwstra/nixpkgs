@@ -14,7 +14,7 @@
 # ordering is needed. The test verifies both the eval-time plumbing
 # (assertions) and the runtime result (credential file exists with
 # correct content).
-{ lib, pkgs, ... }:
+{ lib, ... }:
 let
   inherit (lib) mkOption types;
 
@@ -48,12 +48,9 @@ in
     {
       config,
       options,
-      pkgs,
-      lib,
       ...
     }:
     let
-      inherit (dbContract) mkContract;
       credentialPath = config.contracts.fileSecrets.results.pgProvider.credential.path;
       expectedConnectionString = "postgresql:///webappdb?password_file=${credentialPath}";
     in
@@ -67,7 +64,7 @@ in
 
       options.services.webapp.db = mkOption {
         description = "Database connection for the webapp.";
-        type = mkContract {
+        type = dbContract.mkContract {
           request.dbName.default = "webappdb";
         };
       };
