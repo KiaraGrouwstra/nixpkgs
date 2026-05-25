@@ -436,13 +436,21 @@ in
                 mkProviderType = mkOption {
                   description = ''
                     Like `contractDefinitions.${contractName}._mkProviderType`, but with
-                    `_requests` pre-bound to `config.contracts.${contractName}.requests`.
+                    `_lookupRequest` pre-bound to a self-aware lookup across all
+                    contracts: for each leaf, find any contract whose providers
+                    register an option at a prefix of the leaf's path, then return
+                    the matching consumer want's request from that contract's
+                    `.requests`.
 
                     Prefer this over `contractDefinitions.${contractName}._mkProviderType`
                     when defining provider options: it automatically forwards consumer
                     `want` request data into each leaf at `mkDefault` priority (1000),
                     so provider-specific options do not silently mask consumer wants via
-                    `nestedAttrsOf` leaf-level priority filtering.
+                    `nestedAttrsOf` leaf-level priority filtering. The self-aware
+                    lookup means a single provider option that services multiple
+                    contract types (via `lib.mkMerge`) is supported transparently --
+                    each leaf's request resolves against whichever contract actually
+                    owns it.
 
                     `contracts.${contractName}.mkProviderType :: { providerOptions?, overrides?, fulfill?, fulfill'? } -> optionType`
 
@@ -461,12 +469,49 @@ in
                     ```
 
                     The lib version produces an identical option type shape;
-                    only the runtime `_requests` pre-binding differs, which
+                    only the runtime `_lookupRequest` pre-binding differs, which
                     does not affect rendered docs.
                   '';
                   type = types.functionTo types.optionType;
                   readOnly = true;
-                  default = args: contractType._mkProviderType (args // { _requests = contract.config.requests; });
+                  default =
+                    args:
+                    contractType._mkProviderType (
+                      args
+                      // {
+                        # Self-aware lookup: walk every contract; for any whose
+                        # providers list an option whose `loc` is a prefix of the
+                        # leaf path, look up the remaining suffix in that
+                        # contract's `requests` tree. First-hit wins -- distinct
+                        # contracts targeting the same leaf path would already
+                        # collide elsewhere, so resolving against any one of them
+                        # is acceptable here.
+                        _lookupRequest =
+                          leafPath:
+                          let
+                            tryContract =
+                              name:
+                              let
+                                c = config.contracts.${name};
+                                providers = c.providers or { };
+                                tryProvider =
+                                  _: p:
+                                  let
+                                    loc = p.module.loc or null;
+                                    locLen = if loc == null then 0 else lib.length loc;
+                                    matches = loc != null && lib.take locLen leafPath == loc;
+                                    v = if matches then lib.attrByPath (lib.drop locLen leafPath) null c.requests else null;
+                                  in
+                                  if v != null && v ? request then v.request else null;
+                                hits = lib.filter (v: v != null) (lib.mapAttrsToList tryProvider providers);
+                              in
+                              if hits == [ ] then null else lib.head hits;
+                          in
+                          lib.foldl' (
+                            acc: name: if acc != null then acc else tryContract name
+                          ) null (lib.attrNames contractDefinitions);
+                      }
+                    );
                 };
               };
               # Provide the asserting default for `instances` via config rather

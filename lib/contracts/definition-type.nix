@@ -158,12 +158,17 @@ submodule (contract: {
         variant of `fulfill` exposing the instance `name`. At most one of
         `fulfill` / `fulfill'` may be set.
 
-        `_requests`
+        `_lookupRequest`
 
         : 5\. Internal. Pre-bound by `contracts.<contract>.mkProviderType`, which is the
-        recommended call site for providers. Forwards consumer `want` request data
-        into each leaf at `mkDefault` priority (1000) so provider-specific options
-        do not silently mask consumer wants via `nestedAttrsOf` leaf-priority filtering.
+        recommended call site for providers. A function `leafPath -> request | null`
+        that, given a leaf's full option path, returns the consumer `want`'s request
+        attrset or `null`. Forwards request data into each leaf at `mkDefault`
+        priority (1000) so provider-specific options do not silently mask consumer
+        wants via `nestedAttrsOf` leaf-priority filtering. The bridge searches
+        across all contracts whose providers register this option's loc, so a
+        single provider option that services multiple contract types via
+        `lib.mkMerge` is supported transparently.
 
         **Example:**
 
@@ -199,7 +204,7 @@ submodule (contract: {
           overrides ? { },
           fulfill ? null,
           fulfill' ? null,
-          _requests ? null,
+          _lookupRequest ? null,
         }:
         assert lib.assertMsg (
           fulfill == null || fulfill' == null
@@ -240,30 +245,21 @@ submodule (contract: {
               # leaving `overrides.request.<field>.default` as the only surviving
               # value -- silently masking the consumer's declared owner/group/mode.
               #
-              # The path-split search strips the provider option path prefix from
-              # `options.request.loc` to recover the leaf's position within
-              # `_requests` (the want-derived request tree pre-bound by the caller).
+              # `_lookupRequest` (pre-bound by the bridge) takes the leaf's full
+              # option path and returns the matching consumer want's request, or
+              # null. The bridge searches across every contract whose providers
+              # register an option at a prefix of this leaf path, so one provider
+              # option serving multiple contracts via `lib.mkMerge` is supported.
               (
                 { options, ... }:
-                if _requests == null then
+                if _lookupRequest == null then
                   { }
                 else
                   {
                     config.request =
                       let
                         leafPath = lib.init options.request.loc;
-                        matchN = lib.findFirst (
-                          n:
-                          let
-                            v = lib.attrByPath (lib.drop n leafPath) null _requests;
-                          in
-                          v != null && v ? request
-                        ) null (lib.range 0 (lib.length leafPath));
-                        wantRequest =
-                          if matchN != null then
-                            (lib.attrByPath (lib.drop matchN leafPath) null _requests).request
-                          else
-                            null;
+                        wantRequest = _lookupRequest leafPath;
                       in
                       lib.mkIf (wantRequest != null) (lib.mkDefault wantRequest);
                   }

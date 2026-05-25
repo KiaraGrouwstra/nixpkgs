@@ -25,13 +25,17 @@
     contracts defined inline on `config.contractDefinitions`.
 
     For each contract, prefers the bridge (`config.contracts.<name>.mkProviderType`)
-    when available - the bridge pre-binds `_requests` so consumer `want` request
-    data is forwarded into each leaf (see `_mkProviderType`'s `_requests`
-    parameter in `./definition-type.nix`). Falls back to the pure lib function
-    when `config.contracts` is absent (e.g. inside the manual docs build's
-    per-module sandbox, where the contracts module is not imported); the lib
-    version produces an identical option type shape, only without runtime want
-    forwarding, which is irrelevant to rendered docs.
+    when available - the bridge pre-binds `_lookupRequest` so consumer `want`
+    request data is forwarded into each leaf (see `_mkProviderType`'s
+    `_lookupRequest` parameter in `./definition-type.nix`). The lookup is
+    self-aware: it searches across every contract whose providers register an
+    option at a prefix of the leaf's path, so a single provider option that
+    services multiple contract types via `lib.mkMerge` is supported
+    transparently. Falls back to the pure lib function when `config.contracts`
+    is absent (e.g. inside the manual docs build's per-module sandbox, where
+    the contracts module is not imported); the lib version produces an
+    identical option type shape, only without runtime want forwarding, which
+    is irrelevant to rendered docs.
 
     Use this in provider modules to bind one or more contracts at once,
     including contracts defined inline on `config.contractDefinitions`:

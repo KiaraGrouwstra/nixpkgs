@@ -32,18 +32,18 @@ let
     };
   };
 
-  evaluated = lib.evalOption (mkOption { type = lib.contract.definitionType; }) arithmeticInterface;
-  # Uses the raw `_mkProviderType` rather than the `forModule` wrapper because
-  # the single `services.increment.arithmetic` option absorbs requests from
-  # three sibling contract types (`noProvider`, `byRef`, `byName`) via
-  # `lib.mkMerge` below; the wrapped form would pre-bind one contract's
-  # `_requests`, which would be wrong for the other two.
-  mkProviderType = evaluated._mkProviderType;
+  # The wrapped `mkProviderType` is self-aware: its `_lookupRequest` walks
+  # every contract whose providers register an option at a prefix of the
+  # leaf's path, so this single provider option transparently services all
+  # three contract types (`noProvider`, `byRef`, `byName`) merged below via
+  # `lib.mkMerge`. The contract picked here (`byRef`) is arbitrary -- any
+  # entry from `forModule config` would produce the same lookup behavior.
+  inherit (lib.contract.forModule config) byRef;
 
   mkProvider =
     f:
     mkOption {
-      type = mkProviderType {
+      type = byRef.mkProviderType {
         fulfill =
           { value }:
           {
