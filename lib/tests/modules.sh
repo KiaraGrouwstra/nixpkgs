@@ -944,6 +944,10 @@ checkConfigOutput '^6$' config.result.byName ./contracts-provider-selection.nix
 # no provider set: clear error message
 checkConfigError 'contracts\.noProvider\.defaultProvider is unset' config.contracts.noProvider.results.consumer.instance.value ./contracts-provider-selection.nix
 
+# contracts: deployer write at a `providerOptions` leaf must not mask consumer wants
+# (regression for the `_requests` re-application at `mkDefault` in mkProviderType).
+checkConfigOutput '^12$' config.contracts.wantForwarding.results.consumer.instance.value ./contracts-want-forwarding.nix
+
 # contracts: mkContract propagates request option defaults via extendSubmodule
 checkConfigOutput '^42$' config.result ./contracts-mkcontract.nix
 
