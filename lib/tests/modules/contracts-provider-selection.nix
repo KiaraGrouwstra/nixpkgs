@@ -33,7 +33,7 @@ let
   };
 
   evaluated = lib.evalOption (mkOption { type = lib.contract.definitionType; }) arithmeticInterface;
-  inherit (evaluated) mkProviderType;
+  mkProviderType = evaluated._mkProviderType;
 
   mkProvider =
     f:

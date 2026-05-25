@@ -48,7 +48,7 @@ let
   };
 
   evaluated = lib.evalOption (mkOption { type = lib.contract.definitionType; }) connectionContractDef;
-  inherit (evaluated) mkProviderType;
+  mkProviderType = evaluated._mkProviderType;
 in
 {
   imports = [ lib.contract.module ];

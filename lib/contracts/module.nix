@@ -88,9 +88,9 @@ in
               Providers for the contract may be implemented by defining an option as follows:
 
               ```nix
-              { lib, ... }:
+              { lib, config, ... }:
               let
-                inherit (lib.contracts.${contractName}) mkProviderType;
+                inherit (config.contracts.${contractName}) mkProviderType;
               in
               {
                 options = {
@@ -435,10 +435,10 @@ in
                 };
                 mkProviderType = mkOption {
                   description = ''
-                    Like `contractDefinitions.${contractName}.mkProviderType`, but with
+                    Like `contractDefinitions.${contractName}._mkProviderType`, but with
                     `_requests` pre-bound to `config.contracts.${contractName}.requests`.
 
-                    Prefer this over `contractDefinitions.${contractName}.mkProviderType`
+                    Prefer this over `contractDefinitions.${contractName}._mkProviderType`
                     when defining provider options: it automatically forwards consumer
                     `want` request data into each leaf at `mkDefault` priority (1000),
                     so provider-specific options do not silently mask consumer wants via
@@ -466,7 +466,7 @@ in
                   '';
                   type = types.functionTo types.optionType;
                   readOnly = true;
-                  default = args: contractType.mkProviderType (args // { _requests = contract.config.requests; });
+                  default = args: contractType._mkProviderType (args // { _requests = contract.config.requests; });
                 };
               };
               # Provide the asserting default for `instances` via config rather

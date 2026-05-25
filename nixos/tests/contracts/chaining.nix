@@ -74,7 +74,7 @@ in
       options.services.pgProvider.databaseConnection = mkOption {
         description = "Database connection instances fulfilled by this provider.";
         default = config.contracts.databaseConnection.requests;
-        type = dbContract.mkProviderType {
+        type = config.contracts.databaseConnection.mkProviderType {
           fulfill =
             { dbName }:
             {

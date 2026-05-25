@@ -26,7 +26,7 @@
   meta.doc = ./contracts.md;
   # Seed nixpkgs-shipped contract types so they appear in `config.contractDefinitions`
   # alongside any user-defined types.
-  # Only settable fields are listed here; `mkProviderType` and `mkContract` are
+  # Only settable fields are listed here; `_mkProviderType` and `mkContract` are
   # `readOnly` options whose defaults must not be overridden from config.
   config.contractDefinitions = lib.mapAttrs (_: contract: {
     inherit (contract) meta interface behaviorTest;

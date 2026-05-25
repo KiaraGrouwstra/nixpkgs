@@ -114,10 +114,10 @@ in
 For lib-only providers that don't need a wrapping submodule, the option is itself the contract option:
 
 ```nix
-{ lib, options, ... }:
+{ lib, config, options, ... }:
 {
   options.services.increment.arithmetic = lib.mkOption {
-    type = lib.contracts.arithmetic.mkProviderType {
+    type = config.contracts.arithmetic.mkProviderType {
       fulfill =
         { value }:
         {

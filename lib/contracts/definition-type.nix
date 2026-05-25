@@ -126,14 +126,14 @@ submodule (contract: {
           ) (lib.getAttrs [ "request" "result" ] interface);
         });
     };
-    mkProviderType = mkOption {
+    _mkProviderType = mkOption {
       description = ''
         Create a `nestedAttrsOf` type for provider instances with automatic result computation.
 
         Reduces provider boilerplate by combining request/result option declarations
         and optional result derivation into a single type constructor.
 
-        `<contract>.mkProviderType :: { providerOptions?, overrides?, fulfill?, fulfill'? } -> optionType`
+        `<contract>._mkProviderType :: { providerOptions?, overrides?, fulfill?, fulfill'? } -> optionType`
 
         **Inputs:**
 
