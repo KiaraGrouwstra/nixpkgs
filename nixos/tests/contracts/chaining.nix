@@ -39,7 +39,6 @@ let
     };
   };
 
-  dbContract = lib.evalOption (mkOption { type = lib.contract.definitionType; }) dbContractDef;
 in
 {
   name = "contracts-chaining";
@@ -53,6 +52,7 @@ in
     let
       credentialPath = config.contracts.fileSecrets.results.pgProvider.credential.path;
       expectedConnectionString = "postgresql:///webappdb?password_file=${credentialPath}";
+      inherit (lib.contract.forModule config) databaseConnection;
     in
     {
       imports = [
@@ -64,7 +64,7 @@ in
 
       options.services.webapp.db = mkOption {
         description = "Database connection for the webapp.";
-        type = dbContract.mkContract {
+        type = databaseConnection.mkContract {
           request.dbName.default = "webappdb";
         };
       };
@@ -74,7 +74,7 @@ in
       options.services.pgProvider.databaseConnection = mkOption {
         description = "Database connection instances fulfilled by this provider.";
         default = config.contracts.databaseConnection.requests;
-        type = dbContract._mkProviderType {
+        type = databaseConnection.mkProviderType {
           fulfill =
             { dbName }:
             {

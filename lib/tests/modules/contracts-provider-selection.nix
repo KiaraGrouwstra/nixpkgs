@@ -33,6 +33,11 @@ let
   };
 
   evaluated = lib.evalOption (mkOption { type = lib.contract.definitionType; }) arithmeticInterface;
+  # Uses the raw `_mkProviderType` rather than the `forModule` wrapper because
+  # the single `services.increment.arithmetic` option absorbs requests from
+  # three sibling contract types (`noProvider`, `byRef`, `byName`) via
+  # `lib.mkMerge` below; the wrapped form would pre-bind one contract's
+  # `_requests`, which would be wrong for the other two.
   mkProviderType = evaluated._mkProviderType;
 
   mkProvider =

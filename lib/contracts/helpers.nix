@@ -21,7 +21,8 @@
 
   /**
     Rebind every contract's `mkProviderType` against a NixOS module's `config`,
-    returning an attrset shaped like `lib.contracts`.
+    returning an attrset shaped like `lib.contracts` extended with any
+    contracts defined inline on `config.contractDefinitions`.
 
     For each contract, prefers the bridge (`config.contracts.<name>.mkProviderType`)
     when available - the bridge pre-binds `_requests` so consumer `want` request
@@ -32,25 +33,29 @@
     version produces an identical option type shape, only without runtime want
     forwarding, which is irrelevant to rendered docs.
 
-    Use this in provider modules to bind one or more contracts at once:
+    Use this in provider modules to bind one or more contracts at once,
+    including contracts defined inline on `config.contractDefinitions`:
 
     ```nix
-    inherit (lib.contract.forModule config) fileSecrets arithmetic;
+    inherit (lib.contract.forModule config) fileSecrets databaseConnection;
     # then: type = fileSecrets.mkProviderType { ... };
-    #       type = arithmetic.mkProviderType { ... };
+    #       type = databaseConnection.mkProviderType { ... };
     ```
 
     lib.contract.forModule :: moduleConfig -> { <contractName> = contract; ... }
   */
   forModule =
     moduleConfig:
+    let
+      contracts = lib.contracts // (moduleConfig.contractDefinitions or { });
+    in
     lib.mapAttrs (
       name: contract:
       contract
       // {
         mkProviderType = moduleConfig.contracts.${name}.mkProviderType or contract._mkProviderType;
       }
-    ) lib.contracts;
+    ) contracts;
 
   /**
     Generic skeleton for a contract `behaviorTest`.
