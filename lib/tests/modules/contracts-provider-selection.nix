@@ -32,18 +32,23 @@ let
     };
   };
 
-  evaluated = lib.evalOption (mkOption { type = lib.contract.definitionType; }) arithmeticInterface;
-  # Uses the raw `_mkProviderType` rather than the `forModule` wrapper because
-  # the single `services.increment.arithmetic` option absorbs requests from
-  # three sibling contract types (`noProvider`, `byRef`, `byName`) via
-  # `lib.mkMerge` below; the wrapped form would pre-bind one contract's
-  # `_requests`, which would be wrong for the other two.
-  mkProviderType = evaluated._mkProviderType;
+  inherit (lib.contract.forModule config) byRef byName;
+
+  # `services.increment.arithmetic` services both `byRef` and `byName`;
+  # `services.double.arithmetic` services `byRef` alone. `combine` unions
+  # each provider's relevant want trees so request forwarding lands on the
+  # right leaf regardless of which sibling contract type contributed it.
+  incrementCombined = lib.contract.combine [
+    byRef
+    byName
+  ];
+  doubleCombined = lib.contract.combine [ byRef ];
 
   mkProvider =
-    f:
+    combined: f:
     mkOption {
-      type = mkProviderType {
+      default = combined.requests;
+      type = combined.mkProviderType {
         fulfill =
           { value }:
           {
@@ -55,8 +60,8 @@ in
 {
   imports = [ ./contracts-arithmetic-contract.nix ];
 
-  options.services.increment.arithmetic = mkProvider (v: v + 1);
-  options.services.double.arithmetic = mkProvider (v: v * 2);
+  options.services.increment.arithmetic = mkProvider incrementCombined (v: v + 1);
+  options.services.double.arithmetic = mkProvider doubleCombined (v: v * 2);
 
   options.result = mkOption {
     type = types.attrsOf types.int;
@@ -70,15 +75,7 @@ in
       "byName"
     ] (_: arithmeticInterface);
 
-    # -- Providers: feed requests, compute results --
-
-    services.increment.arithmetic = lib.mkMerge (
-      map (ct: config.contracts.${ct}.requests) [
-        "byRef"
-        "byName"
-      ]
-    );
-    services.double.arithmetic = config.contracts.byRef.requests;
+    # -- Providers: leaves come from each option's `default = combined.requests`. --
 
     # Register providers.
     contracts.byRef.providers.increment.module = options.services.increment.arithmetic;

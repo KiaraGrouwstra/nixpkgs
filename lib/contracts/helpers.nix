@@ -54,8 +54,72 @@
       contract
       // {
         mkProviderType = moduleConfig.contracts.${name}.mkProviderType or contract._mkProviderType;
+        # Raw want-derived requests tree for this contract, exposed so
+        # `lib.contract.combine` can union it across sibling contract types.
+        # `null` outside the contracts module (e.g. docs sandbox).
+        _requests = moduleConfig.contracts.${name}.requests or null;
       }
     ) contracts;
+
+  /**
+    Combine multiple contract records (typically returned by `forModule`) into
+    a single contract-like view whose `mkProviderType` services *all* of them.
+
+    Use this when one provider option fulfills more than one distinct contract
+    type sharing the same `interface` -- a pattern that `forModule` alone
+    cannot express, because its wrapped `mkProviderType` pre-binds `_requests`
+    to one specific contract's want tree. `combine` merges the want trees
+    (via `recursiveUpdate`) so request forwarding works correctly across
+    every contract in the list.
+
+    All input contracts must share the same `interface` (same `request` and
+    `result` shape); a clear assertion fires if they do not.
+
+    ```nix
+    inherit (lib.contract.forModule config) byRef byName;
+    type = (lib.contract.combine [ byRef byName ]).mkProviderType {
+      fulfill = { value }: { value = value + 1; };
+    };
+    ```
+
+    For a single-contract provider, use `forModule` directly -- `combine` is
+    the explicit opt-in for the multi-contract scenario.
+
+    lib.contract.combine :: [ contract ] -> { mkProviderType, mkContract, interface, ... }
+  */
+  combine =
+    contracts:
+    assert lib.assertMsg (
+      contracts != [ ]
+    ) "lib.contract.combine: contract list must be non-empty.";
+    let
+      head = lib.head contracts;
+      interface = head.interface;
+      sameInterface = c: c.interface == interface;
+    in
+    assert lib.assertMsg (lib.all sameInterface contracts)
+      "lib.contract.combine: all contracts must share the same `interface`.";
+    let
+      mergedRequests = lib.foldl' lib.recursiveUpdate { } (
+        map (c: c._requests or { }) (lib.filter (c: (c._requests or null) != null) contracts)
+      );
+    in
+    {
+      inherit interface;
+      inherit (head) mkContract;
+      # Union of each input contract's want-derived requests tree. Use this
+      # as the provider option's `default` so leaves exist for every contract
+      # the combined provider services.
+      requests = mergedRequests;
+      mkProviderType =
+        args:
+        head._mkProviderType (
+          args
+          // {
+            _requests = if mergedRequests == { } then null else mergedRequests;
+          }
+        );
+    };
 
   /**
     Generic skeleton for a contract `behaviorTest`.
