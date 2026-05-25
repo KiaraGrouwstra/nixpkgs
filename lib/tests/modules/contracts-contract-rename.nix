@@ -16,6 +16,7 @@ let
     request.value = lib.mkOption { type = lib.types.int; };
     result.value = lib.mkOption { type = lib.types.int; };
   };
+  inherit (config.contracts) oldName;
 in
 {
   imports = [
@@ -48,8 +49,8 @@ in
 
   # Provider option for the deprecated contract: increments request value by 1.
   options.services.increment.oldName = lib.mkOption {
-    default = config.contracts.oldName.requests;
-    type = config.contractDefinitions.oldName._mkProviderType {
+    default = oldName.requests;
+    type = oldName.mkProviderType {
       fulfill =
         { value }:
         {
@@ -82,7 +83,7 @@ in
 
     # Provider wiring uses the GUI-discoverable `{ module, contract? }` shape.
     contracts.oldName.providers.increment.module = options.services.increment.oldName;
-    contracts.oldName.defaultProvider = config.contracts.oldName.providers.increment;
+    contracts.oldName.defaultProvider = oldName.providers.increment;
 
     result = lib.concatStringsSep "%" config.warnings;
   };
