@@ -154,8 +154,9 @@ submodule (contract: {
 
         `fulfill'`
 
-        : 4\. Optional function `{ request, name } -> result`. Lower-level
-        variant of `fulfill` exposing the instance `name`. At most one of
+        : 4\. Optional function `{ request, name, instance } -> result`. Lower-level
+        variant of `fulfill` exposing the instance `name` and the full submodule
+        `instance` (including provider-specific options). At most one of
         `fulfill` / `fulfill'` may be set.
 
         `_requests`
@@ -275,6 +276,7 @@ submodule (contract: {
                 config.result = lib.mkDefault (fulfill'' {
                   inherit (config) request;
                   inherit name;
+                  instance = config;
                 });
               }
             )
