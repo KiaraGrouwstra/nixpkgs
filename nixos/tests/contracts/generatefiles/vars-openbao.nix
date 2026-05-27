@@ -132,6 +132,33 @@ in
       machine.wait_for_file("${pathA}")
       machine.wait_for_file("${pathB}")
 
+      # Verify the OpenBao round-trip: the upload service must have written
+      # the files under the same path the vault-agent template reads from.
+      # With the leaf-name fix, listing `vars/secret/` yields `myapp/`
+      # (joined-path bug would yield `vars_myapp/` or nothing).
+      kv_listing = machine.succeed(
+          "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root "
+          "bao kv list -mount=secret vars/secret/"
+      )
+      assert "myapp/" in kv_listing, \
+          f"expected `myapp/` under vars/secret/ in OpenBao, got: {kv_listing!r}"
+
+      myapp_listing = machine.succeed(
+          "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root "
+          "bao kv list -mount=secret vars/secret/myapp/"
+      )
+      for f in ("alpha", "beta"):
+          assert f in myapp_listing, \
+              f"expected `{f}` under vars/secret/myapp/ in OpenBao, got: {myapp_listing!r}"
+
+      # Verify the vault-agent fetch path: delete the local file and wait
+      # for vault-agent to re-render it from OpenBao.
+      machine.succeed("rm -f ${pathA}")
+      machine.wait_for_file("${pathA}")
+      content = machine.succeed("cat ${pathA}").strip()
+      assert content == "generated-alpha-secret", \
+          f"after re-render: expected 'generated-alpha-secret', got '{content}'"
+
       # Verify file A: content, ownership, permissions
       content = machine.succeed("cat ${pathA}").strip()
       assert content == "generated-alpha-secret", f"alpha: expected 'generated-alpha-secret', got '{content}'"

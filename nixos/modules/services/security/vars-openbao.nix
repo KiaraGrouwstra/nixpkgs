@@ -43,11 +43,16 @@ let
     instanceName: fileName: secret:
     "${cfg.tmpDir}/${if secret then "secret" else "public"}/${instanceName}/${fileName}";
 
-  # Flatten instances for iteration in runtime services.
+  # Flatten instances for iteration in runtime services. Key on the leaf
+  # name to match what `fulfill'` sees: the contract framework passes the
+  # deepest submodule key, not the joined path. `services.vars`'s
+  # `generate-vars` writes through `backendFiles` using that same leaf
+  # name, so keying here on `lib.last path` keeps all three sides
+  # (generate, upload, fetch) agreeing on the same paths.
   flatInstances =
     lib.concatMapNestedAttrs' varsBackendType (
       path: instance: {
-        ${lib.concatStringsSep "_" path} = instance;
+        ${lib.last path} = instance;
       }
     ) cfg.${contract};
 
@@ -89,9 +94,9 @@ let
                   ${lib.escapeShellArg kv} \
                   content="$(base64 < ${lib.escapeShellArg path})"
                 echo "  Uploaded ${fileName}"
-
-                # Remove local copy -- vault-agent will fetch it from OpenBao.
-                rm -f ${lib.escapeShellArg path}
+                # Keep the local copy: LoadCredential consumers read it at
+                # unit activation, which can race vault-agent's first render
+                # (the agent becomes active before templates are on disk).
               else
                 echo "  Skipping ${fileName} (already in OpenBao or not yet generated)"
               fi
