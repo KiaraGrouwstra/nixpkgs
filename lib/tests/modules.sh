@@ -444,8 +444,8 @@ checkConfigError 'A definition for option .* is not of type .*' config.value.b.f
 checkConfigError 'expected an attribute set with keys from \[request, result\]' config.value.consumer ./declare-nested-attrs-misshapen.nix
 
 # Check contracts
-checkConfigOutput '^5$' config.contracts.arithmetic.want.alice.value ./contracts-basic.nix
-checkConfigOutput '^6$' config.contracts.arithmetic.result.alice.value ./contracts-basic.nix
+checkConfigOutput '^5$' config.contracts.arithmetic.want.consumer.x.request.value ./contracts-basic.nix
+checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.x.value ./contracts-basic.nix
 
 # submoduleWith
 

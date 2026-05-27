@@ -7,31 +7,35 @@
 # `lib.evalModules` call and injecting the resulting value into each
 # node's configuration at eval time.
 #
-# The contract option comes from `lib.contract.module`; on NixOS nodes
-# it is registered via the module list, so the test bodies only carry
-# consumer/fulfiller wiring.
+# This iteration drops the inline contract option in favor of the
+# generic `lib.contract.module` registry: the `arithmetic` contract is
+# declared once in `./arithmetic-contract.nix` and consumed via
+# `config.contracts.arithmetic.*` in both NixOS modules and the bare
+# `lib.evalModules` composition.
 { pkgs, lib, ... }:
 let
   # Multiple consumers register at distinct paths under one contract to
-  # demonstrate `nestedAttrsOf` namespacing.
+  # demonstrate namespacing.
   consumerModule = {
     contracts.arithmetic.want = {
-      alice.value = 5;
-      bob.deep.path.value = 10;
+      alice.request.value = 5;
+      bob.deep.path.request.value = 10;
     };
   };
 
-  # Fulfiller side: walks the want tree and produces a parallel result
-  # tree, computing each leaf as `value + 1`. Note: walking and writing
-  # the same `nestedAttrsOf` option would recurse on its merged spine
-  # (the fulfiller's own contribution would feed back into the walk),
-  # so we walk `want` and write to `result` -- distinct options.
+  # Fulfiller side: writes each leaf's `result` alongside its `request`,
+  # computing `value + 1`. The fulfiller targets the same leaves the
+  # consumer declared; walking the merged `want` spine to discover paths
+  # generically is deferred to the `requests` projection in a follow-up
+  # commit (writing into the same option we read from would otherwise
+  # recurse on the spine).
   fulfillerModule = { config, ... }: let
-    walk = w:
-      if w ? value then { value = w.value + 1; }
-      else builtins.mapAttrs (_: walk) w;
+    want = config.contracts.arithmetic.want;
   in {
-    contracts.arithmetic.result = walk config.contracts.arithmetic.want;
+    contracts.arithmetic.want = {
+      alice.result.value = want.alice.request.value + 1;
+      bob.deep.path.result.value = want.bob.deep.path.request.value + 1;
+    };
   };
 
   # Shared evaluation: composes consumer and fulfiller against the
@@ -47,8 +51,8 @@ let
       ];
     }).config;
 
-  aliceResult = sharedContracts.contracts.arithmetic.result.alice.value;
-  bobResult = sharedContracts.contracts.arithmetic.result.bob.deep.path.value;
+  aliceResult = sharedContracts.contracts.arithmetic.results.alice.value;
+  bobResult = sharedContracts.contracts.arithmetic.results.bob.deep.path.value;
 in
 {
   name = "contracts-cross-node";

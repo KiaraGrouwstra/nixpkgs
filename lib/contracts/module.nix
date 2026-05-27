@@ -4,6 +4,7 @@ let
   inherit (types)
     attrsOf
     nestedAttrsOf
+    raw
     submodule
     ;
 in
@@ -11,11 +12,10 @@ in
   options = {
     contractDefinitions = mkOption {
       description = ''
-        Registry of contract types available in this module evaluation.
+        Types of contracts. Each entry declares a contract's `meta` (description,
+        maintainers) and `interface.{request,result}` schemas.
 
-        Each entry declares a contract's `meta` (description,
-        maintainers) and `interface.{request,result}` schemas, which
-        are used to synthesise the `contracts.<name>` options.
+        Instances of these contracts are configured via `contracts.<name>`.
 
         Adding a new contract type at the call site:
 
@@ -28,17 +28,26 @@ in
           };
         };
         ```
+
+        **Integrating into a new module system** (e.g. home-manager, nix-darwin):
+
+        Import `lib.contract.module` and populate `contractDefinitions` with the
+        contract definitions you want to make available.
       '';
       type = attrsOf lib.contract.definitionType;
       default = { };
     };
     contracts = mkOption {
       description = ''
-        Contract instances, keyed by contract type registered in
-        `contractDefinitions`.
+        Contract instances, keyed by contract type.
 
-        Consumers set `contracts.<type>.want.<field> = ...`.
-        Fulfillers set `contracts.<type>.result.<field> = ...`.
+        Consumers set `contracts.<type>.want.<path>.request.<field> = ...`.
+        Fulfillers set `contracts.<type>.want.<path>.result.<field> = ...`.
+
+        Each leaf of the `want` tree carries both the consumer's `request`
+        and the fulfiller's `result`, so a single nested-attrs traversal
+        sees both sides paired up. Consumers conventionally read fulfilled
+        values via the `results` projection.
       '';
       default = { };
       type = submodule {
@@ -46,44 +55,68 @@ in
           contractName: contractType:
           let
             inherit (contractType) meta interface;
-            requestLeafType = submodule { options = interface.request; };
-            resultLeafType = submodule { options = interface.result; };
+            leafType = submodule {
+              options = {
+                request = mkOption {
+                  description = ''
+                    The request parameters.
+                    Must match the `${contractName}` contract interface's request type.
+                  '';
+                  type = submodule { options = interface.request; };
+                };
+                result = mkOption {
+                  description = ''
+                    Result populated by the fulfiller of the `${contractName}` contract.
+                    Must match the `${contractName}` contract interface's result type.
+                  '';
+                  type = submodule { options = interface.result; };
+                };
+              };
+            };
           in
           mkOption {
             description = meta.description;
             default = { };
-            type = submodule {
+            type = submodule (contract: {
               options = {
                 want = mkOption {
                   description = ''
-                    Requests declared by consumers of the `${contractName}` contract.
+                    Requests and fulfilled results for the `${contractName}` contract.
 
-                    `want` uses `nestedAttrsOf`, so entries may be organized at any depth:
+                    Each leaf carries both `request` (consumer-set) and `result`
+                    (fulfiller-set). `nestedAttrsOf` lets entries be organized at any depth:
 
                     ```nix
                     contracts.${contractName}.want."<consumer>" = {
-                      flat.someField = ...;
-                      grouped.primary.someField = ...;
-                      deeply.nested.entry.someField = ...;
+                      flat = { request = ...; result = ...; };
+                      grouped.primary = { request = ...; result = ...; };
+                      deeply.nested.entry = { request = ...; result = ...; };
                     };
                     ```
+
+                    **Naming restrictions:** namespace keys must not be literally
+                    `request` or `result`, otherwise they would be misidentified
+                    as leaves by `nestedAttrsOf`'s leaf-detection heuristic.
                   '';
-                  type = nestedAttrsOf requestLeafType;
+                  type = nestedAttrsOf leafType;
                   default = { };
                 };
-                result = mkOption {
+                results = mkOption {
                   description = ''
-                    Fulfilled results for the `${contractName}` contract, mirroring the
-                    structure of `want`.
+                    Read-only projection of `want` to just the `result` attributes.
 
-                    Fulfillers populate `result.<path>.<field>`; consumers read it back
-                    via `config.contracts.${contractName}.result.<path>.<field>`.
+                    Consumers read the fulfilled value via
+                    `config.contracts.${contractName}.results.<path>.<field>`.
                   '';
-                  type = nestedAttrsOf resultLeafType;
-                  default = { };
+                  type = nestedAttrsOf raw;
+                  readOnly = true;
+                  default = lib.mapNestedAttrs' (nestedAttrsOf leafType) (v: v.result) contract.config.want;
+                  defaultText = lib.literalExpression ''
+                    lib.mapNestedAttrs' (nestedAttrsOf leafType) (v: v.result) want
+                  '';
                 };
               };
-            };
+            });
           }
         ) config.contractDefinitions;
       };

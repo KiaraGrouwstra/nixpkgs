@@ -13,8 +13,8 @@
     };
   };
 
-  contracts.arithmetic = {
-    want.alice.value = 5;
-    result.alice.value = 6;
+  contracts.arithmetic.want.consumer.x = {
+    request.value = 5;
+    result.value = 6;
   };
 }
