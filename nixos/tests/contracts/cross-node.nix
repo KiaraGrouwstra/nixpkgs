@@ -23,18 +23,18 @@ let
     };
   };
 
-  # Fulfiller side: writes each leaf's `result` alongside its `request`,
-  # computing `value + 1`. The fulfiller targets the same leaves the
-  # consumer declared; walking the merged `want` spine to discover paths
-  # generically is deferred to the `requests` projection in a follow-up
-  # commit (writing into the same option we read from would otherwise
-  # recurse on the spine).
+  # Fulfiller side: reads consumer inputs through the read-only
+  # `requests` projection (symmetric with how the consumer reads
+  # `results`) and writes each leaf's `result` back into `want`,
+  # computing `value + 1`. The fulfiller targets the consumer-declared
+  # leaves explicitly: writing into the same option whose spine we'd
+  # walk to discover paths generically would otherwise recurse.
   fulfillerModule = { config, ... }: let
-    want = config.contracts.arithmetic.want;
+    requests = config.contracts.arithmetic.requests;
   in {
     contracts.arithmetic.want = {
-      alice.result.value = want.alice.request.value + 1;
-      bob.deep.path.result.value = want.bob.deep.path.request.value + 1;
+      alice.result.value = requests.alice.value + 1;
+      bob.deep.path.result.value = requests.bob.deep.path.value + 1;
     };
   };
 

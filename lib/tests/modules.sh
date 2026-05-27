@@ -445,6 +445,7 @@ checkConfigError 'expected an attribute set with keys from \[request, result\]' 
 
 # Check contracts
 checkConfigOutput '^5$' config.contracts.arithmetic.want.consumer.x.request.value ./contracts-basic.nix
+checkConfigOutput '^5$' config.contracts.arithmetic.requests.consumer.x.value ./contracts-basic.nix
 checkConfigOutput '^6$' config.contracts.arithmetic.results.consumer.x.value ./contracts-basic.nix
 
 # submoduleWith

@@ -101,6 +101,20 @@ in
                   type = nestedAttrsOf leafType;
                   default = { };
                 };
+                requests = mkOption {
+                  description = ''
+                    Read-only projection of `want` to just the `request` attributes.
+
+                    Fulfillers consume this to enumerate consumer requests
+                    without manually projecting each leaf.
+                  '';
+                  type = nestedAttrsOf raw;
+                  readOnly = true;
+                  default = lib.mapNestedAttrs' (nestedAttrsOf leafType) (v: v.request) contract.config.want;
+                  defaultText = lib.literalExpression ''
+                    lib.mapNestedAttrs' (nestedAttrsOf leafType) (v: v.request) want
+                  '';
+                };
                 results = mkOption {
                   description = ''
                     Read-only projection of `want` to just the `result` attributes.
