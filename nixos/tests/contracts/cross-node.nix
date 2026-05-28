@@ -29,6 +29,7 @@ let
     (lib.evalModules {
       modules = [
         lib.contract.module
+        ./arithmetic-contract.nix
         consumerModule
         fulfillerModule
       ];
@@ -44,7 +45,7 @@ in
     # consumer can verify it at runtime. In a real use case this would
     # be a proper service (e.g. a secrets manager).
     provider = { pkgs, ... }: {
-      imports = [ fulfillerModule ];
+      imports = [ ./arithmetic-contract.nix fulfillerModule ];
       systemd.services.arithmetic-server = {
         wantedBy = [ "multi-user.target" ];
         script = ''
@@ -60,7 +61,7 @@ in
     # at evaluation time, so it has the expected value baked in without
     # talking to the provider.
     consumer = {
-      imports = [ consumerModule ];
+      imports = [ ./arithmetic-contract.nix consumerModule ];
       environment.etc."arithmetic-expected".text = toString resultValue;
     };
   };
