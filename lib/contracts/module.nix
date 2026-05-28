@@ -3,6 +3,7 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrsOf
+    nestedAttrsOf
     submodule
     ;
 in
@@ -45,6 +46,8 @@ in
           contractName: contractType:
           let
             inherit (contractType) meta interface;
+            requestLeafType = submodule { options = interface.request; };
+            resultLeafType = submodule { options = interface.result; };
           in
           mkOption {
             description = meta.description;
@@ -52,14 +55,32 @@ in
             type = submodule {
               options = {
                 want = mkOption {
-                  description = "Requests declared by consumers of the `${contractName}` contract.";
+                  description = ''
+                    Requests declared by consumers of the `${contractName}` contract.
+
+                    `want` uses `nestedAttrsOf`, so entries may be organized at any depth:
+
+                    ```nix
+                    contracts.${contractName}.want."<consumer>" = {
+                      flat.someField = ...;
+                      grouped.primary.someField = ...;
+                      deeply.nested.entry.someField = ...;
+                    };
+                    ```
+                  '';
+                  type = nestedAttrsOf requestLeafType;
                   default = { };
-                  type = submodule { options = interface.request; };
                 };
                 result = mkOption {
-                  description = "Fulfilled results for the `${contractName}` contract.";
+                  description = ''
+                    Fulfilled results for the `${contractName}` contract, mirroring the
+                    structure of `want`.
+
+                    Fulfillers populate `result.<path>.<field>`; consumers read it back
+                    via `config.contracts.${contractName}.result.<path>.<field>`.
+                  '';
+                  type = nestedAttrsOf resultLeafType;
                   default = { };
-                  type = submodule { options = interface.result; };
                 };
               };
             };

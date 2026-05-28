@@ -438,9 +438,14 @@ checkConfigOutput '^"hello"$' config.packageInvalidIdentifier.pname ./declare-mk
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifier.defaultText.text ./declare-mkPackageOption.nix
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifierExample.example.text ./declare-mkPackageOption.nix
 
+# Check nestedAttrsOf
+checkConfigOutput '^3$' config.value.b.d.e ./declare-nested-attrs.nix
+checkConfigError 'A definition for option .* is not of type .*' config.value.b.f ./declare-nested-attrs-unsound.nix
+checkConfigError 'expected an attribute set with keys from \[request, result\]' config.value.consumer ./declare-nested-attrs-misshapen.nix
+
 # Check contracts
-checkConfigOutput '^5$' config.contracts.arithmetic.want.value ./contracts-basic.nix
-checkConfigOutput '^6$' config.contracts.arithmetic.result.value ./contracts-basic.nix
+checkConfigOutput '^5$' config.contracts.arithmetic.want.alice.value ./contracts-basic.nix
+checkConfigOutput '^6$' config.contracts.arithmetic.result.alice.value ./contracts-basic.nix
 
 # submoduleWith
 

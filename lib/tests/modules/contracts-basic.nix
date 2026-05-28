@@ -14,7 +14,7 @@
   };
 
   contracts.arithmetic = {
-    want.value = 5;
-    result.value = 6;
+    want.alice.value = 5;
+    result.alice.value = 6;
   };
 }
