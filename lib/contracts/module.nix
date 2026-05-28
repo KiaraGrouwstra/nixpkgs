@@ -3,7 +3,6 @@ let
   inherit (lib) mkOption types;
   inherit (types)
     attrsOf
-    raw
     submodule
     ;
 in
@@ -13,24 +12,23 @@ in
       description = ''
         Registry of contract types available in this module evaluation.
 
-        Each entry declares a contract's `interface.{request,result}`
-        schemas, which are used to synthesise the `contracts.<name>` options.
+        Each entry declares a contract's `meta` (description,
+        maintainers) and `interface.{request,result}` schemas, which
+        are used to synthesise the `contracts.<name>` options.
 
         Adding a new contract type at the call site:
 
         ```nix
         contractDefinitions.myContract = {
+          meta = { description = "..."; maintainers = [ ]; };
           interface = {
             request.someInput = lib.mkOption { type = lib.types.str; };
             result.someOutput = lib.mkOption { type = lib.types.str; };
           };
         };
         ```
-
-        The element type is loosely typed in this commit; a typed schema
-        (`lib.contract.definitionType`) lands in a follow-up commit.
       '';
-      type = attrsOf raw;
+      type = attrsOf lib.contract.definitionType;
       default = { };
     };
     contracts = mkOption {
@@ -46,10 +44,10 @@ in
         options = lib.mapAttrs (
           contractName: contractType:
           let
-            inherit (contractType) interface;
+            inherit (contractType) meta interface;
           in
           mkOption {
-            description = "Instances of the `${contractName}` contract.";
+            description = meta.description;
             default = { };
             type = submodule {
               options = {

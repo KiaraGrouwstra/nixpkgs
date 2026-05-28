@@ -7,6 +7,10 @@ let
 in
 {
   config.contractDefinitions.arithmetic = {
+    meta = {
+      description = "A contract for arithmetic operations, used for testing.";
+      maintainers = [ ];
+    };
     interface = {
       request.value = mkOption {
         description = "Input value.";
