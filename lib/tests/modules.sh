@@ -438,6 +438,10 @@ checkConfigOutput '^"hello"$' config.packageInvalidIdentifier.pname ./declare-mk
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifier.defaultText.text ./declare-mkPackageOption.nix
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifierExample.example.text ./declare-mkPackageOption.nix
 
+# Check contracts
+checkConfigOutput '^5$' config.contracts.arithmetic.want.value ./contracts-basic.nix
+checkConfigOutput '^6$' config.contracts.arithmetic.result.value ./contracts-basic.nix
+
 # submoduleWith
 
 ## specialArgs should work

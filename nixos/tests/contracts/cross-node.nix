@@ -7,33 +7,11 @@
 # `lib.evalModules` call and injecting the resulting value into each
 # node's configuration at eval time.
 #
-# To keep this commit self-contained, the contract option is declared
-# inline in this file rather than pulled from any shared library code.
+# The contract option comes from `lib.contract.module`; on NixOS nodes
+# it is registered via the module list, so the test bodies only carry
+# consumer/fulfiller wiring.
 { pkgs, lib, ... }:
 let
-  inherit (lib) mkOption types;
-
-  # Inline contract option: a flat single-instance pair of
-  # `want` (request inputs) and `result` (fulfilled outputs).
-  contractModule = {
-    options.contracts.arithmetic = {
-      want = mkOption {
-        description = "Consumer-set inputs for the arithmetic contract.";
-        default = { };
-        type = types.submodule {
-          options.value = mkOption { type = types.int; };
-        };
-      };
-      result = mkOption {
-        description = "Fulfiller-set outputs for the arithmetic contract.";
-        default = { };
-        type = types.submodule {
-          options.value = mkOption { type = types.int; };
-        };
-      };
-    };
-  };
-
   # Consumer side: declares the requested input value.
   consumerModule = {
     contracts.arithmetic.want.value = 5;
@@ -44,12 +22,13 @@ let
     contracts.arithmetic.result.value = config.contracts.arithmetic.want.value + 1;
   };
 
-  # Shared evaluation: composes consumer and fulfiller in a single
-  # module-system evaluation to produce the agreed-upon result.
+  # Shared evaluation: composes consumer and fulfiller against the
+  # generic contracts module so both nodes derive their value from
+  # one source of truth.
   sharedContracts =
     (lib.evalModules {
       modules = [
-        contractModule
+        lib.contract.module
         consumerModule
         fulfillerModule
       ];
@@ -65,7 +44,7 @@ in
     # consumer can verify it at runtime. In a real use case this would
     # be a proper service (e.g. a secrets manager).
     provider = { pkgs, ... }: {
-      imports = [ contractModule fulfillerModule ];
+      imports = [ fulfillerModule ];
       systemd.services.arithmetic-server = {
         wantedBy = [ "multi-user.target" ];
         script = ''
@@ -81,7 +60,7 @@ in
     # at evaluation time, so it has the expected value baked in without
     # talking to the provider.
     consumer = {
-      imports = [ contractModule consumerModule ];
+      imports = [ consumerModule ];
       environment.etc."arithmetic-expected".text = toString resultValue;
     };
   };

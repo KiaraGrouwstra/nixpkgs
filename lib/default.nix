@@ -71,6 +71,7 @@ let
       modules = callLibs ./modules.nix;
       options = callLibs ./options.nix;
       types = callLibs ./types.nix;
+      contract = callLibs ./contracts;
 
       # constants
       licenses = callLibs ./licenses;

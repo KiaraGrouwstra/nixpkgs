@@ -1,0 +1,4 @@
+{ lib, ... }:
+{
+  module = ./module.nix;
+}
