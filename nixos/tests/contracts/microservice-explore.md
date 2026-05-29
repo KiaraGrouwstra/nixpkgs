@@ -75,6 +75,43 @@ its own deployment, local services run independently per host.
   - Cross-contract chaining is still possible but only within a
     routing scope.
 
+## Variant D: services-as-peers on one NixOS node
+
+`microservice-explore-D.nix`
+
+Same single shared `evalModules` as A, but the peer set is three
+modular service slots co-located on one NixOS host instead of three
+NixOS nodes. The bake path gains a leading `<slot>/` segment so
+per-service-slot isolation is visible on the filesystem.
+
+- **Pros**
+  - Decouples the contract peer set from the NixOS topology -- the
+    eval doesn't know whether peers are hosts or co-located slots.
+  - Cheap to stand up: one VM, multi-slot fan-out is just nested
+    `environment.etc` entries.
+- **Cons**
+  - The "isolation" between slots is conventional (separate `/etc`
+    subtrees) rather than enforced by the deployment shape.
+
+## Variant E: services-as-peers across multiple NixOS nodes
+
+`microservice-explore-E.nix`
+
+Same eval as D, plus a `slotHost` mapping that pins each slot to one
+NixOS node. Each node bakes only the slice for the slot(s) it hosts.
+"Local" contracts now mean inside-one-slot, which on E also means
+inside-one-host -- the cross-node-cross-service boundary is the one
+under test.
+
+- **Pros**
+  - The bc3eac2b framing: peer identity is the service slot; which
+    host runs which slot is a separate, swappable mapping.
+  - Cross-node consistency for centralised contracts and slot-local
+    isolation for local contracts both fall out of the same scheme.
+- **Cons**
+  - The slot-to-host mapping is an extra moving part the eval has to
+    consult for baking, even though it's outside the shared eval.
+
 ## Take-aways
 
 - The eval-time-only test scaffold (`environment.etc."..."` baked
@@ -92,3 +129,10 @@ its own deployment, local services run independently per host.
   mechanism if "local services don't see each other" is a
   property we want to enforce structurally rather than by
   convention.
+- A/B/C explored the eval-shape axis (one eval / per-contract /
+  per-routing-scope) with peers = NixOS nodes. D and E hold the
+  eval shape constant (A's single shared eval) and vary the peer
+  axis: D collapses the peers onto one host as service slots; E
+  distributes them across hosts via a `slotHost` mapping. The two
+  axes are orthogonal -- any eval-shape (A/B/C) could in principle
+  be paired with any peer-axis (host vs. service slot).
