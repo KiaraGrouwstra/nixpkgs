@@ -4,7 +4,8 @@
 # 1. Consumer provides a generation script via the generateFiles contract
 # 2. generate-vars runs the script at boot, writing files locally
 # 3. upload-vars-openbao uploads them to OpenBao and removes local copies
-# 4. vault-agent fetches them back from OpenBao
+# 4. the shared `openbao agent` (services.openbao.agents.default) fetches them
+#    back from OpenBao via the broker's `extraTemplates` merge point
 # 5. Content, ownership, and permissions are verified
 { lib, pkgs, ... }:
 let
@@ -22,6 +23,9 @@ in
         ../../../modules/services/security/vars.nix
         ../../../modules/services/security/vars-on-machine.nix
         ../../../modules/services/security/vars-openbao.nix
+        # Pulls in `services.openbao.agents.<name>` (and the broker), which
+        # vars-openbao now renders its fetch templates through.
+        ../../../modules/services/security/systemd-openbaod.nix
       ];
 
       # OpenBao dev server
@@ -45,24 +49,21 @@ in
         };
       };
 
-      # vault-agent auth config
-      services.vault-agent.instances.vars-openbao = {
-        package = pkgs.openbao;
-        settings.auto_auth = [
+      # Shared `openbao agent` auth config (token_file against the dev root
+      # token). vars-openbao contributes its fetch templates to this agent.
+      services.openbao.agents.default.settings = {
+        vault.address = "http://127.0.0.1:8200";
+        auto_auth.method = [
           {
-            method = [
-              {
-                type = "token_file";
-                config.token_file_path = pkgs.writeText "vault-token" "root";
-              }
-            ];
+            type = "token_file";
+            config.token_file_path = pkgs.writeText "vault-token" "root";
           }
         ];
       };
 
-      # Order services: openbao-dev -> generate-vars -> upload -> vault-agent
+      # Order services: openbao-dev -> generate-vars -> upload -> agent
       systemd.services.generate-vars.after = [ "openbao-dev.service" ];
-      systemd.services.vault-agent-vars-openbao.after = [ "openbao-dev.service" ];
+      systemd.services.openbao-agent-default.after = [ "openbao-dev.service" ];
 
       contracts.generateFiles.defaultProviderName = "vars";
       contracts.varsBackend.defaultProviderName = "openbao";
@@ -128,7 +129,7 @@ in
       # Wait for the full pipeline: generate -> upload -> vault-agent fetch.
       machine.wait_for_unit("generate-vars.service")
       machine.wait_for_unit("upload-vars-openbao.service")
-      machine.wait_for_unit("vault-agent-vars-openbao.service")
+      machine.wait_for_unit("openbao-agent-default.service")
       machine.wait_for_file("${pathA}")
       machine.wait_for_file("${pathB}")
 
@@ -151,8 +152,8 @@ in
           assert f in myapp_listing, \
               f"expected `{f}` under vars/secret/myapp/ in OpenBao, got: {myapp_listing!r}"
 
-      # Verify the vault-agent fetch path: delete the local file and wait
-      # for vault-agent to re-render it from OpenBao.
+      # Verify the agent fetch path: delete the local file and wait
+      # for the agent to re-render it from OpenBao.
       machine.succeed("rm -f ${pathA}")
       machine.wait_for_file("${pathA}")
       content = machine.succeed("cat ${pathA}").strip()

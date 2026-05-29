@@ -12,6 +12,8 @@
 #   and through an EnvironmentFile (vault.environmentTemplate)
 # - rotating the secret in OpenBao makes the agent re-render and run
 #   `try-reload-or-restart` on the consumer, so it picks up the new value
+# - the `envSecrets` contract provider delivers a requested variable to its unit
+#   via the broker and reloads the unit when the backing secret rotates
 { lib, ... }:
 {
   name = "contracts-systemd-openbaod";
@@ -61,6 +63,7 @@
         script = ''
           until bao status; do sleep 1; done
           bao kv put secret/my-secret foo=bar
+          bao kv put secret/env-secret token=initial
         '';
       };
 
@@ -101,6 +104,28 @@
           '';
         };
       };
+
+      # Contract-driven consumer: request an environment variable through the
+      # `envSecrets` provider rather than hand-writing a `vault.*` template. The
+      # provider renders it into `env-app`'s EnvironmentFile via the same agent.
+      services.systemd-openbaod.enable = true;
+      contracts.envSecrets.defaultProviderName = "systemd-openbaod";
+      contracts.envSecrets.want.test.token.request = {
+        unit = "env-app";
+        variables.TOKEN_ENV = {
+          path = "secret/data/env-secret";
+          field = "token";
+          base64Decode = false;
+        };
+      };
+      systemd.services.env-app = {
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig.Restart = "always";
+        script = ''
+          printf '%s' "$TOKEN_ENV" > /tmp/env-app-token
+          exec sleep infinity
+        '';
+      };
     };
 
   testScript = ''
@@ -121,6 +146,14 @@
     machine.succeed("bao kv put secret/my-secret foo=rotated")
     machine.wait_until_succeeds("grep -q rotated /tmp/app-env")
     machine.wait_until_succeeds("grep -q rotated /tmp/app-cred")
+
+    # Contract-driven consumer: the envSecrets provider delivered TOKEN_ENV to
+    # env-app via the broker, and a rotation reloads the unit with the new value.
+    machine.wait_for_unit("env-app.service")
+    machine.wait_until_succeeds("grep -q initial /tmp/env-app-token")
+    machine.succeed("rm -f /tmp/env-app-token")
+    machine.succeed("bao kv put secret/env-secret token=rotated")
+    machine.wait_until_succeeds("grep -q rotated /tmp/env-app-token")
   '';
 
   meta.maintainers = with lib.maintainers; [ kiara ];
