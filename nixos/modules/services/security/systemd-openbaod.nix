@@ -1,127 +1,41 @@
-# Provider for the fileSecrets contract using systemd-openbaod and vault-agent.
+# systemd-openbaod: broker secrets from OpenBao to systemd services.
 #
-# Retrieves secrets from OpenBao via vault-agent templates and writes them to
-# files on disk with the requested ownership and permissions.
+# This module is a thin bridge to the NixOS modules shipped with the-distro's
+# systemd-openbao, fetched at the same revision that `pkgs.systemd-openbaod` is
+# built from so the daemon and its modules stay in lockstep. Rather than
+# re-implementing the broker here, it imports:
 #
-# Requires:
-# - A running OpenBao server
-# - A vault-agent instance configured with authentication (e.g. AppRole, token)
-#   pointed at the OpenBao server
+#   - systemd-openbaod.nix: the `/run/systemd-openbaod/sock` socket + daemon,
+#     plus (via openbao-secrets.nix) per-service `vault.*` options that deliver
+#     secrets through `LoadCredential` / `EnvironmentFile` and run
+#     `try-reload-or-restart` on rotation.
+#   - openbao-agent.nix: `services.openbao.agents.<name>`, each running
+#     `bao agent` to render the templates the services above declare. An agent
+#     with no templates is disabled, so the unit stays absent until a service
+#     actually targets it.
 #
-# The provider generates vault-agent templates that render each secret to its
-# result path, and activation scripts that set the correct file permissions.
-{
-  config,
-  lib,
-  pkgs,
-  options,
-  ...
-}:
+# The source is fetched with `builtins.fetchTarball` (a fixed-output fetch, not
+# IFD) mirroring the npins pattern, so eval stays pure. The revision and hash
+# track `pkgs/by-name/sy/systemd-openbaod/package.nix`; bump both together.
+#
+# The daemon's systemd service is socket-activated (it is not wanted by any
+# target), so on a host that declares no agents and no `vault.*` secrets only
+# the unix socket is created and the daemon never starts. Opt-in gating of the
+# socket itself is left to a follow-up PR against the-distro.
+{ pkgs, ... }:
 let
-  cfg = config.services.systemd-openbaod;
-
-  inherit (lib)
-    contracts
-    mkOption
-    mkEnableOption
-    mkPackageOption
-    ;
-  inherit (lib.types)
-    nestedAttrsOf
-    str
-    submodule
-    ;
-  contract = "fileSecrets";
-  inherit (config.contracts.${contract}) mkProviderType;
+  src = builtins.fetchTarball {
+    url = "https://git.lix.systems/kiaragrouwstra/systemd-openbao/archive/d4baef0f4904dce66a70993593c114ff7e8b13e6.tar.gz";
+    sha256 = "00d17alq44gmw722yqwbrg74mskgccbsfzhnmpj7252pdgkbf4p0";
+  };
 in
 {
-  options.services.systemd-openbaod = {
-    enable = mkEnableOption "systemd-openbaod fileSecrets provider";
+  imports = [
+    "${src}/nix/modules/systemd-openbaod.nix" # also pulls in openbao-secrets.nix
+    "${src}/nix/modules/openbao-agent.nix"
+  ];
 
-    package = mkPackageOption pkgs "systemd-openbaod" { };
-
-    vaultAgentInstance = mkOption {
-      type = str;
-      default = "systemd-openbaod";
-      description = ''
-        Name of the `services.vault-agent.instances` entry to generate
-        templates into. The vault-agent instance must be configured
-        separately with authentication settings pointing at your
-        OpenBao server.
-      '';
-    };
-
-    ${contract} = mkOption {
-      description = ''
-        Instances of the fileSecrets contract fulfilled by systemd-openbaod.
-
-        Each entry maps to a secret retrieved from OpenBao via vault-agent.
-        The `openbaoPath` option specifies the Vault/OpenBao KV path and
-        `openbaoField` selects which field to extract.
-      '';
-      type = mkProviderType {
-        overrides.request = {
-          owner.default = "root";
-          group.default = "root";
-        };
-        providerOptions = {
-          openbaoPath = mkOption {
-            type = str;
-            description = ''
-              KV v2 path in OpenBao where this secret is stored
-              (e.g. `"secret/data/myapp/password"`).
-            '';
-          };
-          openbaoField = mkOption {
-            type = str;
-            default = "value";
-            description = ''
-              Field within the OpenBao secret's `.Data.data` to extract.
-            '';
-          };
-        };
-        fulfill' =
-          { name, ... }:
-          {
-            path = "/run/systemd-openbaod/files/${name}";
-          };
-      };
-    };
-  };
-
-  config = lib.mkIf cfg.enable {
-    services.systemd-openbaod.${contract} = config.contracts.${contract}.requests;
-    contracts.${contract}.providers.systemd-openbaod.module = options.services.systemd-openbaod.${contract};
-
-    # Generate vault-agent templates and activation scripts from flattened secrets.
-    #
-    # We flatten the nestedAttrsOf structure to iterate over leaf secrets,
-    # generating a vault-agent template and an ownership fixup for each.
-    services.vault-agent.instances.${cfg.vaultAgentInstance}.settings.template =
-      let
-        collectTemplates =
-          prefix: attrs:
-          lib.concatLists (
-            lib.mapAttrsToList (
-              name: value:
-              let
-                path = prefix ++ [ name ];
-              in
-              if value ? request && value ? result then
-                [
-                  {
-                    contents = ''{{- with secret "${value.openbaoPath}" }}{{ .Data.data.${value.openbaoField} }}{{- end }}'';
-                    destination = value.result.path;
-                    perms = value.request.mode;
-                    command = "chown ${value.request.owner}:${value.request.group} ${value.result.path}";
-                  }
-                ]
-              else
-                collectTemplates path value
-            ) attrs
-          );
-      in
-      collectTemplates [ ] cfg.${contract};
-
-  };
+  # One source of truth for the daemon binary: the nixpkgs package built from
+  # the same revision the imported modules come from.
+  services.systemd-openbaod.package = pkgs.systemd-openbaod;
 }
