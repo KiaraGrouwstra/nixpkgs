@@ -79,38 +79,47 @@ its own deployment, local services run independently per host.
 
 `microservice-explore-D.nix`
 
-Same single shared `evalModules` as A, but the peer set is three
-modular service slots co-located on one NixOS host instead of three
-NixOS nodes. The bake path gains a leading `<slot>/` segment so
-per-service-slot isolation is visible on the filesystem.
+Same single shared `evalModules` as A, but the peer set is three NixOS
+[modular services](https://nixos.org/manual/nixos/stable/#modular-services)
+(`system.services.<slot>`) co-located on one NixOS host instead of
+three NixOS nodes. Each slot is a real `_class = "service"` modular
+service with its own `process.argv` and `configData`; the NixOS
+modular-services integration writes each slot's `configData` to
+`/etc/system-services/<slot>/...`, so per-service isolation is enforced
+by the integration rather than tacked on as a path convention.
 
 - **Pros**
   - Decouples the contract peer set from the NixOS topology -- the
-    eval doesn't know whether peers are hosts or co-located slots.
-  - Cheap to stand up: one VM, multi-slot fan-out is just nested
-    `environment.etc` entries.
+    eval doesn't know whether peers are hosts or co-located services.
+  - The isolation boundary is the modular-services boundary itself,
+    not just a chosen filesystem layout.
 - **Cons**
-  - The "isolation" between slots is conventional (separate `/etc`
-    subtrees) rather than enforced by the deployment shape.
+  - Pulls in the full `system.services` machinery (real systemd units
+    per peer) just to demonstrate the boundary; A's `environment.etc`
+    scaffold is lighter if all you care about is the eval.
 
 ## Variant E: services-as-peers across multiple NixOS nodes
 
 `microservice-explore-E.nix`
 
-Same eval as D, plus a `slotHost` mapping that pins each slot to one
-NixOS node. Each node bakes only the slice for the slot(s) it hosts.
-"Local" contracts now mean inside-one-slot, which on E also means
+Same eval as D, plus a `slotHost` mapping that pins each modular
+service to one NixOS node. Each node only declares the
+`system.services.<slot>` entries for the slot(s) it hosts, so each
+node only bakes the slice belonging to those services. "Local"
+contracts now mean inside-one-service, which on E also means
 inside-one-host -- the cross-node-cross-service boundary is the one
 under test.
 
 - **Pros**
-  - The bc3eac2b framing: peer identity is the service slot; which
-    host runs which slot is a separate, swappable mapping.
-  - Cross-node consistency for centralised contracts and slot-local
-    isolation for local contracts both fall out of the same scheme.
+  - Peer identity is the modular service; which host runs which
+    service is a separate, swappable mapping consulted only at
+    bake-time.
+  - Cross-node consistency for centralised contracts and
+    service-local isolation for local contracts both fall out of the
+    same scheme, with each peer backed by a real systemd unit.
 - **Cons**
-  - The slot-to-host mapping is an extra moving part the eval has to
-    consult for baking, even though it's outside the shared eval.
+  - The slot-to-host mapping is an extra moving part the bake has to
+    consult, even though it's outside the shared eval.
 
 ## Take-aways
 
@@ -130,9 +139,10 @@ under test.
   property we want to enforce structurally rather than by
   convention.
 - A/B/C explored the eval-shape axis (one eval / per-contract /
-  per-routing-scope) with peers = NixOS nodes. D and E hold the
-  eval shape constant (A's single shared eval) and vary the peer
-  axis: D collapses the peers onto one host as service slots; E
-  distributes them across hosts via a `slotHost` mapping. The two
-  axes are orthogonal -- any eval-shape (A/B/C) could in principle
-  be paired with any peer-axis (host vs. service slot).
+  per-routing-scope) with peers = NixOS nodes. D and E hold the eval
+  shape constant (A's single shared eval) and vary the peer axis to
+  NixOS [modular services](https://nixos.org/manual/nixos/stable/#modular-services):
+  D collapses the peers onto one host as co-located modular services;
+  E distributes them across hosts via a `slotHost` mapping. The two
+  axes are orthogonal -- any eval-shape (A/B/C) could in principle be
+  paired with any peer-axis (host vs. modular service).

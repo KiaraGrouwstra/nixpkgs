@@ -1,25 +1,28 @@
 # Exploration: micro-service-style eval-time contract exchange with
-# the isolation boundary moved from NixOS nodes down to service slots
-# co-located on one NixOS node (Variant D).
+# the isolation boundary moved from NixOS nodes down to NixOS modular
+# services co-located on one NixOS node (Variant D).
 #
-# Scenario: a single NixOS node (`host`) hosting three modular service
-# slots (alice, bob, carol). The peer set for contract resolution is
-# the slot set, not the host set -- the bc3eac2b framing where the
-# peer is a service slot rather than a host. Three contracts with
-# distinct field types (bool / int / str), and a per-contract routing
-# knob that switches between centralised (one slot answers everyone)
-# and local (each slot answers only itself).
+# Scenario: a single NixOS node (`host`) hosting three modular services
+# (alice, bob, carol) declared via `system.services.<name>`. The peer
+# set for contract resolution is the service set, not the host set --
+# the framing where the peer is a NixOS modular service rather than a
+# host. Three contracts with distinct field types (bool / int / str),
+# and a per-contract routing knob that switches between centralised
+# (one service answers everyone) and local (each service answers only
+# itself).
 #
-# Like Variant A, all slots' wants and all contracts' handlers are
+# Like Variant A, all peers' wants and all contracts' handlers are
 # composed in a SINGLE shared `lib.evalModules` call. The host then
-# bakes each slot's slice into `/etc/contracts-explore/<slot>/...` at
-# config-eval time, so per-service-slot isolation is visible in the
-# filesystem even though everything runs on one host.
+# routes each service's slice through that service's `configData`, so
+# the NixOS modular-services integration is what creates the per-service
+# `/etc/system-services/<service>/contracts-explore/...` subtree on
+# disk. Each service is a real systemd unit (a trivial `sleep infinity`)
+# so the slot is structural, not just a path convention.
 #
 # A/B/C explored the eval-shape axis (one eval / per-contract /
 # per-routing-scope) with peers = NixOS nodes. D keeps A's single
-# shared eval but shifts the peer axis to service slots; E does the
-# same and distributes the slots across NixOS nodes.
+# shared eval but shifts the peer axis to NixOS modular services; E
+# does the same and distributes the services across NixOS nodes.
 { pkgs, lib, ... }:
 let
   inherit (lib) mkOption types;
@@ -128,29 +131,37 @@ let
     then [ slot ]
     else slotNames;
 
-  mkNode = _: {
-    environment.etc = lib.listToAttrs (lib.concatMap (slot:
-      lib.concatMap (cName:
-        map (peer: lib.nameValuePair "contracts-explore/${slot}/${cName}/${peer}" {
-          text = lib.generators.toPretty { multiline = false; } sharedEval.${cName}.result.${peer};
-        }) (peersFor slot cName)
-      ) (lib.attrNames routes)
-    ) slotNames);
+  # Build one `system.services.<slot>` modular service that bakes its
+  # contract slice through `configData`. The NixOS systemd integration
+  # writes each configData entry to
+  # `/etc/system-services/${slot}/${key}`, so the slot prefix on disk
+  # is provided by the service integration itself.
+  mkSlotService = slot: {
+    process.argv = [ "${pkgs.coreutils}/bin/sleep" "infinity" ];
+    configData = lib.listToAttrs (lib.concatMap (cName:
+      map (peer: lib.nameValuePair "contracts-explore/${cName}/${peer}" {
+        text = lib.generators.toPretty { multiline = false; } sharedEval.${cName}.result.${peer};
+      }) (peersFor slot cName)
+    ) (lib.attrNames routes));
   };
 in
 {
   name = "contracts-microservice-explore-D";
 
-  nodes.host = mkNode null;
+  nodes.host = {
+    system.services = lib.genAttrs slotNames mkSlotService;
+  };
 
   testScript =
     let
       # Build the expected file map: for each slot, which (contract, peer)
-      # files should exist and what they should contain.
+      # files should exist and what they should contain. Paths follow
+      # the modular-services integration layout: configData entries land
+      # at /etc/system-services/<servicePrefix>/<key>.
       expectedFor = slot:
         lib.concatMap (cName:
           map (peer: {
-            path = "/etc/contracts-explore/${slot}/${cName}/${peer}";
+            path = "/etc/system-services/${slot}/contracts-explore/${cName}/${peer}";
             content = lib.generators.toPretty { multiline = false; } sharedEval.${cName}.result.${peer};
           }) (peersFor slot cName)
         ) (lib.attrNames routes);
@@ -163,7 +174,7 @@ in
       missingFor = slot:
         lib.concatMap (cName:
           let allOthers = lib.subtractLists (peersFor slot cName) slotNames; in
-          map (peer: "/etc/contracts-explore/${slot}/${cName}/${peer}") allOthers
+          map (peer: "/etc/system-services/${slot}/contracts-explore/${cName}/${peer}") allOthers
         ) (lib.attrNames routes);
 
       pyListFor = slot:
@@ -171,6 +182,12 @@ in
     in
     ''
       host.wait_for_unit("multi-user.target")
+
+      # Each slot is a real modular service; confirm the systemd units
+      # the modular-services integration generates are up.
+      ${lib.concatMapStringsSep "\n" (s:
+        ''host.wait_for_unit("${s}.service")''
+      ) slotNames}
 
       for slot, expected, must_be_absent in [
       ${lib.concatMapStringsSep ",\n" (s:

@@ -1,23 +1,25 @@
 # Exploration: micro-service-style eval-time contract exchange where
-# the peer is a service slot but slots are distributed one per NixOS
-# node (Variant E).
+# the peer is a NixOS modular service but services are distributed one
+# per NixOS node (Variant E).
 #
-# Scenario: three NixOS nodes (n1, n2, n3), three modular service
-# slots (alice, bob, carol), a `slotHost` table that pins each slot
-# to one node, and three contracts with distinct field types
-# (bool / int / str). Same per-contract routing knob as A/D between
-# centralised and local; here a "local" contract isolates inside a
-# single slot, which means inside a single host -- so the
-# cross-node-cross-service boundary is what gets tested.
+# Scenario: three NixOS nodes (n1, n2, n3), three modular services
+# (alice, bob, carol) declared via `system.services.<name>`, a
+# `slotHost` table that pins each service to one node, and three
+# contracts with distinct field types (bool / int / str). Same
+# per-contract routing knob as A/D between centralised and local; here
+# a "local" contract isolates inside a single modular service, which
+# also means inside a single host -- so the cross-node-cross-service
+# boundary is what gets tested.
 #
-# Like Variant A, all slots' wants and all contracts' handlers are
+# Like Variant A, all services' wants and all contracts' handlers are
 # composed in a SINGLE shared `lib.evalModules` call. Each NixOS node
-# only bakes the slice belonging to the slot(s) it hosts, under
-# `/etc/contracts-explore/<slot>/...` -- so the file layout per host
-# reflects the slot-to-host mapping.
+# declares only the modular service(s) it hosts; the NixOS systemd
+# integration writes each service's `configData` to
+# `/etc/system-services/<service>/contracts-explore/...`, so the file
+# layout per host reflects the slot-to-host mapping.
 #
 # E shares D's eval strategy; the only difference is that the peer
-# slots are spread across distinct NixOS hosts instead of co-located.
+# services are spread across distinct NixOS hosts instead of co-located.
 { pkgs, lib, ... }:
 let
   inherit (lib) mkOption types;
@@ -25,9 +27,9 @@ let
   slotNames = [ "alice" "bob" "carol" ];
   slotIndex = name: lib.lists.findFirstIndex (n: n == name) (throw "unknown slot ${name}") slotNames;
 
-  # Which NixOS node hosts each slot. This is the only place the
-  # NixOS topology and the contract peer set meet -- the shared eval
-  # itself only sees slot names.
+  # Which NixOS node hosts each modular service. This is the only place
+  # the NixOS topology and the contract peer set meet -- the shared eval
+  # itself only sees service names.
   slotHost = {
     alice = "n1";
     bob = "n2";
@@ -137,14 +139,21 @@ let
     then [ slot ]
     else slotNames;
 
+  # Build one `system.services.<slot>` modular service that bakes its
+  # contract slice through `configData`. Files land at
+  # `/etc/system-services/${slot}/...` via the modular-services
+  # integration.
+  mkSlotService = slot: {
+    process.argv = [ "${pkgs.coreutils}/bin/sleep" "infinity" ];
+    configData = lib.listToAttrs (lib.concatMap (cName:
+      map (peer: lib.nameValuePair "contracts-explore/${cName}/${peer}" {
+        text = lib.generators.toPretty { multiline = false; } sharedEval.${cName}.result.${peer};
+      }) (peersFor slot cName)
+    ) (lib.attrNames routes));
+  };
+
   mkNode = node: {
-    environment.etc = lib.listToAttrs (lib.concatMap (slot:
-      lib.concatMap (cName:
-        map (peer: lib.nameValuePair "contracts-explore/${slot}/${cName}/${peer}" {
-          text = lib.generators.toPretty { multiline = false; } sharedEval.${cName}.result.${peer};
-        }) (peersFor slot cName)
-      ) (lib.attrNames routes)
-    ) (slotsOn node));
+    system.services = lib.genAttrs (slotsOn node) mkSlotService;
   };
 in
 {
@@ -161,7 +170,7 @@ in
         lib.concatMap (slot:
           lib.concatMap (cName:
             map (peer: {
-              path = "/etc/contracts-explore/${slot}/${cName}/${peer}";
+              path = "/etc/system-services/${slot}/contracts-explore/${cName}/${peer}";
               content = lib.generators.toPretty { multiline = false; } sharedEval.${cName}.result.${peer};
             }) (peersFor slot cName)
           ) (lib.attrNames routes)
@@ -180,23 +189,30 @@ in
           foreignSlots = lib.subtractLists (slotsOn node) slotNames;
           foreignPaths = lib.concatMap (slot:
             lib.concatMap (cName:
-              map (peer: "/etc/contracts-explore/${slot}/${cName}/${peer}")
+              map (peer: "/etc/system-services/${slot}/contracts-explore/${cName}/${peer}")
                 (peersFor slot cName)
             ) (lib.attrNames routes)
           ) foreignSlots;
           localMissing = lib.concatMap (slot:
             lib.concatMap (cName:
               let allOthers = lib.subtractLists (peersFor slot cName) slotNames; in
-              map (peer: "/etc/contracts-explore/${slot}/${cName}/${peer}") allOthers
+              map (peer: "/etc/system-services/${slot}/contracts-explore/${cName}/${peer}") allOthers
             ) (lib.attrNames routes)
           ) (slotsOn node);
         in foreignPaths ++ localMissing;
 
       pyListFor = node:
         "[" + lib.concatMapStringsSep ", " builtins.toJSON (missingFor node) + "]";
+
+      # Each hosted slot should have its modular service unit running.
+      waitUnits = lib.concatMap (n:
+        map (s: "${n}.wait_for_unit(\"${s}.service\")") (slotsOn n)
+      ) nodeNames;
     in
     ''
       ${lib.concatMapStringsSep "\n" (n: "${n}.wait_for_unit(\"multi-user.target\")") nodeNames}
+
+      ${lib.concatStringsSep "\n" waitUnits}
 
       for node, expected, must_be_absent in [
       ${lib.concatMapStringsSep ",\n" (n:
