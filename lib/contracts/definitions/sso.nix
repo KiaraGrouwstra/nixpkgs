@@ -49,6 +49,33 @@ in
         '';
         type = str;
       };
+
+      authorizationEndpoint = mkOption {
+        description = ''
+          OIDC authorization endpoint URL. Provided for consumers that cannot
+          perform discovery from the issuer and need the endpoint spelled out.
+        '';
+        type = str;
+        example = "https://auth.example.com/api/oidc/authorization";
+      };
+
+      tokenEndpoint = mkOption {
+        description = ''
+          OIDC token endpoint URL. Provided for consumers that cannot perform
+          discovery from the issuer and need the endpoint spelled out.
+        '';
+        type = str;
+        example = "https://auth.example.com/api/oidc/token";
+      };
+
+      userinfoEndpoint = mkOption {
+        description = ''
+          OIDC userinfo endpoint URL. Provided for consumers that cannot perform
+          discovery from the issuer and need the endpoint spelled out.
+        '';
+        type = str;
+        example = "https://auth.example.com/api/oidc/userinfo";
+      };
     };
   };
   behaviorTest =
