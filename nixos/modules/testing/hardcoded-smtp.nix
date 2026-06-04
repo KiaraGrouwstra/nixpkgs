@@ -16,6 +16,7 @@ let
     submodule
     ;
   contract = "smtp";
+  providerName = "hardcoded-smtp";
   inherit (config.contracts.${contract}) mkProviderType;
 in
 {
@@ -38,8 +39,8 @@ in
         };
         ${contract} = mkOption {
           description = "Instances of the smtp contract.";
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
             fulfill' = _: {
               host = "127.0.0.1";

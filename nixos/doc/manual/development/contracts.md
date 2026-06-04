@@ -78,8 +78,8 @@ in
   options.testing.hardcoded-secret = lib.mkOption {
     type = lib.types.submodule {
       options.fileSecrets = lib.mkOption {
-        default = config.contracts.fileSecrets.requests;
-        defaultText = lib.literalExpression "config.contracts.fileSecrets.requests";
+        default = config.contracts.fileSecrets.providerRequests.hardcoded-secret;
+        defaultText = lib.literalExpression "config.contracts.fileSecrets.providerRequests.hardcoded-secret";
         type = fileSecrets.mkProviderType {
           overrides.request = {
             owner.default = "root";
@@ -101,6 +101,8 @@ in
 ```
 
 `mkProviderType { fulfill, ... }` produces a `nestedAttrsOf submodule` type whose entries each have `request`, `result`, and any `providerOptions` declared on the provider. `fulfill` (`request -> result`) or its lower-level variant `fulfill'` (`{ request, name } -> result`) computes the result from the request at `mkDefault` priority.
+
+A provider's option `default` is its own slice of [`providerRequests`](#contracts-provider-selection) (`config.contracts.<type>.providerRequests.<name>`), the requests routed to that provider, rather than the whole `requests` tree. A non-selected provider's option is then empty, so any side-effects it gates on a non-empty option stay dormant.
 
 `providers.<name>` stores `{ module, contract? }`:
 
@@ -133,11 +135,13 @@ A consumer's request is fulfilled by exactly one provider per instance. There ar
 
 - `contracts.<type>.defaultProviderName = "<name>"` — by name (an enum over the registered providers).
 - `contracts.<type>.defaultProvider = config.contracts.<type>.providers."<name>"` — by reference (e.g. for renamed contracts where the name changed).
-- `contracts.<type>.instances."<consumer>"."<option>" = config.contracts.<type>.providers."<name>"` — per-instance override, written as a provider reference (`{ module, contract? }`); the `instances` option's `apply` resolves it at the matching path. GUIs read references as typed values rather than opaque ones.
+- `contracts.<type>.instances."<consumer>"."<option>" = config.contracts.<type>.providers."<name>"` — per-instance override, written as a provider reference (`{ module, contract? }`); `resolvedInstances` resolves it to the provider's instance at the matching path, and `providerRequests` resolves it to that provider's name. GUIs read references as typed values rather than opaque ones.
 
 If none of the three is set and any consumer reads `results`, evaluation fails with `contracts.<type>.defaultProvider is unset`.
 
 Per-instance overrides compose against the `defaultProvider`-derived tree without `lib.recursiveUpdate`: `nestedAttrsOf` runs priority filtering at each leaf, so a `mkDefault` / `mkOptionDefault`-priority default at one path is preserved when another module sets a normal-priority override at a sibling path.
+
+`contracts.<type>.providerRequests."<name>"` exposes the `requests` tree filtered to the leaves routed to `<name>` (honoring all three selection mechanisms above). A provider's option `default` reads its own slice so it gathers only its routed requests; see [Providers](#contracts-providers).
 
 ## Adding a Contract Type {#contracts-new-type}
 

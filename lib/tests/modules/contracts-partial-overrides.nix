@@ -55,12 +55,12 @@ in
   # `contractDefinitions` one) so `_requests` is pre-bound -- that pre-binding
   # is exactly the want-forwarding mechanism under test.
   # Mirror real providers (e.g. `testing.hardcoded-secret`) by setting the
-  # whole requests tree as the option's `default`. That places the want-derived
-  # values at `mkOptionDefault` priority -- exactly what `nestedAttrsOf` leaf
-  # filtering drops when a deployer-written provider leaf appears at the same
-  # instance, unless `_requests` re-applies them at `mkDefault`.
+  # provider's routed-requests tree as the option's `default`. That places the
+  # want-derived values at `mkOptionDefault` priority -- exactly what
+  # `nestedAttrsOf` leaf filtering drops when a deployer-written provider leaf
+  # appears at the same instance, unless `_requests` re-applies them at `mkDefault`.
   options.services.myProvider.wantForwarding = mkOption {
-    default = config.contracts.wantForwarding.requests;
+    default = config.contracts.wantForwarding.providerRequests.myProvider;
     type = config.contracts.wantForwarding.mkProviderType {
       providerOptions.extra = mkOption {
         description = "Provider-specific leaf whose deployer write triggers the leakage path.";

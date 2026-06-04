@@ -49,7 +49,7 @@ in
 
   # Provider option for the deprecated contract: increments request value by 1.
   options.services.increment.oldName = lib.mkOption {
-    default = oldName.requests;
+    default = oldName.providerRequests.increment;
     type = oldName.mkProviderType {
       fulfill =
         { value }:

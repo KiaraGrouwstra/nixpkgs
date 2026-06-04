@@ -17,6 +17,7 @@ let
     ;
   inherit (pkgs) writeText;
   contract = "fileSecrets";
+  providerName = "hardcoded-secret";
   inherit (lib.contract.forModule config) fileSecrets;
 in
 {
@@ -52,8 +53,8 @@ in
               };
             }
           '';
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = fileSecrets.mkProviderType {
             overrides.request = {
               owner.default = "root";
@@ -83,7 +84,8 @@ in
 
     systemd.services = lib.mkMerge [
       # Oneshot services that materialize each secret after users and sysusers are ready.
-      (lib.concatMapNestedAttrs' (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
+      (lib.concatMapNestedAttrs'
+        (options.testing.hardcoded-secret.type.getSubOptions [ ]).${contract}.type
         (
           path: cfg':
           let
@@ -111,7 +113,8 @@ in
             };
           }
         )
-        cfg.${contract})
+        cfg.${contract}
+      )
 
       # Make each top-level consumer service wait for all its secret services.
       # Assumes secrets are keyed as `<appName>.<secretName>` matching `<appName>.service`.

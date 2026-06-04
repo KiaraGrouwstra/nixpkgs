@@ -147,8 +147,8 @@ in
     type = submodule {
       options.${generateFilesContract} = mkOption {
         description = "Instances of the generateFiles contract fulfilled by vars.";
-        default = config.contracts.${generateFilesContract}.requests;
-        defaultText = lib.literalExpression "config.contracts.${generateFilesContract}.requests";
+        default = config.contracts.${generateFilesContract}.providerRequests.vars;
+        defaultText = lib.literalExpression "config.contracts.${generateFilesContract}.providerRequests.vars";
         type = mkProviderType {
           fulfill' =
             { name, request, ... }:

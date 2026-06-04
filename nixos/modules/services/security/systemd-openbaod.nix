@@ -124,8 +124,8 @@ in
     enable = lib.mkEnableOption "the systemd-openbaod contract providers (envSecrets, fileSecrets) backed by the broker";
 
     envSecrets = mkOption {
-      default = config.contracts.envSecrets.requests;
-      defaultText = lib.literalExpression "config.contracts.envSecrets.requests";
+      default = config.contracts.envSecrets.providerRequests.systemd-openbaod;
+      defaultText = lib.literalExpression "config.contracts.envSecrets.providerRequests.systemd-openbaod";
       description = ''
         `envSecrets` provider instances. Each request delivers a set of
         environment variables to its `unit` via a broker-rendered
@@ -142,8 +142,8 @@ in
     };
 
     fileSecrets = mkOption {
-      default = config.contracts.fileSecrets.requests;
-      defaultText = lib.literalExpression "config.contracts.fileSecrets.requests";
+      default = config.contracts.fileSecrets.providerRequests.systemd-openbaod;
+      defaultText = lib.literalExpression "config.contracts.fileSecrets.providerRequests.systemd-openbaod";
       description = ''
         `fileSecrets` provider instances. Each request composes the configured
         `lines` into a single environment-style secret file rendered through the

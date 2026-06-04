@@ -1017,8 +1017,8 @@ in
 
   options.services.borgbackup.contracts.fileBackup = lib.mkOption {
     description = "Instances of the fileBackup contract fulfilled by borgbackup.";
-    default = config.contracts.fileBackup.requests;
-    defaultText = lib.literalExpression "config.contracts.fileBackup.requests";
+    default = config.contracts.fileBackup.providerRequests.borgbackup;
+    defaultText = lib.literalExpression "config.contracts.fileBackup.providerRequests.borgbackup";
     type = config.contracts.fileBackup.mkProviderType {
       providerOptions = mkContractBorgOptions;
       fulfill' = { name, instance, ... }: {

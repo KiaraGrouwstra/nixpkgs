@@ -58,7 +58,7 @@ in
   };
 
   options.services.urlbuilder.connection = mkOption {
-    default = config.contracts.connection.requests;
+    default = config.contracts.connection.providerRequests.urlbuilder;
     type = connection.mkProviderType {
       fulfill =
         { name, connection }:

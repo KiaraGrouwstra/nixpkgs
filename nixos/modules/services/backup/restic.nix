@@ -467,8 +467,8 @@ in
 
   options.services.restic.contracts.fileBackup = lib.mkOption {
     description = "Instances of the fileBackup contract fulfilled by restic.";
-    default = config.contracts.fileBackup.requests;
-    defaultText = lib.literalExpression "config.contracts.fileBackup.requests";
+    default = config.contracts.fileBackup.providerRequests.restic;
+    defaultText = lib.literalExpression "config.contracts.fileBackup.providerRequests.restic";
     type = config.contracts.fileBackup.mkProviderType {
       providerOptions = mkContractResticOptions;
       fulfill' = { name, instance, ... }: {
@@ -479,8 +479,8 @@ in
 
   options.services.restic.contracts.streamingBackup = lib.mkOption {
     description = "Instances of the streamingBackup contract fulfilled by restic.";
-    default = config.contracts.streamingBackup.requests;
-    defaultText = lib.literalExpression "config.contracts.streamingBackup.requests";
+    default = config.contracts.streamingBackup.providerRequests.restic;
+    defaultText = lib.literalExpression "config.contracts.streamingBackup.providerRequests.restic";
     type = config.contracts.streamingBackup.mkProviderType {
       providerOptions = mkContractResticOptions;
       fulfill' = { name, instance, ... }: {

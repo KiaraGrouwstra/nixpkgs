@@ -17,6 +17,7 @@ let
     submodule
     ;
   contract = "streamingBackup";
+  providerName = "hardcoded-streaming-backup";
   inherit (config.contracts.${contract}) mkProviderType;
 in
 {
@@ -36,8 +37,8 @@ in
           description = ''
             Instances of the streamingBackup contract.
           '';
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
             fulfill' =
               { name, request, ... }:

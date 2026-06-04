@@ -16,7 +16,7 @@ in
   imports = [ ./arithmetic-contract.nix ];
   options.arithmetic = mkOption {
     description = "Arithmetic contract instances fulfilled by this increment provider.";
-    default = arithmetic.requests;
+    default = arithmetic.providerRequests.increment;
     type = arithmetic.mkProviderType {
       fulfill =
         { value }:

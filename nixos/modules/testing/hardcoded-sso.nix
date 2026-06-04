@@ -16,6 +16,7 @@ let
     submodule
     ;
   contract = "sso";
+  providerName = "hardcoded-sso";
   inherit (config.contracts.${contract}) mkProviderType;
 
   clientSecret = "hardcoded-test-secret";
@@ -41,8 +42,8 @@ in
         };
         ${contract} = mkOption {
           description = "Instances of the sso contract.";
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
             fulfill' = _: {
               issuer = issuerUrl;

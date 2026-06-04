@@ -73,7 +73,7 @@ in
 
       options.services.pgProvider.databaseConnection = mkOption {
         description = "Database connection instances fulfilled by this provider.";
-        default = config.contracts.databaseConnection.requests;
+        default = config.contracts.databaseConnection.providerRequests.pgProvider;
         type = databaseConnection.mkProviderType {
           fulfill =
             { dbName }:
@@ -106,7 +106,8 @@ in
         testing.hardcoded-secret.fileSecrets.pgProvider.credential.content = "s3cret-db-password";
 
         # Default providers.
-        contracts.databaseConnection.defaultProvider = config.contracts.databaseConnection.providers.pgProvider;
+        contracts.databaseConnection.defaultProvider =
+          config.contracts.databaseConnection.providers.pgProvider;
         contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
 
         # --- ASSERTIONS ---

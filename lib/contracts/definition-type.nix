@@ -179,7 +179,7 @@ submodule (contract: {
             <nixpkgs/nixos/tests/contracts/arithmetic-contract.nix>
           ];
           options.services.increment.arithmetic = lib.mkOption {
-            default = arithmetic.requests;
+            default = arithmetic.providerRequests.increment;
             type = arithmetic.mkProviderType {
               fulfill = request: {
                 value = request.value + 1;
@@ -261,10 +261,7 @@ submodule (contract: {
                           v != null && v ? request
                         ) null (lib.range 0 (lib.length leafPath));
                         wantRequest =
-                          if matchN != null then
-                            (lib.attrByPath (lib.drop matchN leafPath) null _requests).request
-                          else
-                            null;
+                          if matchN != null then (lib.attrByPath (lib.drop matchN leafPath) null _requests).request else null;
                       in
                       lib.mkIf (wantRequest != null) (lib.mkDefault wantRequest);
                   }

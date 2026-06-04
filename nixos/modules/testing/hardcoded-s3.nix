@@ -17,6 +17,7 @@ let
     submodule
     ;
   contract = "s3";
+  providerName = "hardcoded-s3";
   inherit (config.contracts.${contract}) mkProviderType;
 
   accessKey = "minioadmin";
@@ -42,8 +43,8 @@ in
         };
         ${contract} = mkOption {
           description = "Instances of the s3 contract.";
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
             fulfill = request: {
               endpoint = "127.0.0.1";

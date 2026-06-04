@@ -32,7 +32,7 @@ let
     in
     {
       options.services.increment.arithmetic = mkOption {
-        default = arithmetic.requests;
+        default = arithmetic.providerRequests.increment;
         type = arithmetic.mkProviderType {
           fulfill =
             { value }:

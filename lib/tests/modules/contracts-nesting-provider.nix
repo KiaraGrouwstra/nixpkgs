@@ -23,7 +23,12 @@
 }:
 let
   inherit (lib) mkOption types;
-  inherit (config.contracts) arithmetic depth0 depth1 depth2;
+  inherit (config.contracts)
+    arithmetic
+    depth0
+    depth1
+    depth2
+    ;
 
   arithmeticInterface = (config.contractDefinitions.arithmetic).interface;
 
@@ -79,10 +84,10 @@ in
     contracts.depth1.want.consumer.instance.request.value = 5;
     contracts.depth2.want.consumer.instance.request.value = 5;
 
-    # -- Providers: feed requests, register at each depth --
-    depth0 = depth0.requests;
-    depth1.arithmetic = depth1.requests;
-    depth2.inner.arithmetic = depth2.requests;
+    # -- Providers: feed routed requests, register at each depth --
+    depth0 = depth0.providerRequests.p;
+    depth1.arithmetic = depth1.providerRequests.p;
+    depth2.inner.arithmetic = depth2.providerRequests.p;
 
     # depth 0: option *is* the contract option; inferred `contract = [ ]`.
     contracts.depth0.providers.p.module = options.depth0;

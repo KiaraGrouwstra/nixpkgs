@@ -152,7 +152,8 @@ rec {
                         "evalServices: multiple services declared `defaultProvider` for `${contractType}`: ${
                           lib.concatMapStringsSep ", " (e: e.serviceName) perServiceDefaultProvider
                         }";
-                      (evaluated.${(lib.head perServiceDefaultProvider).serviceName}).contracts.${contractType}.defaultProvider;
+                      (evaluated.${(lib.head perServiceDefaultProvider).serviceName})
+                      .contracts.${contractType}.defaultProvider;
                   }
                 ) config.contractDefinitions;
               }
@@ -178,13 +179,17 @@ rec {
           class = "service";
           modules = baseModules name serviceModules ++ [
             {
-              config.contracts = lib.mapAttrs (
-                contractType: _:
-                {
-                  requests = lib.mkForce joint.contracts.${contractType}.requests;
-                  results = lib.mkForce (joint.contracts.${contractType}.results.${name} or { });
-                }
-              ) jointContractDefinitions;
+              config.contracts = lib.mapAttrs (contractType: _: {
+                requests = lib.mkForce joint.contracts.${contractType}.requests;
+                results = lib.mkForce (joint.contracts.${contractType}.results.${name} or { });
+                # Seed the joint routing so a provider whose option `default`
+                # reads `providerRequests.<self>` gathers the requests routed
+                # to it. The provider registration (`providers`) is local to
+                # the service, but routing lives in the joint eval; depends on
+                # `joint` only (not `evaluated`), so it is cycle-safe like
+                # `requests`.
+                providerRequests = lib.mkForce joint.contracts.${contractType}.providerRequests;
+              }) jointContractDefinitions;
             }
           ];
         }).config
@@ -343,7 +348,12 @@ rec {
       # A reference implementation for the NixOS case may be found at
       # `nixos/modules/system/service/contracts-bridge.nix`.
       upstreamSeedModule =
-        { lib, name, config, ... }:
+        {
+          lib,
+          name,
+          config,
+          ...
+        }:
         {
           config = {
 
@@ -361,14 +371,15 @@ rec {
             # Enumerate over the service's own `contractDefinitions` (not the full upstream
             # set) so we only inject for types the service actually declares — avoids
             # setting undeclared options and the error-message cycle that would follow.
-            contracts = lib.mapAttrs (
-              contractType: _:
-              {
-                requests = lib.mkForce contracts.${contractType}.requests;
-                results = lib.mkForce (contracts.${contractType}.results.${name} or { });
-                defaultProvider = lib.mkForce contracts.${contractType}.defaultProvider;
-              }
-            ) config.contractDefinitions;
+            contracts = lib.mapAttrs (contractType: _: {
+              requests = lib.mkForce contracts.${contractType}.requests;
+              results = lib.mkForce (contracts.${contractType}.results.${name} or { });
+              defaultProvider = lib.mkForce contracts.${contractType}.defaultProvider;
+              # Routing from the containing system, so a provider whose option
+              # `default` reads `providerRequests.<self>` gathers its routed
+              # requests (the provider registration is local to the service).
+              providerRequests = lib.mkForce contracts.${contractType}.providerRequests;
+            }) config.contractDefinitions;
 
           };
         };

@@ -429,11 +429,13 @@ in
                       GUI introspection and is discouraged.
                     '';
                     type = nestedAttrsOf raw;
-                    readOnly = true;
                     # Resolve provider-reference leaves (`{ module, contract? }`)
                     # to the provider's instance at the matching path. Path-aware
                     # so a ref at `<consumer>.<instance>` resolves to that
                     # provider's specific consumer/instance, not its full tree.
+                    # Computed but overridable (like `requests` / `results`) so a
+                    # cross-eval bridge can force-inject the containing system's
+                    # resolution (see `lib/services/lib.nix`).
                     default = resolveInstanceTree (path: ref: lib.getAttrFromPath path (resolveRef ref));
                     defaultText = lib.literalExpression ''
                       <config.contracts.${contractName}.instances with each provider reference resolved to its instance>
@@ -459,11 +461,13 @@ in
                       ```
                     '';
                     type = attrsOf (nestedAttrsOf raw);
-                    readOnly = true;
                     # For each declared provider, keep the `requests` leaves whose
                     # resolved routing names that provider. `routedName` resolves a
                     # leaf reference to the matching `providers` key by comparing
                     # `module.loc` (cheap to force, unlike the provider's value).
+                    # Computed but overridable (like `requests` / `results`) so a
+                    # cross-eval bridge can force-inject the containing system's
+                    # routing (see `lib/services/lib.nix`).
                     default =
                       let
                         providerNames = lib.attrNames contract.config.providers;
@@ -589,7 +593,7 @@ in
                           <nixpkgs/nixos/tests/contracts/arithmetic-contract.nix>
                         ];
                         options.services.increment.arithmetic = lib.mkOption {
-                          default = arithmetic.requests;
+                          default = arithmetic.providerRequests.increment;
                           type = arithmetic.mkProviderType {
                             fulfill = request: {
                               value = request.value + 1;

@@ -17,6 +17,7 @@ let
     submodule
     ;
   contract = "ssl";
+  providerName = "self-signed-ssl";
   inherit (config.contracts.${contract}) mkProviderType;
 in
 {
@@ -31,8 +32,8 @@ in
         };
         ${contract} = mkOption {
           description = "Instances of the ssl contract fulfilled by self-signed certificates.";
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
             fulfill' =
               { name, ... }:

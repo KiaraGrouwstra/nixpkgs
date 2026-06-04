@@ -55,7 +55,7 @@ in
   };
 
   options.services.increment.versioned = mkOption {
-    default = versioned.requests;
+    default = versioned.providerRequests.increment;
     type = versioned.mkProviderType {
       fulfill =
         { newValue }:

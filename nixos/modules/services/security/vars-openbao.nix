@@ -35,9 +35,10 @@ let
     submodule
     ;
   contract = "varsBackend";
+  providerName = "openbao";
   inherit (config.contracts.${contract}) mkProviderType;
 
-  isSelected = config.contracts.${contract}.defaultProviderName == "openbao";
+  isSelected = config.contracts.${contract}.defaultProviderName == providerName;
 
   varsBackendType = (options.services.vars-openbao.type.getSubOptions [ ]).${contract}.type;
 
@@ -193,8 +194,8 @@ in
 
         ${contract} = mkOption {
           description = "Instances of the varsBackend contract.";
-          default = config.contracts.${contract}.requests;
-          defaultText = lib.literalExpression "config.contracts.${contract}.requests";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
             fulfill' =
               { name, request, ... }:
