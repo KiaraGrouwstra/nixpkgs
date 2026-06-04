@@ -62,6 +62,12 @@ in
     type = types.attrsOf types.int;
   };
 
+  # Routing view: which consumer instances each provider's `providerRequests`
+  # slice gathers (sorted, dot-joined), and a request value carried through it.
+  options.routed = mkOption {
+    type = types.attrsOf types.str;
+  };
+
   config = {
     # Additional contract types sharing the arithmetic interface.
     contractDefinitions.noProvider = arithmeticInterface;
@@ -103,6 +109,20 @@ in
       default = config.contracts.by.results.consumer.slow.value;
       override = config.contracts.by.results.consumer.fast.value;
       by = config.contracts.by.results.consumer.instance.value;
+    };
+
+    # -- providerRequests routing --
+    # `increment` is the default, so it gathers every instance except the
+    # `consumer.fast` override; `double` gathers only that override. Each
+    # provider's slice mirrors `requests`, so the request values survive.
+    routed = {
+      increment = lib.concatStringsSep "," (
+        lib.sort (a: b: a < b) (lib.attrNames config.contracts.by.providerRequests.increment.consumer)
+      );
+      double = lib.concatStringsSep "," (
+        lib.sort (a: b: a < b) (lib.attrNames config.contracts.by.providerRequests.double.consumer)
+      );
+      incrementValue = toString config.contracts.by.providerRequests.increment.consumer.slow.request.value;
     };
   };
 }
