@@ -63,6 +63,24 @@ in
       };
 
     };
+
+    virtualisation.writableStore = lib.mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        If enabled, the Nix store in the container is made writable: instead
+        of bind-mounting the host's `/nix/store` read-only, the launcher
+        stages a per-container store directory (bind-mounting each top-level
+        host store entry into it as a real path) and binds that writable at
+        `/nix/store`. This lets a deployment push new paths into the running
+        container (e.g. via `nix-copy-closure --to`) at the cost of the
+        read-only bind's efficiency.
+
+        A writable overlayfs (the approach `qemu-vm.nix` uses) is not viable
+        here: the kernel rejects an overlay upper inside the nested user
+        namespaces of the Nix build sandbox, where these containers run.
+      '';
+    };
   };
 
   config = {
@@ -110,8 +128,11 @@ in
     virtualisation.systemd-nspawn.options = [
       "--private-network"
       "--machine=${config.system.name}"
-      "--bind-ro=/nix/store:/nix/store"
-
+    ]
+    # With a writable store the wrapper below binds a per-container store
+    # clone over `/nix/store`, so drop the read-only host-store bind here.
+    ++ lib.optional (!cfg.writableStore) "--bind-ro=/nix/store:/nix/store"
+    ++ [
       # systemd-nspawn does some cleverness to mount a procfs and sysfs in an
       # unprivileged container, see
       # <https://github.com/systemd/systemd/blob/v258.2/src/nspawn/nspawn.c#L4341-L4349>.
@@ -143,9 +164,48 @@ in
           init = "${config.system.build.toplevel}/init";
           cmdline-json = builtins.toJSON cfg.cmdline;
         };
+
+        # When the store is writable, stage a per-container store directory
+        # before launching: bind-mount each top-level host store entry into
+        # it as a real path (so the container sees real, not symlinked,
+        # `/nix/store/<hash>` entries -- `nix-daemon` rejects symlinked
+        # top-level entries, and `cp -al` fails cross-device against the
+        # sandbox's separate store bind mount). New paths pushed in later
+        # (e.g. by `nix-copy-closure --to`) land in the writable backing
+        # alongside the bind-mounts. Staging runs on the host before
+        # systemd-nspawn execs init, which itself lives under the store.
+        stageWritableStore = ''
+          : "''${RUN_NSPAWN_STORE_DIR:=$PWD/${config.system.name}-store}"
+          if [ ! -e "$RUN_NSPAWN_STORE_DIR/.populated" ]; then
+            ${pkgs.coreutils}/bin/mkdir -p "$RUN_NSPAWN_STORE_DIR"
+            for entry in /nix/store/*; do
+              name=''${entry##*/}
+              target=$RUN_NSPAWN_STORE_DIR/$name
+              if [ -L "$entry" ]; then
+                # Preserve top-level symlinks as symlinks; nix-daemon
+                # accepts these only when the original store has them.
+                ${pkgs.coreutils}/bin/cp -P "$entry" "$target"
+                continue
+              fi
+              if [ -d "$entry" ]; then
+                ${pkgs.coreutils}/bin/mkdir "$target"
+              else
+                : > "$target"
+              fi
+              ${pkgs.util-linux}/bin/mount --bind "$entry" "$target"
+            done
+            : > "$RUN_NSPAWN_STORE_DIR/.populated"
+          fi
+        '';
+        writableStoreBind = ''"--bind=$RUN_NSPAWN_STORE_DIR:/nix/store"'';
       in
       pkgs.writers.writeDashBin "run-${config.system.name}-nspawn" ''
-        exec ${lib.getExe run-nspawn} ${commandLineOptions} ${lib.escapeShellArgs config.virtualisation.systemd-nspawn.options} "$@"
+        set -eu
+        ${lib.optionalString cfg.writableStore stageWritableStore}
+        exec ${lib.getExe run-nspawn} ${commandLineOptions} ${
+          if cfg.writableStore then writableStoreBind else ""
+        } \
+          ${lib.escapeShellArgs config.virtualisation.systemd-nspawn.options} "$@"
       '';
   };
 }
