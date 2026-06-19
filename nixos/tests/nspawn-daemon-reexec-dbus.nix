@@ -208,6 +208,33 @@ in
           return broken, _status, out
 
 
+      def diagnose_via_backdoor(tag):
+          """When the SSH `own_bus` probe reports broken, the cause is ambiguous:
+          the container's D-Bus may genuinely be dead, OR the switch may merely
+          have torn down sshd / the network so the SSH probe cannot reach a
+          perfectly healthy bus. The driver `nsenter` backdoor bypasses both the
+          network and sshd, so probing the same facts through it tells the two
+          apart. Logs, never asserts -- this is attribution, not a gate."""
+          checks = {
+              "dbus-broker": "systemctl is-active dbus-broker.service 2>&1",
+              "sshd": "systemctl is-active sshd.service 2>&1",
+              "bus-call": "timeout 8 systemctl show -p ActiveState --value "
+              "dbus-broker.service 2>&1",
+              "bus-socket": "test -S /run/dbus/system_bus_socket && echo present "
+              "|| echo absent",
+              "eth1-addr": "ip -o addr show eth1 2>&1 | "
+              "grep -o 'inet6\\? [^ ]*' | head -2 | tr '\\n' ' '; echo",
+              "listen-22": "ss -lntH 'sport = :22' 2>&1 | head -1; echo",
+          }
+          parts = []
+          for name, cmd in checks.items():
+              st, o = machine.execute(
+                  f"timeout 12 {cmd}", check_return=False, timeout=20
+              )
+              parts.append(f"{name}=(rc={st} {o.strip()!r})")
+          machine.log(f"[diagnose {tag}] via backdoor: " + " | ".join(parts))
+
+
       machine.start()
       client.start()
       machine.wait_for_unit("multi-user.target", timeout=120)
@@ -284,6 +311,7 @@ in
                   switch_backdoor_broke_at = i
               if o and switch_own_bus_broke_at is None:
                   switch_own_bus_broke_at = i
+                  diagnose_via_backdoor(f"phase2-switch-{i}")
               if switch_backdoor_broke_at is not None and switch_own_bus_broke_at is not None:
                   break
       else:
@@ -346,6 +374,7 @@ in
               )
               if o and ssh_switch_own_bus_broke_at is None:
                   ssh_switch_own_bus_broke_at = i
+                  diagnose_via_backdoor(f"phase3-ssh-switch-{i}")
                   break
       else:
           machine.log(
