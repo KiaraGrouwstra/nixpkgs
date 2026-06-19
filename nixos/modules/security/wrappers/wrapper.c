@@ -75,6 +75,18 @@ static int make_caps_ambient(const char *self_path) {
             // no capabilities set
             return 0;
         }
+        if (errno == ENOTSUP || errno == ENOSYS) {
+            // The filesystem backing this wrapper cannot store the
+            // `security.capability` xattr at all (e.g. the `noxattr` tmpfs
+            // backing `/run/wrappers` inside an unprivileged systemd-nspawn
+            // test container). A store with no capability support has, by
+            // definition, no file capabilities to raise -- treat it exactly
+            // like the ENODATA "none set" case rather than aborting. This is
+            // unconditionally correct: had the build-time `setcap` succeeded,
+            // the xattr would be queryable; on a backend where it cannot be
+            // set it can equally never be read.
+            return 0;
+        }
         fprintf(stderr, "cannot get capabilities for %s: %s", self_path, strerror(errno));
         return 1;
     }

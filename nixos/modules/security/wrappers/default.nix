@@ -137,10 +137,18 @@ let
       chmod 0000 "$wrapperDir/${program}"
       chown ${owner}:${group} "$wrapperDir/${program}"
 
-      # Set desired capabilities on the file plus cap_setpcap so
-      # the wrapper program can elevate the capabilities set on
-      # its file into the Ambient set.
-      ${pkgs.libcap.out}/bin/setcap "cap_setpcap,${capabilities}" "$wrapperDir/${program}"
+      ${lib.optionalString (!config.boot.isNspawnContainer) ''
+        # Set desired capabilities on the file plus cap_setpcap so
+        # the wrapper program can elevate the capabilities set on
+        # its file into the Ambient set.
+        ${pkgs.libcap.out}/bin/setcap "cap_setpcap,${capabilities}" "$wrapperDir/${program}"
+      ''}
+      # Inside a systemd-nspawn test container the build sandbox's user namespace
+      # (`auto-allocate-uids` / `uid-range`, `--private-users=no`) refuses to set
+      # file capabilities (`setcap` -> `Operation not supported`), which would make
+      # activation exit 4/NOPERMISSION. Skip the `setcap` so the wrapper is a plain
+      # executable -- same rationale and fidelity tradeoff as the dropped setuid
+      # bits below and the specialisation assertion in `virtualisation/nspawn-container`.
 
       # Set the executable bit
       chmod ${permissions} "$wrapperDir/${program}"
@@ -165,7 +173,22 @@ let
       chmod 0000 "$wrapperDir/${program}"
       chown ${owner}:${group} "$wrapperDir/${program}"
 
-      chmod "u${if setuid then "+" else "-"}s,g${if setgid then "+" else "-"}s,${permissions}" "$wrapperDir/${program}"
+      ${
+        if config.boot.isNspawnContainer then
+          # Inside a systemd-nspawn test container the build sandbox uses a user
+          # namespace (`auto-allocate-uids` / `uid-range`, `--private-users=no`),
+          # so the container's "root" is a mapped uid with no real privilege and
+          # the kernel refuses to set S_ISUID/S_ISGID (`chmod u+s` ->
+          # `Operation not permitted`), which would make activation fail with
+          # status 4/NOPERMISSION. Drop the setuid/setgid bits so the wrapper is
+          # a plain executable -- the same reason specialisations are asserted
+          # disallowed in `virtualisation/nspawn-container`. Dropping the bits
+          # (rather than `|| true`) keeps the failure mode explicit: the wrapper
+          # is present and executable but knowingly not setuid in-test.
+          ''chmod "${permissions}" "$wrapperDir/${program}"''
+        else
+          ''chmod "u${if setuid then "+" else "-"}s,g${if setgid then "+" else "-"}s,${permissions}" "$wrapperDir/${program}"''
+      }
     '';
 
   mkWrappedPrograms = map (
