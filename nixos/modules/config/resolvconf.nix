@@ -200,6 +200,15 @@ in
           ${lib.getExe cfg.package} -u
           chgrp resolvconf ${lib.escapeShellArgs cfg.subscriberFiles}
           chmod g=u ${lib.escapeShellArgs cfg.subscriberFiles}
+        ''
+        # Inside a systemd-nspawn test container the tmpfs backing `/run` is
+        # effectively `noacl`, so `setfacl` fails with ENOTSUP and activation
+        # exits 4/NOPERMISSION. The ACL only grants the `resolvconf` group write
+        # access to `/run/resolvconf`; skipping it in-test costs multi-user
+        # resolvconf fidelity but not activation correctness (what the test
+        # probes). Guard on `boot.isNspawnContainer` rather than `|| true` to
+        # keep the skip explicit and confined to the sandboxed-container case.
+        + lib.optionalString (!config.boot.isNspawnContainer) ''
           ${lib.getExe' pkgs.acl "setfacl"} -R \
             -m group:resolvconf:rwx \
             -m default:group:resolvconf:rwx \
