@@ -91,6 +91,12 @@ let
   '';
 
   containerCommon = {
+    # The NixOS test framework builds toplevels with `system.switch.enable =
+    # false`, which omits the `switch-to-configuration` binary entirely. Phases 2
+    # and 3 invoke that binary, so it must be present -- exactly as fediversity's
+    # `checks/common/targetNode.nix` re-enables it for the deployed target.
+    system.switch.enable = true;
+
     services.openssh = {
       enable = true;
       # Persistent service, not socket-activated: the probe needs a live sshd
