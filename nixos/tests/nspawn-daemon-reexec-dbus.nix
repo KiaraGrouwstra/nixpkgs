@@ -160,6 +160,7 @@ in
       # regression.
       REEXECS = 40
       SWITCHES = 20
+      SSH_SWITCHES = 20
 
       OTHER_SWITCHER = "${otherSystem}/bin/switch-to-configuration"
 
@@ -285,11 +286,72 @@ in
               "wedged and a real switch cannot run cleanly"
           )
 
+      # ---- Phase 3: SSH-mediated `switch-to-configuration switch` ----
+      # Phases 1-2 run the switcher through the driver's nsenter backdoor -- the
+      # activation process is a child of the driver, in the container's init
+      # namespace, with no session teardown. apps-tf instead reaches the
+      # container the way `src/effects/ssh/run.sh` does: it SSHes in and launches
+      # the switch as a DETACHED transient unit
+      # (`systemd-run --no-block ... switch-to-configuration switch`), so the
+      # activation runs under systemd (not the SSH session), the `switch` action
+      # PERSISTS (restarting changed units, not just `test`'s dry reexec), and the
+      # SSH channel that kicked it off goes away immediately. That
+      # transient-unit-over-SSH path is the one remaining variable phases 1-2 do
+      # not exercise; this phase reconstructs it to see whether it -- and not the
+      # in-namespace switch -- is what kills the container's own bus.
+      ssh_switch_own_bus_broke_at = None
+      SSH = (
+          "ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "
+          "-o UserKnownHostsFile=/dev/null root@machine"
+      )
+      # Capture the booted toplevel up front. Phase 3 uses the `switch` action,
+      # which PERSISTS `/run/current-system`, so to keep every iteration a real
+      # config change we must toggle between two fixed toplevels (booted baseline
+      # <-> `other`) rather than reading the moving `/run/current-system`.
+      _, booted_system = machine.execute("readlink -f /run/current-system")
+      BOOTED_SWITCHER = booted_system.strip() + "/bin/switch-to-configuration"
+      if reexec_backdoor_broke_at is None and switch_backdoor_broke_at is None:
+          for i in range(1, SSH_SWITCHES + 1):
+              # Toggle baseline <-> `other` so each iteration is a real config
+              # change (policy + marker systemd added on odd, removed on even),
+              # firing the reexec + broker reload every time.
+              if i % 2 == 1:
+                  switcher = OTHER_SWITCHER
+              else:
+                  switcher = BOOTED_SWITCHER
+              # Launch the switch as a detached transient unit over SSH, exactly as
+              # run.sh does (NIXOS_INSTALL_BOOTLOADER=0 since nspawn cannot install a
+              # bootloader; RuntimeMaxSec so a wedged activation self-reaps). The SSH
+              # call returns as soon as the unit is scheduled ("Running as unit:").
+              client.execute(
+                  "timeout 40 " + SSH + " "
+                  "'timeout 35 systemd-run --no-block "
+                  "-p Environment=NIXOS_INSTALL_BOOTLOADER=0 "
+                  "-p RuntimeMaxSec=180 "
+                  f"{switcher} switch'",
+                  check_return=False,
+                  timeout=60,
+              )
+              # Give the detached activation time to run through stop/reexec/start.
+              machine.sleep(15)
+              o, os_, oo = own_bus_broken()
+              machine.log(
+                  f"[ssh-switch {i}] own-bus: status={os_} out={oo.strip()!r}"
+              )
+              if o and ssh_switch_own_bus_broke_at is None:
+                  ssh_switch_own_bus_broke_at = i
+                  break
+      else:
+          machine.log(
+              "skipping phase 3: an earlier phase already broke the bus"
+          )
+
       machine.log(
           f"SUMMARY: reexec(backdoor={reexec_backdoor_broke_at} "
           f"own_bus={reexec_own_bus_broke_at} of {REEXECS}) "
           f"switch(backdoor={switch_backdoor_broke_at} "
-          f"own_bus={switch_own_bus_broke_at} of {SWITCHES})"
+          f"own_bus={switch_own_bus_broke_at} of {SWITCHES}) "
+          f"ssh_switch(own_bus={ssh_switch_own_bus_broke_at} of {SSH_SWITCHES})"
       )
 
       assert reexec_backdoor_broke_at is None, (
@@ -303,11 +365,16 @@ in
           f"switch-to-configuration #{switch_backdoor_broke_at} of {SWITCHES}, "
           "same notify-socket wedge as the bare-reexec case."
       )
-      assert reexec_own_bus_broke_at is None and switch_own_bus_broke_at is None, (
+      assert (
+          reexec_own_bus_broke_at is None
+          and switch_own_bus_broke_at is None
+          and ssh_switch_own_bus_broke_at is None
+      ), (
           f"(B) in-container own bus: the container's system bus stopped "
           f"answering an SSH-driven `systemctl` after "
           f"reexec #{reexec_own_bus_broke_at} / switch "
-          f"#{switch_own_bus_broke_at}, the way a real switch-to-configuration "
+          f"#{switch_own_bus_broke_at} / ssh-switch "
+          f"#{ssh_switch_own_bus_broke_at}, the way a real switch-to-configuration "
           "deploy reaches it. This is independent of the driver notify-socket "
           "fix. Never observed on QEMU."
       )
