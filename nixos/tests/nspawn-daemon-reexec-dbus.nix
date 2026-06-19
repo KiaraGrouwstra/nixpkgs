@@ -308,6 +308,15 @@ in
       # path the bare reexec and marker-only switch never exercised.
       switch_backdoor_broke_at = None
       switch_own_bus_broke_at = None
+      # (C) ACTIVATION-FAILED. Independently of the bus, a real switch can fail to
+      # ACTIVATE under nspawn: services like `suid-sgid-wrappers` (chmod on
+      # /run/wrappers) and `resolvconf` (setfacl on /run/resolvconf) hit
+      # "Operation not permitted/supported" in the container's restricted /run +
+      # user namespace, so switch-to-configuration exits non-zero (status 4,
+      # NOPERMISSION) even though the bus and route survive. This is the failure
+      # that actually blocks an nspawn deploy and that QEMU never hits; record the
+      # switcher's own exit status so it can be asserted, not silently ignored.
+      switch_failed = []  # list of (iteration, switcher, status, tail-of-output)
       if reexec_backdoor_broke_at is None:
           for i in range(1, SWITCHES + 1):
               # Alternate: odd iterations run `other`'s switcher (the live system,
@@ -323,12 +332,22 @@ in
               else:
                   switcher = "/run/current-system/bin/switch-to-configuration"
               # Run the switcher entirely inside the container, the way a deploy
-              # would; bounded so a wedged activation fails fast.
-              machine.execute(
+              # would; bounded so a wedged activation fails fast. Capture its exit
+              # status: a non-zero `switch-to-configuration test` is an activation
+              # failure (mode C), distinct from a bus break.
+              sw_status, sw_out = machine.execute(
                   f"timeout 90 {switcher} test 2>&1",
                   check_return=False,
                   timeout=120,
               )
+              if sw_status != 0:
+                  switch_failed.append(
+                      (i, switcher, sw_status, sw_out.strip()[-2000:])
+                  )
+                  machine.log(
+                      f"[switch {i}] ACTIVATION FAILED status={sw_status} "
+                      f"switcher={switcher}"
+                  )
               b, bs, bo = backdoor_broken()
               o, os_, oo = own_bus_broken()
               machine.log(
@@ -413,8 +432,25 @@ in
           f"SUMMARY: reexec(backdoor={reexec_backdoor_broke_at} "
           f"own_bus={reexec_own_bus_broke_at} of {REEXECS}) "
           f"switch(backdoor={switch_backdoor_broke_at} "
-          f"own_bus={switch_own_bus_broke_at} of {SWITCHES}) "
+          f"own_bus={switch_own_bus_broke_at} "
+          f"activation_failed={len(switch_failed)}/{SWITCHES}) "
           f"ssh_switch(own_bus={ssh_switch_own_bus_broke_at} of {SSH_SWITCHES})"
+      )
+
+      # (C) is the failure that actually blocks an nspawn deploy: with the bus and
+      # route kept alive, `switch-to-configuration` still cannot complete because
+      # activation steps that mutate /run (suid-sgid-wrappers, resolvconf) are not
+      # permitted in the container. Asserted first, since it is the real blocker
+      # the driver notify-socket fix does NOT address.
+      assert not switch_failed, (
+          f"(C) activation failed: {len(switch_failed)} of {SWITCHES} "
+          f"`switch-to-configuration test` runs exited non-zero on nspawn while "
+          f"the bus and route survived. First failure: iteration "
+          f"{switch_failed[0][0]}, status {switch_failed[0][2]}, switcher "
+          f"{switch_failed[0][1]}. Tail:\n{switch_failed[0][3]}\n"
+          "On nspawn the container's restricted /run + user namespace reject the "
+          "chmod/setfacl that suid-sgid-wrappers and resolvconf perform during "
+          "activation. Never observed on QEMU, where /run is fully writable."
       )
 
       assert reexec_backdoor_broke_at is None, (
