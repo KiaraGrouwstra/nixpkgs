@@ -108,6 +108,32 @@ let
     users.users.root.password = "";
     security.pam.services.sshd.allowNullPassword = true;
     networking.firewall.allowedTCPPorts = [ 22 ];
+
+    # Network-survival guards mirroring fediversity's checks/common/targetNode.nix
+    # + lib.nix `incusModel`. A real `switch-to-configuration switch` restarts the
+    # generated networking units; on nspawn that drops the cross-node route to the
+    # container ("No route to host" from a sibling node) even though eth1 keeps its
+    # address. Without these guards the switch severs reachability, which the SSH
+    # own-bus probe cannot tell apart from a dead bus. Keeping the units untouched
+    # across the switch isolates the question: if reachability survives, the break
+    # was networking, not D-Bus.
+    systemd.services.sshd.restartIfChanged = lib.mkForce false;
+    systemd.services.sshd.stopIfChanged = lib.mkForce false;
+    systemd.services."network-addresses-eth1" = {
+      partOf = lib.mkForce [ ];
+      bindsTo = lib.mkForce [ ];
+      serviceConfig.ExecStop = lib.mkForce "${pkgs.coreutils}/bin/true";
+      restartIfChanged = lib.mkForce false;
+      stopIfChanged = lib.mkForce false;
+    };
+    systemd.services.network-setup = {
+      restartIfChanged = lib.mkForce false;
+      stopIfChanged = lib.mkForce false;
+    };
+    systemd.services."network-link-eth1" = {
+      restartIfChanged = lib.mkForce false;
+      stopIfChanged = lib.mkForce false;
+    };
   };
 in
 {
@@ -224,6 +250,8 @@ in
               "|| echo absent",
               "eth1-addr": "ip -o addr show eth1 2>&1 | "
               "grep -o 'inet6\\? [^ ]*' | head -2 | tr '\\n' ' '; echo",
+              "routes": "ip route show 2>&1 | tr '\\n' ';'; "
+              "ip -6 route show 2>&1 | grep -v '^fe80\\|^ff00' | tr '\\n' ';'; echo",
               "listen-22": "ss -lntH 'sport = :22' 2>&1 | head -1; echo",
           }
           parts = []
