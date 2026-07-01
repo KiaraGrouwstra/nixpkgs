@@ -74,9 +74,15 @@ in
               '';
             };
             fulfill' =
-              { name, ... }:
+              { path, ... }:
               {
-                path = "${hardcoded-secret.config.directory}/${name}";
+                # Join the full path (relative to this provider option root) so
+                # distinct consumers requesting a same-named secret do not
+                # collide, matching the `<appName>_<secretName>` service keys
+                # below.
+                path = "${hardcoded-secret.config.directory}/${
+                  lib.concatStringsSep "_" (lib.drop 3 path)
+                }";
               };
           };
         };

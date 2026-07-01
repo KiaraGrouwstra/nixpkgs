@@ -154,10 +154,13 @@ submodule (contract: {
 
         `fulfill'`
 
-        : 4\. Optional function `{ request, name, instance } -> result`. Lower-level
-        variant of `fulfill` exposing the instance `name` and the full submodule
-        `instance` (including provider-specific options). At most one of
-        `fulfill` / `fulfill'` may be set.
+        : 4\. Optional function `{ request, name, instance, path } -> result`.
+        Lower-level variant of `fulfill` exposing the instance `name`, the full
+        submodule `instance` (including provider-specific options), and the
+        absolute option `path` (list of strings) to the leaf -- useful when the
+        result must be unique across the whole tree (e.g. a file path), since a
+        `nestedAttrsOf` leaf's `name` is only its final path element. At most one
+        of `fulfill` / `fulfill'` may be set.
 
         `_requests`
 
@@ -268,12 +271,19 @@ submodule (contract: {
               )
             ]
             ++ lib.optional (fulfill'' != null) (
-              { config, name, ... }:
+              { config, options, name, ... }:
               {
                 config.result = lib.mkDefault (fulfill'' {
                   inherit (config) request;
                   inherit name;
                   instance = config;
+                  # Absolute option path to this leaf's submodule (the trailing
+                  # `result` element dropped). `nestedAttrsOf` leaves only know
+                  # their leaf `name`, so a provider whose result must be unique
+                  # across the whole tree (e.g. a file path) can join this path
+                  # instead. Relative-to-provider-root joining is the provider's
+                  # concern, as it knows its own option prefix.
+                  path = lib.init options.result.loc;
                 });
               }
             )

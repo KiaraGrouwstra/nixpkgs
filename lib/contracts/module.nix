@@ -600,9 +600,11 @@ in
 
                       `fulfill'`
 
-                      : 4\. Optional function `{ request, name } -> result`. Lower-level
-                      variant of `fulfill` exposing the instance `name`. At most one of
-                      `fulfill` / `fulfill'` may be set.
+                      : 4\. Optional function `{ request, name, instance, path } -> result`.
+                      Lower-level variant of `fulfill` exposing the instance `name`, the
+                      full submodule `instance`, and the absolute option `path` to the
+                      leaf (for results that must be unique across the whole tree). At
+                      most one of `fulfill` / `fulfill'` may be set.
 
                       `_requests`
 
