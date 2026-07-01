@@ -32,6 +32,7 @@ in
           Linux user that must own the secret file.
         '';
         type = str;
+        default = "root";
       };
 
       group = mkOption {
@@ -39,6 +40,7 @@ in
           Linux group that must own the secret file.
         '';
         type = str;
+        default = "root";
       };
 
       restartUnits = mkOption {
