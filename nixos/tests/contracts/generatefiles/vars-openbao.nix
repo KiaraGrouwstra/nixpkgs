@@ -7,7 +7,7 @@
 # 4. the shared `openbao agent` (services.openbao.agents.default) fetches them
 #    back from OpenBao via the broker's `extraTemplates` merge point
 # 5. Content, ownership, and permissions are verified
-{ lib, pkgs, ... }:
+{ lib, ... }:
 let
   secretOwner = "testuser";
   secretGroup = "testgroup";
@@ -17,7 +17,7 @@ in
   name = "contracts-generatefiles-vars-openbao";
 
   nodes.machine =
-    { config, pkgs, ... }:
+    { pkgs, config, ... }:
     {
       imports = [
         ../../../modules/services/security/vars.nix
@@ -65,9 +65,9 @@ in
       systemd.services.generate-vars.after = [ "openbao-dev.service" ];
       systemd.services.openbao-agent-default.after = [ "openbao-dev.service" ];
 
-      contracts.generateFiles.defaultProviderName = "vars";
-      contracts.varsBackend.defaultProviderName = "openbao";
-      contracts.fileSecrets.defaultProviderName = "vars";
+      contracts.generateFiles.defaultProvider = config.contracts.generateFiles.providers.vars;
+      contracts.varsBackend.defaultProvider = config.contracts.varsBackend.providers.openbao;
+      contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.vars;
 
       services.vars-openbao.tokenFile = builtins.toFile "vault-token" "root";
 

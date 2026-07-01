@@ -9,7 +9,6 @@ let
   cfg = config.testing.hardcoded-streaming-backup;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)
@@ -104,6 +103,7 @@ in
             "hardcoded-streaming-backup-${name}" = {
               description = "Hardcoded streaming backup for ${name}";
               serviceConfig.Type = "oneshot";
+              serviceConfig.User = request.user;
               script = ''
                 mkdir -p "${repoDir}"
                 ${request.backupCmd} > "${repoDir}/snapshot-$(date +%s)"

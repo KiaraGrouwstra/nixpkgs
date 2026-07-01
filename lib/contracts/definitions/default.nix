@@ -15,8 +15,10 @@ lib.mapAttrs
     ssl = ./ssl.nix;
     smtp = ./smtp.nix;
     ldap = ./ldap.nix;
-    sso = ./sso.nix;
+    postgresql = ./postgresql.nix;
+    oidc = ./oidc.nix;
     s3 = ./s3.nix;
+    redis = ./redis.nix;
     streamingBackup = ./streaming-backup.nix;
     generateFiles = ./generate-files.nix;
     varsBackend = ./vars-backend.nix;

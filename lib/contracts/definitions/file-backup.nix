@@ -151,7 +151,7 @@ in
 
           config = {
             specialisation.root.configuration =
-              { config, ... }:
+              { ... }:
               {
                 imports = [ contractWiringModule ];
 

@@ -3,7 +3,7 @@
 # Exercises the generateFiles contract with the on-machine varsBackend,
 # and verifies that generated files are also accessible through the
 # fileSecrets contract bridge.
-{ lib, pkgs, ... }:
+{ lib, ... }:
 let
   secretOwner = "testuser";
   secretGroup = "testgroup";
@@ -13,16 +13,16 @@ in
   name = "contracts-generatefiles-vars";
 
   nodes.machine =
-    { config, pkgs, ... }:
+    { pkgs, config, ... }:
     {
       imports = [
         ../../../modules/services/security/vars.nix
         ../../../modules/services/security/vars-on-machine.nix
       ];
 
-      contracts.generateFiles.defaultProviderName = "vars";
-      contracts.varsBackend.defaultProviderName = "on-machine";
-      contracts.fileSecrets.defaultProviderName = "vars";
+      contracts.generateFiles.defaultProvider = config.contracts.generateFiles.providers.vars;
+      contracts.varsBackend.defaultProvider = config.contracts.varsBackend.providers.on-machine;
+      contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.vars;
 
       # The always-loaded hardcoded-secret module's `default` propagates every
       # fileSecrets request into its option, then iterates assuming each entry

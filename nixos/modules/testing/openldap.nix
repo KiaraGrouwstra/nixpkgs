@@ -6,10 +6,9 @@
   ...
 }:
 let
-  cfg = config.testing.hardcoded-ldap;
+  cfg = config.testing.openldap;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)
@@ -17,7 +16,7 @@ let
     submodule
     ;
   contract = "ldap";
-  providerName = "hardcoded-ldap";
+  providerName = "openldap";
   inherit (config.contracts.${contract}) mkProviderType;
 
   baseDN = "dc=test,dc=local";
@@ -32,9 +31,9 @@ in
   # doc build. Document it in the eager build instead.
   meta.buildDocsInSandbox = false;
 
-  options.testing.hardcoded-ldap = mkOption {
+  options.testing.openldap = mkOption {
     description = ''
-      Hardcoded LDAP provider for testing.
+      openldap reference provider for the `ldap` contract, for testing.
       Runs openldap with a minimal directory containing requested groups.
     '';
     type = submodule {
@@ -47,14 +46,14 @@ in
         passwordFile = mkOption {
           description = "Path to the bind password file.";
           type = str;
-          default = "/run/hardcoded-ldap/password";
+          default = "/run/openldap/password";
         };
         ${contract} = mkOption {
           description = "Instances of the ldap contract.";
           default = config.contracts.${contract}.providerRequests.${providerName};
           defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
-            fulfill' = _: {
+            fulfill = _: {
               host = "127.0.0.1";
               port = cfg.port;
               inherit
@@ -72,7 +71,7 @@ in
   };
 
   config = {
-    contracts.${contract}.providers.hardcoded-ldap.module = options.testing.hardcoded-ldap;
+    contracts.${contract}.providers.openldap.module = options.testing.openldap;
 
     services.openldap = {
       enable = true;
@@ -105,7 +104,7 @@ in
       declarativeContents.${baseDN} =
         let
           groupEntries =
-            lib.concatMapNestedAttrs' (options.testing.hardcoded-ldap.type.getSubOptions [ ]).${contract}.type
+            lib.concatMapNestedAttrs' (options.testing.openldap.type.getSubOptions [ ]).${contract}.type
               (
                 _path: instance:
                 let
@@ -141,7 +140,7 @@ in
         '';
     };
 
-    system.activationScripts.hardcoded-ldap-password = ''
+    system.activationScripts.openldap-password = ''
       mkdir -p "$(dirname "${cfg.passwordFile}")"
       printf '%s' "${bindPassword}" > "${cfg.passwordFile}"
       chmod 0400 "${cfg.passwordFile}"

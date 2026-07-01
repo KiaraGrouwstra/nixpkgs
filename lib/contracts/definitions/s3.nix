@@ -110,6 +110,13 @@ in
           inherit (lib.getAttrFromPath providerRoot nodes.machine) result;
         in
         ''
+          # Wait for the system to finish booting before inspecting the
+          # provider. A provider that provisions buckets asynchronously (e.g.
+          # `minio`) orders that work before `multi-user.target`, so
+          # gating here avoids racing the bucket-creation against the checks
+          # below -- the open S3 port alone does not imply buckets exist yet.
+          machine.wait_for_unit("multi-user.target")
+
           with subtest("Credential files exist"):
               machine.wait_for_file("${result.accessKeyIDFile}")
               machine.wait_for_file("${result.secretAccessKeyFile}")
