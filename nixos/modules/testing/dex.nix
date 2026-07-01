@@ -5,18 +5,17 @@
   ...
 }:
 let
-  cfg = config.testing.hardcoded-sso;
+  cfg = config.testing.dex;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)
     str
     submodule
     ;
-  contract = "sso";
-  providerName = "hardcoded-sso";
+  contract = "oidc";
+  providerName = "dex";
   inherit (config.contracts.${contract}) mkProviderType;
 
   clientSecret = "hardcoded-test-secret";
@@ -28,9 +27,9 @@ in
   # doc build. Document it in the eager build instead.
   meta.buildDocsInSandbox = false;
 
-  options.testing.hardcoded-sso = mkOption {
+  options.testing.dex = mkOption {
     description = ''
-      Hardcoded SSO/OIDC provider for testing.
+      Dex reference provider for the `oidc` contract, for testing.
       Runs Dex with static client configuration.
     '';
     type = submodule {
@@ -43,14 +42,14 @@ in
         secretFile = mkOption {
           description = "Path to the client secret file.";
           type = str;
-          default = "/run/hardcoded-sso/client-secret";
+          default = "/run/dex/client-secret";
         };
         ${contract} = mkOption {
-          description = "Instances of the sso contract.";
+          description = "Instances of the oidc contract.";
           default = config.contracts.${contract}.providerRequests.${providerName};
           defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
-            fulfill' = _: {
+            fulfill = _: {
               issuer = issuerUrl;
               clientSecretFile = cfg.secretFile;
             };
@@ -61,7 +60,7 @@ in
   };
 
   config = {
-    contracts.${contract}.providers.hardcoded-sso.module = options.testing.hardcoded-sso;
+    contracts.${contract}.providers.dex.module = options.testing.dex;
 
     services.dex = {
       enable = true;
@@ -81,7 +80,7 @@ in
           }
         ];
         staticClients = lib.attrValues (
-          lib.concatMapNestedAttrs' (options.testing.hardcoded-sso.type.getSubOptions [ ]).${contract}.type (
+          lib.concatMapNestedAttrs' (options.testing.dex.type.getSubOptions [ ]).${contract}.type (
             path: instance: {
               ${lib.concatStringsSep "_" path} = {
                 id = instance.request.clientID;
@@ -94,7 +93,7 @@ in
       };
     };
 
-    system.activationScripts.hardcoded-sso-secret = ''
+    system.activationScripts.dex-secret = ''
       mkdir -p "$(dirname "${cfg.secretFile}")"
       echo "${clientSecret}" > "${cfg.secretFile}"
       chmod 0400 "${cfg.secretFile}"

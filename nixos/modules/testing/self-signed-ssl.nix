@@ -9,7 +9,6 @@ let
   cfg = config.testing.self-signed-ssl;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)

@@ -6,10 +6,9 @@
   ...
 }:
 let
-  cfg = config.testing.hardcoded-s3;
+  cfg = config.testing.minio;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)
@@ -17,7 +16,7 @@ let
     submodule
     ;
   contract = "s3";
-  providerName = "hardcoded-s3";
+  providerName = "minio";
   inherit (config.contracts.${contract}) mkProviderType;
 
   accessKey = "minioadmin";
@@ -29,9 +28,9 @@ in
   # doc build. Document it in the eager build instead.
   meta.buildDocsInSandbox = false;
 
-  options.testing.hardcoded-s3 = mkOption {
+  options.testing.minio = mkOption {
     description = ''
-      Hardcoded S3 provider for testing.
+      MinIO reference provider for the `s3` contract, for testing.
       Runs MinIO on localhost and provisions requested buckets.
     '';
     type = submodule {
@@ -44,7 +43,7 @@ in
         credentialsDir = mkOption {
           description = "Directory to store credential files.";
           type = str;
-          default = "/run/hardcoded-s3";
+          default = "/run/minio";
         };
         ${contract} = mkOption {
           description = "Instances of the s3 contract.";
@@ -66,7 +65,7 @@ in
   };
 
   config = {
-    contracts.${contract}.providers.hardcoded-s3.module = options.testing.hardcoded-s3;
+    contracts.${contract}.providers.minio.module = options.testing.minio;
 
     services.minio = {
       enable = true;
@@ -80,7 +79,7 @@ in
       });
     };
 
-    system.activationScripts.hardcoded-s3-credentials = ''
+    system.activationScripts.minio-credentials = ''
       mkdir -p "${cfg.credentialsDir}"
       echo "${accessKey}" > "${cfg.credentialsDir}/access-key-id"
       echo "${secretKey}" > "${cfg.credentialsDir}/secret-access-key"
@@ -91,28 +90,44 @@ in
       chmod 0400 "${cfg.credentialsDir}"/access-key-id "${cfg.credentialsDir}"/secret-access-key "${cfg.credentialsDir}"/minio-root
     '';
 
-    systemd.services.hardcoded-s3-buckets = {
-      description = "Create S3 buckets for hardcoded-s3 provider";
+    systemd.services.minio-buckets = {
+      description = "Create S3 buckets for minio provider";
       after = [ "minio.service" ];
-      wantedBy = [ "multi-user.target" ];
+      # Gate `multi-user.target` on bucket provisioning so consumers (and the
+      # contract test, which only waits for the target / the open port) cannot
+      # observe the endpoint before its buckets exist.
+      requiredBy = [ "multi-user.target" ];
+      before = [ "multi-user.target" ];
       serviceConfig = {
         Type = "oneshot";
-        StateDirectory = "hardcoded-s3-mc";
-        Environment = "HOME=/var/lib/hardcoded-s3-mc";
+        StateDirectory = "minio-mc";
+        Environment = "HOME=/var/lib/minio-mc";
       };
       path = [ pkgs.minio-client ];
       script =
         let
           bucketNames = lib.attrValues (
-            lib.concatMapNestedAttrs' (options.testing.hardcoded-s3.type.getSubOptions [ ]).${contract}.type (
+            lib.concatMapNestedAttrs' (options.testing.minio.type.getSubOptions [ ]).${contract}.type (
               path: instance: {
                 ${lib.concatStringsSep "_" path} = instance.request.bucket;
               }) cfg.${contract}
           );
         in
         ''
-          for i in $(seq 1 30); do
-            mc alias set local http://127.0.0.1:${toString cfg.port} ${accessKey} ${secretKey} && break
+          set -euo pipefail
+          # `minio.service` reaching `active` only means the process spawned,
+          # not that it has finished formatting its pool and is accepting S3
+          # requests, so `mc alias set` can keep hitting connection-refused for
+          # a few seconds. Retry until the endpoint is actually ready before
+          # provisioning buckets.
+          for i in $(seq 1 60); do
+            if mc alias set local http://127.0.0.1:${toString cfg.port} ${accessKey} ${secretKey}; then
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "minio endpoint never became ready" >&2
+              exit 1
+            fi
             sleep 1
           done
           ${lib.concatMapStringsSep "\n" (b: "mc mb --ignore-existing local/${b}") bucketNames}

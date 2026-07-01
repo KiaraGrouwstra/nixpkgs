@@ -9,7 +9,6 @@ let
   cfg = config.testing.hardcoded-file-backup;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)

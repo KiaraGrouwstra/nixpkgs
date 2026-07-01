@@ -18,6 +18,14 @@ in
   };
   interface = {
     request = {
+      user = mkOption {
+        description = ''
+          Unix user doing the backups.
+        '';
+        type = str;
+        example = "vaultwarden";
+      };
+
       backupName = mkOption {
         description = ''
           Name of the backup in the repository.
@@ -85,6 +93,7 @@ in
           config = lib.setAttrByPath providerRoot {
             request = {
               backupName = "test.dat";
+              user = "root";
               backupCmd = "cat ${config.test.dataFile}";
               restoreCmd = "cat > ${config.test.restoredFile}";
             };

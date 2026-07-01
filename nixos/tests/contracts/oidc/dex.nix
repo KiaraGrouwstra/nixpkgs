@@ -5,21 +5,21 @@
 {
   meta.maintainers = [ lib.maintainers.kiara ];
 }
-// lib.contracts.sso.behaviorTest {
-  name = "hardcoded-sso";
+// lib.contracts.oidc.behaviorTest {
+  name = "dex";
   providerRoot = [
     "testing"
-    "hardcoded-sso"
-    "sso"
+    "dex"
+    "oidc"
     "myapp"
   ];
   extraModules = [
-    ../../../modules/testing/hardcoded-sso.nix
+    ../../../modules/testing/dex.nix
     (
-      { pkgs, ... }:
+      { pkgs, config, ... }:
       {
         environment.systemPackages = [ pkgs.curl ];
-        contracts.sso.defaultProviderName = "hardcoded-sso";
+        contracts.oidc.defaultProvider = config.contracts.oidc.providers.dex;
         # Relax sandboxing for nspawn containers.
         systemd.services.dex.serviceConfig = {
           PrivateUsers = lib.mkForce false;

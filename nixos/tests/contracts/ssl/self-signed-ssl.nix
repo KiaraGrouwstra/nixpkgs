@@ -16,9 +16,9 @@
   extraModules = [
     ../../../modules/testing/self-signed-ssl.nix
     (
-      { pkgs, ... }:
+      { pkgs, config, ... }:
       {
-        contracts.ssl.defaultProviderName = "self-signed-ssl";
+        contracts.ssl.defaultProvider = config.contracts.ssl.providers.self-signed-ssl;
         environment.systemPackages = [ pkgs.openssl ];
       }
     )

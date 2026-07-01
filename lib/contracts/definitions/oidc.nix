@@ -9,7 +9,7 @@ in
 {
   meta = {
     description = ''
-      Contract for SSO via OIDC where a consumer requests single sign-on
+      Contract for OIDC where a consumer requests OpenID Connect
       integration and a provider supplies the OpenID Connect endpoint
       and client credentials.
     '';
@@ -85,7 +85,7 @@ in
       extraModules ? [ ],
     }:
     {
-      name = "contracts_sso_${name}";
+      name = "contracts_oidc_${name}";
       nodes.machine =
         { config, ... }:
         {

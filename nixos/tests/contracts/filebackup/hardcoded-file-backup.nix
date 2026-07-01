@@ -15,9 +15,12 @@
   ];
   extraModules = [
     ../../../modules/testing/hardcoded-file-backup.nix
-    {
-      contracts.fileBackup.defaultProviderName = "hardcoded-file-backup";
-      testing.hardcoded-file-backup.directory = "/opt/repos/hardcoded-backup";
-    }
+    (
+      { config, ... }:
+      {
+        contracts.fileBackup.defaultProvider = config.contracts.fileBackup.providers.hardcoded-file-backup;
+        testing.hardcoded-file-backup.directory = "/opt/repos/hardcoded-backup";
+      }
+    )
   ];
 }

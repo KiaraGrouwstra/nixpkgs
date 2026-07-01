@@ -15,8 +15,12 @@
   ];
   extraModules = [
     ../../../modules/testing/hardcoded-streaming-backup.nix
-    {
-      contracts.streamingBackup.defaultProviderName = "hardcoded-streaming-backup";
-    }
+    (
+      { config, ... }:
+      {
+        contracts.streamingBackup.defaultProvider =
+          config.contracts.streamingBackup.providers.hardcoded-streaming-backup;
+      }
+    )
   ];
 }

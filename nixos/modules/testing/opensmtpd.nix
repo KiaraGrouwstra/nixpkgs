@@ -5,10 +5,9 @@
   ...
 }:
 let
-  cfg = config.testing.hardcoded-smtp;
+  cfg = config.testing.opensmtpd;
 
   inherit (lib)
-    contracts
     mkOption
     ;
   inherit (lib.types)
@@ -16,7 +15,7 @@ let
     submodule
     ;
   contract = "smtp";
-  providerName = "hardcoded-smtp";
+  providerName = "opensmtpd";
   inherit (config.contracts.${contract}) mkProviderType;
 in
 {
@@ -25,9 +24,9 @@ in
   # doc build. Document it in the eager build instead.
   meta.buildDocsInSandbox = false;
 
-  options.testing.hardcoded-smtp = mkOption {
+  options.testing.opensmtpd = mkOption {
     description = ''
-      Hardcoded SMTP provider for testing.
+      opensmtpd reference provider for the `smtp` contract, for testing.
       Runs a local opensmtpd instance that accepts mail on localhost.
     '';
     type = submodule {
@@ -40,14 +39,14 @@ in
         passwordFile = mkOption {
           description = "Path to the password file.";
           type = str;
-          default = "/run/hardcoded-smtp/password";
+          default = "/run/opensmtpd/password";
         };
         ${contract} = mkOption {
           description = "Instances of the smtp contract.";
           default = config.contracts.${contract}.providerRequests.${providerName};
           defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
           type = mkProviderType {
-            fulfill' = _: {
+            fulfill = _: {
               host = "127.0.0.1";
               port = cfg.port;
               username = "testuser";
@@ -60,7 +59,7 @@ in
   };
 
   config = {
-    contracts.${contract}.providers.hardcoded-smtp.module = options.testing.hardcoded-smtp;
+    contracts.${contract}.providers.opensmtpd.module = options.testing.opensmtpd;
 
     services.opensmtpd = {
       enable = true;
@@ -71,7 +70,7 @@ in
       '';
     };
 
-    system.activationScripts.hardcoded-smtp-password = ''
+    system.activationScripts.opensmtpd-password = ''
       mkdir -p "$(dirname "${cfg.passwordFile}")"
       echo "testpassword" > "${cfg.passwordFile}"
       chmod 0400 "${cfg.passwordFile}"
