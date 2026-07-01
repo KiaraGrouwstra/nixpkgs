@@ -4,7 +4,7 @@
 }:
 let
   inherit (lib) mkOption types;
-  inherit (types) str;
+  inherit (types) str listOf;
 in
 {
   meta = {
@@ -39,6 +39,14 @@ in
           Linux group that must own the secret file.
         '';
         type = str;
+      };
+
+      restartUnits = mkOption {
+        description = ''
+          Systemd units to restart after the secret is (re)provisioned.
+        '';
+        type = listOf str;
+        default = [ ];
       };
     };
     result = {
