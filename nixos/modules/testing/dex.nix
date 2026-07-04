@@ -1,0 +1,102 @@
+{
+  config,
+  lib,
+  options,
+  ...
+}:
+let
+  cfg = config.testing.dex;
+
+  inherit (lib)
+    mkOption
+    ;
+  inherit (lib.types)
+    str
+    submodule
+    ;
+  contract = "oidc";
+  providerName = "dex";
+  inherit (config.contracts.${contract}) mkProviderType;
+
+  clientSecret = "hardcoded-test-secret";
+  issuerUrl = "http://127.0.0.1:${toString cfg.port}/dex";
+in
+{
+  # The contract provider option reads `config.contracts` for its
+  # `type`/`default`, which cannot be evaluated in the sandboxed split options
+  # doc build. Document it in the eager build instead.
+  meta.buildDocsInSandbox = false;
+
+  options.testing.dex = mkOption {
+    description = ''
+      Dex reference provider for the `oidc` contract, for testing.
+      Runs Dex with static client configuration.
+    '';
+    type = submodule {
+      options = {
+        port = mkOption {
+          description = "Port for the Dex OIDC server.";
+          type = lib.types.port;
+          default = 5556;
+        };
+        secretFile = mkOption {
+          description = "Path to the client secret file.";
+          type = str;
+          default = "/run/dex/client-secret";
+        };
+        ${contract} = mkOption {
+          description = "Instances of the oidc contract.";
+          default = config.contracts.${contract}.providerRequests.${providerName};
+          defaultText = lib.literalExpression "config.contracts.${contract}.providerRequests.${providerName}";
+          type = mkProviderType {
+            fulfill = _: {
+              issuer = issuerUrl;
+              clientSecretFile = cfg.secretFile;
+            };
+          };
+        };
+      };
+    };
+  };
+
+  config = {
+    contracts.${contract}.providers.dex.module = options.testing.dex;
+
+    services.dex = {
+      enable = true;
+      settings = {
+        issuer = issuerUrl;
+        storage = {
+          type = "sqlite3";
+          config.file = "/var/lib/dex/dex.db";
+        };
+        web.http = "127.0.0.1:${toString cfg.port}";
+        enablePasswordDB = true;
+        staticPasswords = [
+          {
+            email = "test@test.local";
+            hash = "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W";
+            username = "test";
+          }
+        ];
+        staticClients = lib.attrValues (
+          lib.concatMapNestedAttrs' (options.testing.dex.type.getSubOptions [ ]).${contract}.type (
+            path: instance: {
+              ${lib.concatStringsSep "_" path} = {
+                id = instance.request.clientID;
+                name = instance.request.clientID;
+                secret = clientSecret;
+                redirectURIs = [ instance.request.redirectURI ];
+              };
+            }) cfg.${contract}
+        );
+      };
+    };
+
+    system.activationScripts.dex-secret = ''
+      mkdir -p "$(dirname "${cfg.secretFile}")"
+      echo "${clientSecret}" > "${cfg.secretFile}"
+      chmod 0400 "${cfg.secretFile}"
+    '';
+  };
+}
