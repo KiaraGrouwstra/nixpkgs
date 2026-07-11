@@ -72,15 +72,22 @@ in
     };
 
     notificationProtocol = mkOption {
-      type = types.listOf (
-        types.enum [
-          "systemd"
-          "s6"
-        ]
-      );
-
-      default = [ ];
-      apply = v: lib.unique v;
+      type = types.submodule {
+        options = {
+          systemd = mkOption {
+            default = false;
+            example = true;
+            description = "Whether the service supports systemd-notify.";
+            type = lib.types.bool;
+          };
+          s6 = mkOption {
+            default = false;
+            example = true;
+            description = "Whether the service supports s6-notify.";
+            type = lib.types.bool;
+          };
+        };
+      };
       description = ''
         Notification protocol that this service supports with the underlying service manager.
       '';

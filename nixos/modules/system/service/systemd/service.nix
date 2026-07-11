@@ -214,7 +214,7 @@ in
       serviceConfig = {
         ExecReload = config.systemd.mainExecReload;
         Type = lib.mkDefault (
-          if (lib.elem "systemd" config.notificationProtocol) then "notify" else "simple"
+          if config.notificationProtocol.systemd then "notify" else "simple"
         );
         Restart = lib.mkDefault "always";
         RestartSec = lib.mkDefault "5";
