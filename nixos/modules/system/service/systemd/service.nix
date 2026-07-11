@@ -148,7 +148,7 @@ in
       '';
       type = types.nullOr types.str;
       default =
-        if config.process.reloadCommand then
+        if config.process.reloadCommand != null then
           config.systemd.lib.escapeSystemdExecArgs config.process.reloadCommand
         else
           "";
@@ -214,7 +214,7 @@ in
       serviceConfig = {
         ExecReload = config.systemd.mainExecReload;
         Type = lib.mkDefault (
-          if (config.serviceManager.notificationProtocol == "systemd") then "notify" else "simple"
+          if (lib.elem "systemd" config.notificationProtocol) then "notify" else "simple"
         );
         Restart = lib.mkDefault "always";
         RestartSec = lib.mkDefault "5";

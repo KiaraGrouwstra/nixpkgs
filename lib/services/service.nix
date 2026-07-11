@@ -90,12 +90,12 @@ in
   config = {
     assertions = [
       {
-        assertion = config.process.reloadSignal != null && config.process.reloadCommand != null;
+        assertion = !(config.process.reloadSignal != null && config.process.reloadCommand != null);
         message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
       }
     ];
 
-    process.reloadCommand = (lib.mkIf config.process.reloadSignal != null) (
+    process.reloadCommand = lib.mkIf (config.process.reloadSignal != null) (
       lib.mkForce "${pkgs.coreutils}/bin/kill -${config.process.reloadSignal} $MAINPID"
     );
   };
