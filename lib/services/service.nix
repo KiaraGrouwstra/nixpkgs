@@ -7,6 +7,7 @@
 {
   lib,
   config,
+  options,
   ...
 }:
 let
@@ -97,13 +98,20 @@ in
   config = {
     assertions = [
       {
-        assertion = !(config.process.reloadSignal != null && config.process.reloadCommand != null);
+        # `reloadSignal` derives `reloadCommand` at `mkDefault` priority below, so a
+        # conflict only exists when the user *also* set `reloadCommand` explicitly.
+        # An explicit (non-`mkDefault`) definition has `defaultOverridePriority`.
+        assertion =
+          !(
+            config.process.reloadSignal != null
+            && options.process.reloadCommand.highestPrio <= lib.modules.defaultOverridePriority
+          );
         message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
       }
     ];
 
     process.reloadCommand = lib.mkIf (config.process.reloadSignal != null) (
-      lib.mkForce "${pkgs.coreutils}/bin/kill -${config.process.reloadSignal} $MAINPID"
+      lib.mkDefault "${pkgs.coreutils}/bin/kill -${config.process.reloadSignal} $MAINPID"
     );
   };
 }
