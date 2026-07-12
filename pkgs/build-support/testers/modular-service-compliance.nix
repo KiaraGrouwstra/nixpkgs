@@ -45,6 +45,11 @@ let
           ];
           warnings = [ "compliance child warning" ];
         };
+        # A sub-service exercising reload derivation from a reload signal.
+        services.reloader = {
+          process.argv = [ "${coreutils}/bin/true" ];
+          process.reloadSignal = "HUP";
+        };
       };
     };
   };
@@ -90,6 +95,50 @@ let
         expected = true;
       };
 
+      # The reload-conflict assertion must not fire (its `assertion` must hold) for a
+      # service that sets only reloadSignal (guards the inverted-assertion fix, and the
+      # priority-aware conflict detection: reloadSignal derives reloadCommand internally,
+      # which must not be mistaken for a user-set conflict).
+      testNoReloadConflict = {
+        expr = builtins.any (
+          a:
+          a.message
+          == "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand."
+          && !a.assertion
+        ) c.services.reloader.assertions;
+        expected = false;
+      };
+
+      # Setting process.reloadSignal derives process.reloadCommand
+      # (guards the misplaced-paren mkIf fix).
+      testReloadSignalDerivesCommand = {
+        expr = c.services.reloader.process.reloadCommand;
+        expected = "${coreutils}/bin/kill -HUP $MAINPID";
+      };
+
+      # notificationProtocol submodule bools default to false.
+      testNotificationProtocolSystemdDefault = {
+        expr = c.notificationProtocol.systemd;
+        expected = false;
+      };
+
+      testNotificationProtocolS6Default = {
+        expr = c.notificationProtocol.s6;
+        expected = false;
+      };
+
+      # Setting both reloadSignal and reloadCommand explicitly is a genuine conflict,
+      # so the assertion must fire. Separate eval: checkDrv would fail on this.
+      testReloadConflictFires = {
+        expr = builtins.any (
+          a:
+          a.message
+          == "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand."
+          && !a.assertion
+        ) conflictEval.config.conflict.assertions;
+        expected = true;
+      };
+
       # Separate eval for a failing assertion — checkDrv would fail here,
       # so we only access config.
       testFailingAssertionValue = {
@@ -100,6 +149,16 @@ let
         expected = true;
       };
     };
+
+  conflictEval = evalConfig {
+    services = {
+      conflict = {
+        process.argv = [ "${coreutils}/bin/true" ];
+        process.reloadSignal = "HUP";
+        process.reloadCommand = "${coreutils}/bin/kill -HUP $MAINPID";
+      };
+    };
+  };
 
   failingEval = evalConfig {
     services = {

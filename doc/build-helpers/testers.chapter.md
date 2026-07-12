@@ -758,6 +758,7 @@ An attribute set of derivations which perform the tests during their build.
   - Output attribute `config` is the resulting evaluated services attrset (e.g., the value of the `system.services` option in NixOS).
     This attribute must be available even if `checkDrv` would fail.
   - Output attribute `checkDrv` is a representative derivation whose existence and buildability prove the eval is sound (e.g., `system.build.toplevel` in NixOS, but could perhaps be more specific in the case of another process manager integration).
+  - The generic tester only reads `config` and `checkDrv`. An integration may return additional attributes for its own integration-specific eval checks (e.g., the NixOS invocation also returns `systemdUnits`, the resolved host `systemd.services`, to assert systemd-only attributes such as `serviceConfig.Type`). Such extra attributes are optional and non-systemd integrations need not provide them.
 
 `mkTest` (function)
 
@@ -801,6 +802,8 @@ recurseIntoAttrs (
       {
         config = machine.config.system.services;
         checkDrv = machine.config.system.build.toplevel;
+        # Optional, integration-specific: resolved host units for systemd-only checks.
+        systemdUnits = machine.config.systemd.services;
       };
     mkTest =
       {
