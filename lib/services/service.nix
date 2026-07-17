@@ -4,7 +4,8 @@
 #
 # Portable service base module - imported into every modular service's module system.
 #
-# Defines the core service interface (`process.argv`, sub-`services`, `configData`)
+# Defines the core service interface (`process.argv`, `process.reloadSignal`,
+# `process.reloadCommand`, `notificationProtocol`, sub-`services`, `configData`)
 # and imports the contracts module. This is system-agnostic: it works regardless of
 # whether the containing system is NixOS, home-manager, or similar systems.
 #
@@ -19,6 +20,7 @@
 {
   lib,
   config,
+  options,
   ...
 }:
 let
@@ -77,6 +79,66 @@ in
           a shell script or `importas` from `pkgs.execline`.
         '';
       };
+
+      reloadSignal = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "HUP";
+        description = ''
+          Configures the reload signal to send to the service manager.
+        '';
+      };
+
+      reloadCommand = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = lib.literalExpression ''"''${pkgs.coreutils}/bin/kill -HUP $MAINPID"'';
+        description = ''
+          Command used for reloading in the underlying service manager to reload.
+        '';
+      };
     };
+
+    notificationProtocol = mkOption {
+      type = types.submodule {
+        options = {
+          systemd = mkOption {
+            default = false;
+            example = true;
+            description = "Whether the service supports systemd-notify.";
+            type = lib.types.bool;
+          };
+          s6 = mkOption {
+            default = false;
+            example = true;
+            description = "Whether the service supports s6-notify.";
+            type = lib.types.bool;
+          };
+        };
+      };
+      description = ''
+        Notification protocol that this service supports with the underlying service manager.
+      '';
+    };
+  };
+
+  config = {
+    assertions = [
+      {
+        # `reloadSignal` derives `reloadCommand` at `mkDefault` priority below, so a
+        # conflict only exists when the user *also* set `reloadCommand` explicitly.
+        # An explicit (non-`mkDefault`) definition has `defaultOverridePriority`.
+        assertion =
+          !(
+            config.process.reloadSignal != null
+            && options.process.reloadCommand.highestPrio <= lib.modules.defaultOverridePriority
+          );
+        message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+      }
+    ];
+
+    process.reloadCommand = lib.mkIf (config.process.reloadSignal != null) (
+      lib.mkDefault "${pkgs.coreutils}/bin/kill -${config.process.reloadSignal} $MAINPID"
+    );
   };
 }

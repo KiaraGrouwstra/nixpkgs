@@ -110,9 +110,15 @@ let
                 "/usr/bin/echo"
                 "hello"
               ];
+              reloadSignal = null;
+              reloadCommand = null;
             };
             services = { };
             assertions = [
+              {
+                assertion = true;
+                message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+              }
               {
                 assertion = false;
                 message = "you can't enable this for that reason";
@@ -128,14 +134,23 @@ let
                 "${dummyPkg "cowsay.sh"}"
                 "world"
               ];
+              reloadSignal = null;
+              reloadCommand = null;
             };
             services = { };
-            assertions = [ ];
+            assertions = [
+              {
+                assertion = true;
+                message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+              }
+            ];
             warnings = [ ];
           };
           service3 = {
             process = {
               argv = [ "/bin/false" ];
+              reloadSignal = null;
+              reloadCommand = null;
             };
             services.exclacow = {
               process = {
@@ -143,9 +158,15 @@ let
                   "${dummyPkg "cowsay-ng"}/bin/cowsay"
                   "!"
                 ];
+                reloadSignal = null;
+                reloadCommand = null;
               };
               services = { };
               assertions = [
+                {
+                  assertion = true;
+                  message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+                }
                 {
                   assertion = false;
                   message = "you can't enable this for such reason";
@@ -153,7 +174,12 @@ let
               ];
               warnings = [ "The `bar' service is deprecated and will go away soon!" ];
             };
-            assertions = [ ];
+            assertions = [
+              {
+                assertion = true;
+                message = "reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+              }
+            ];
             warnings = [ ];
           };
         };
@@ -167,6 +193,10 @@ let
     assert
       portable-lib.getAssertions [ "service1" ] exampleEval.config.services.service1 == [
         {
+          assertion = true;
+          message = "in service1: reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+        }
+        {
           message = "in service1: you can't enable this for that reason";
           assertion = false;
         }
@@ -178,6 +208,14 @@ let
       ];
     assert
       portable-lib.getAssertions [ "service3" ] exampleEval.config.services.service3 == [
+        {
+          assertion = true;
+          message = "in service3: reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+        }
+        {
+          assertion = true;
+          message = "in service3.services.exclacow: reloadSignal conflicts with reloadCommand. Please either use reloadSignal or reloadCommand.";
+        }
         {
           message = "in service3.services.exclacow: you can't enable this for such reason";
           assertion = false;
