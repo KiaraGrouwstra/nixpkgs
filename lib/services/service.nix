@@ -50,10 +50,22 @@ in
               { name, ... }:
               {
                 config = {
-                  inherit (config) contractDefinitions;
+                  # Propagate contract type definitions (meta/interface only, at
+                  # `mkDefault`) so a child that itself imports the same contract
+                  # module does not collide on the read-only `mkContract`/
+                  # `_mkProviderType` fields.
+                  contractDefinitions = lib.mkDefault (
+                    lib.mapAttrs (_: def: { inherit (def) meta interface; }) config.contractDefinitions
+                  );
                   contracts = lib.mapAttrs (contractType: _: {
                     results = lib.mkForce (config.contracts.${contractType}.results.${name} or { });
                     defaultProvider = lib.mkForce config.contracts.${contractType}.defaultProvider;
+                    # Propagate joint routing down the tree so a child sub-service acting
+                    # as a contract provider can read `providerRequests.<self>` (and a
+                    # child consumer can read `requests`). Depends only on the parent's
+                    # already-seeded routing, so it stays cycle-safe like `results`.
+                    requests = lib.mkForce config.contracts.${contractType}.requests;
+                    providerRequests = lib.mkForce config.contracts.${contractType}.providerRequests;
                   }) config.contractDefinitions;
                 };
               }
