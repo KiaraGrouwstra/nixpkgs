@@ -9,6 +9,140 @@ let
 in
 rec {
   /**
+    Resolve modular-service contracts across a flattened service tree.
+
+    This is the shared resolution core used both by `evalServices` (parentless
+    peers) and by a containing system (e.g. NixOS `system.services`) that wants
+    to resolve its own service tree's contracts in place. It aggregates
+    `want`/`providers`/`defaultProvider[Name]` across the tree and runs the
+    contracts module's own resolution, returning the resolved `contracts`.
+
+    `baseTree` and `evalTree` are both lists of `{ path; config; }` entries
+    covering the whole ownership tree (top-level services and their
+    sub-`services`, at any depth). They may be the same list. The split exists
+    for `evalServices`, which needs write-side reads (`want`,
+    `defaultProvider[Name]`) to come from an evaluation that is NOT seeded with
+    the joint results (so collecting them cannot force joint resolution), while
+    provider-side reads (`providers`, the `defaultProvider` value) come from the
+    seeded evaluation. A containing system that already has a single evaluated
+    tree passes it as both: reading `providers` (a `{ module = options.<x>; }`
+    reference whose `.loc` is cheap to force) never forces `results`, so no
+    cycle arises.
+
+    lib.services.resolveContracts :: { baseTree, evalTree, contractDefinitions } -> { contracts }
+  */
+  resolveContracts =
+    {
+      # `{ path; config; }` entries read for write-side data (`want`,
+      # `defaultProviderName`, `defaultProvider` detection) without joint seeding.
+      baseTree,
+      # `{ path; config; }` entries read for provider-side data (`providers`, the
+      # `defaultProvider` value). May be the same list as `baseTree`.
+      evalTree,
+      # Union of contract type definitions (meta/interface) declared across the tree.
+      contractDefinitions,
+    }:
+    (lib.evalModules {
+      modules = [
+        lib.contract.module
+        {
+          options.meta = lib.mkOption {
+            type = lib.types.attrs;
+            default = { };
+          };
+        }
+        { inherit contractDefinitions; }
+        (
+          { config, ... }:
+          {
+            contracts = lib.mapAttrs (
+              contractType: _:
+              let
+                # `want` and `defaultProvider[Name]` come from `baseTree` (no joint
+                # seeding) so that collecting them does not force joint resolution.
+                # Collected across the whole ownership tree, not just top-level peers,
+                # so a child sub-service can `want`/provide contracts. `want` from a
+                # sub-service is nested under its tree path so results route back to
+                # `results.<top>.<...child>` (mirroring the `want` shape).
+                perServiceBase = map (entry: {
+                  serviceName = lib.concatStringsSep "." entry.path;
+                  # Nest the sub-service's `want` under its path *below the top-level
+                  # slot* (the top-level slot becomes the joint `want.<slot>` key).
+                  want = lib.setAttrByPath (lib.tail entry.path) (
+                    entry.config.contracts.${contractType}.want or { }
+                  );
+                  topName = lib.head entry.path;
+                  defaultProviderName = entry.config.contracts.${contractType}.defaultProviderName or null;
+                }) baseTree;
+                # `providers` come from `evalTree` (joint-seeded, in `evalServices`)
+                # so provider instances see all consumers' requests when resolving
+                # results. Laziness breaks the apparent mutual dependency: the joint
+                # `requests` is computed from `want` (`baseTree`) and never forces
+                # `instances` or `results`. Collected across the whole tree so a child
+                # sub-service's provider registration participates in resolution.
+                perServiceEval = map (entry: {
+                  providers = entry.config.contracts.${contractType}.providers or { };
+                }) evalTree;
+                defaultProviderName = lib.filter (e: e.defaultProviderName != null) perServiceBase;
+                # Detect services that set `defaultProvider` directly (not via
+                # `defaultProviderName`). In `baseTree` (no joint seeding),
+                # `defaultProvider` is non-null only when assigned explicitly. Exclude
+                # services already handled via `defaultProviderName` to avoid
+                # double-counting. Detection uses `baseTree`; the VALUE is read from
+                # `evalTree` so the provider module's `module.value` reflects seeded
+                # requests. No cycle: `evalTree` does not seed `defaultProvider` from
+                # the joint (only `requests`/`results` are seeded), so the service's own
+                # `defaultProvider = providers.<name>` resolves locally.
+                perServiceDefaultProvider = lib.filter (e: e.detected) (
+                  map (entry: {
+                    path = entry.path;
+                    detected =
+                      entry.config.contracts.${contractType}.defaultProviderName or null == null
+                      && entry.config.contracts.${contractType}.defaultProvider or null != null;
+                  }) baseTree
+                );
+                # Look up an `evalTree` entry's config by tree path.
+                evalConfigAtPath =
+                  path:
+                  (lib.findFirst (e: e.path == path) (throw "resolveContracts: no evalTree entry at path ${
+                    lib.concatStringsSep "." path
+                  }") evalTree).config;
+              in
+              {
+                # Fold every tree entry's (path-nested) `want` under its top-level
+                # slot, recursively merging so a parent and its children share the
+                # `want.<slot>` namespace (`results.<slot>.<...>` mirrors it).
+                want = lib.foldl' (
+                  acc: e: lib.recursiveUpdate acc { ${e.topName} = e.want; }
+                ) { } perServiceBase;
+                providers = lib.foldl' (acc: e: acc // e.providers) { } perServiceEval;
+              }
+              // lib.optionalAttrs (defaultProviderName != [ ]) {
+                defaultProviderName =
+                  assert lib.assertMsg (lib.length defaultProviderName == 1)
+                    "resolveContracts: multiple services declared `defaultProviderName` for `${contractType}`: ${
+                      lib.concatMapStringsSep ", " (e: e.serviceName) defaultProviderName
+                    }";
+                  (lib.head defaultProviderName).defaultProviderName;
+              }
+              // lib.optionalAttrs (perServiceDefaultProvider != [ ]) {
+                defaultProvider =
+                  assert lib.assertMsg (lib.length perServiceDefaultProvider == 1)
+                    "resolveContracts: multiple services declared `defaultProvider` for `${contractType}`: ${
+                      lib.concatMapStringsSep ", " (e: lib.concatStringsSep "." e.path) perServiceDefaultProvider
+                    }";
+                  # Read the VALUE from `evalTree` (seeded) by walking the tree path,
+                  # so a child provider's `defaultProvider` reflects its routed requests.
+                  (evalConfigAtPath (lib.head perServiceDefaultProvider).path)
+                  .contracts.${contractType}.defaultProvider;
+              }
+            ) config.contractDefinitions;
+          }
+        )
+      ];
+    }).config;
+
+  /**
     Jointly evaluate a set of modular services so their contracts resolve against each other.
 
     Contract resolution is peer-to-peer across the `services` set.
@@ -115,105 +249,14 @@ rec {
         acc // lib.mapAttrs (_: def: { inherit (def) meta interface; }) service.contractDefinitions
       ) { } (lib.attrValues baseEvaluated);
 
-      # Aggregate `want`/`providers`/`defaultProviderName` per type across all peers,
-      # then resolve via the contracts module's own logic. `want` is nested under
-      # each service's slot name to match the `results.<slot>.*` structure.
-      joint =
-        (lib.evalModules {
-          modules = [
-            lib.contract.module
-            {
-              options.meta = lib.mkOption {
-                type = lib.types.attrs;
-                default = { };
-              };
-            }
-            { contractDefinitions = jointContractDefinitions; }
-            (
-              { config, ... }:
-              {
-                contracts = lib.mapAttrs (
-                  contractType: _:
-                  let
-                    # `want` and `defaultProvider[Name]` come from `baseEvaluated` (no upstream)
-                    # so that collecting them does not force `joint` resolution.
-                    # Collected across the whole ownership tree (`baseTree`), not just
-                    # top-level peers, so a child sub-service can `want`/provide contracts.
-                    # `want` from a sub-service is nested under its tree path so results
-                    # route back to `results.<top>.<...child>` (mirroring the `want` shape).
-                    perServiceBase = map (entry: {
-                      serviceName = lib.concatStringsSep "." entry.path;
-                      # Nest the sub-service's `want` under its path *below the top-level
-                      # slot* (the top-level slot becomes the joint `want.<slot>` key).
-                      want = lib.setAttrByPath (lib.tail entry.path) (
-                        entry.config.contracts.${contractType}.want or { }
-                      );
-                      topName = lib.head entry.path;
-                      defaultProviderName = entry.config.contracts.${contractType}.defaultProviderName or null;
-                    }) baseTree;
-                    # `providers` come from `evaluated` (with upstream) so provider instances
-                    # see all consumers' requests when resolving results. Laziness breaks the
-                    # apparent mutual dependency: `joint.requests` is computed from `want`
-                    # (`baseEvaluated`) and never forces `joint.instances` or `joint.results`.
-                    # Collected across the whole tree (`evalTree`) so a child sub-service's
-                    # provider registration participates in resolution.
-                    perServiceEval = map (entry: {
-                      providers = entry.config.contracts.${contractType}.providers or { };
-                    }) evalTree;
-                    defaultProviderName = lib.filter (e: e.defaultProviderName != null) perServiceBase;
-                    # Detect services that set `defaultProvider` directly (not via `defaultProviderName`).
-                    # In `baseEvaluated` (no upstream injection), `defaultProvider` is non-null
-                    # only when the user assigned it explicitly. Exclude services that already
-                    # set `defaultProviderName` (handled above) to avoid double-counting.
-                    # Detection uses `baseEvaluated`; the VALUE is read from `evaluated` so the
-                    # provider module's `module.value` reflects upstream-seeded requests. This
-                    # does not create a cycle because `evaluated` does not seed `defaultProvider`
-                    # from `joint` (only `requests` and `results` are seeded): the service's own
-                    # `defaultProvider = providers.increment` assignment resolves locally within
-                    # `evaluated` using its seeded `requests`.
-                    perServiceDefaultProvider = lib.filter (e: e.detected) (
-                      map (entry: {
-                        path = entry.path;
-                        detected =
-                          entry.config.contracts.${contractType}.defaultProviderName or null == null
-                          && entry.config.contracts.${contractType}.defaultProvider or null != null;
-                      }) baseTree
-                    );
-                  in
-                  {
-                    # Fold every tree entry's (path-nested) `want` under its top-level
-                    # slot, recursively merging so a parent and its children share the
-                    # `want.<slot>` namespace (`results.<slot>.<...>` mirrors it).
-                    want = lib.foldl' (
-                      acc: e: lib.recursiveUpdate acc { ${e.topName} = e.want; }
-                    ) { } perServiceBase;
-                    providers = lib.foldl' (acc: e: acc // e.providers) { } perServiceEval;
-                  }
-                  // lib.optionalAttrs (defaultProviderName != [ ]) {
-                    defaultProviderName =
-                      assert lib.assertMsg (lib.length defaultProviderName == 1)
-                        "evalServices: multiple services declared `defaultProviderName` for `${contractType}`: ${
-                          lib.concatMapStringsSep ", " (e: e.serviceName) defaultProviderName
-                        }";
-                      (lib.head defaultProviderName).defaultProviderName;
-                  }
-                  // lib.optionalAttrs (perServiceDefaultProvider != [ ]) {
-                    defaultProvider =
-                      assert lib.assertMsg (lib.length perServiceDefaultProvider == 1)
-                        "evalServices: multiple services declared `defaultProvider` for `${contractType}`: ${
-                          lib.concatMapStringsSep ", " (e: lib.concatStringsSep "." e.path) perServiceDefaultProvider
-                        }";
-                      # Read the VALUE from `evaluated` (upstream-seeded) by walking the
-                      # tree path, so a child provider's `defaultProvider` reflects its
-                      # routed requests.
-                      (evalConfigAtPath (lib.head perServiceDefaultProvider).path)
-                      .contracts.${contractType}.defaultProvider;
-                  }
-                ) config.contractDefinitions;
-              }
-            )
-          ];
-        }).config;
+      # Aggregate `want`/`providers`/`defaultProvider[Name]` across the whole tree
+      # and resolve. Write-side reads come from `baseTree` (no joint seeding) and
+      # provider-side reads from `evalTree` (joint-seeded), so collecting `want`
+      # never forces `results`. See `resolveContracts`.
+      joint = resolveContracts {
+        inherit baseTree evalTree;
+        contractDefinitions = jointContractDefinitions;
+      };
 
       # Per-service configs, evaluated lazily. Each service's `contracts.*` is
       # seeded from the joint resolution so it reads results by option name directly
@@ -253,6 +296,83 @@ rec {
       services = evaluated;
       contracts = joint.contracts;
     };
+
+  /**
+    Lower a resolved modular-service set into a NixOS `system.services` config.
+
+    Mirrors `toKubernetesManifests` for the NixOS runtime: it takes the same
+    `{ services }` input as `evalServices`, resolves the contracts across the
+    tree (via `evalServices`), and returns a value suitable for
+    `system.services` where each service's contract `results` are already baked
+    in from the resolution.
+
+    Why a helper rather than resolving inside the NixOS `system.services` module:
+    the Nix module system forbids an option's definition from reading that same
+    option's definitions, so `system.services` cannot resolve its own contracts
+    in place (it would recurse in the module merge). Resolution therefore lives
+    in a SEPARATE evaluation (`evalServices`); this helper injects that
+    evaluation's results back as plain constant values, which is cycle-free
+    because the injected values do not depend on the NixOS-side merge.
+
+    A consumer writes the service graph ONCE and lowers it:
+
+    ```nix
+    system.services = lib.services.toNixosServices {
+      services = { app = ./app.nix; db = ./db.nix; };
+    };
+    ```
+
+    Each service reads its own resolved result directly, e.g.
+    `config.system.services.app.app.db.result.connectionString`, with no manual
+    `evalServices` call and no hand-wiring of the result string.
+
+    Note: results come from `evalServices`' parentless evaluation (`pkgs` is
+    unavailable there), so a provider whose result value depends on `pkgs` is not
+    supported through this helper; use a provider whose result is portable, or
+    resolve in a context that supplies `pkgs`.
+
+    The optional `select` argument restricts which top-level slices this call
+    EMITS, while resolution keeps spanning the FULL `services` set. This is safe
+    because each emitted service is injected with its own results read per-name
+    from the joint `resolved.contracts.<type>.results.<name>`, independent of
+    which names are emitted. It enables the shared-eval-then-partition topology:
+    resolve one service graph across all peers, then lower disjoint slices onto
+    separate NixOS nodes. See
+    `nixos/tests/contracts/service-locality/cross-node.nix` and
+    `cross-node-modular-services.nix` for the template. `select` trims top-level
+    emitted names only; it does not affect child sub-service lifting, which
+    happens inside `evalServices`.
+
+    lib.services.toNixosServices :: { services: AttrSet, select ? [ String ] } -> AttrSet
+  */
+  toNixosServices =
+    {
+      services,
+      select ? null,
+    }:
+    let
+      resolved = evalServices { inherit services; };
+      toModules = v: if lib.isList v then v else [ v ];
+      # Resolution spans the full `services`; `select` only restricts which
+      # top-level slices are emitted. `getAttrs` throws loudly on an unknown
+      # name rather than silently dropping it.
+      emitted = if select == null then services else lib.getAttrs select services;
+    in
+    lib.mapAttrs (
+      name: serviceModules:
+      {
+        imports = toModules serviceModules;
+        # Inject the resolved read-side contract state as plain values from the
+        # separate `evalServices` resolution. `mkForce` so the seeded results win
+        # over each service's own computed defaults. Sub-service propagation is
+        # handled by the portable base module.
+        config.contracts = lib.mapAttrs (contractType: _: {
+          results = lib.mkForce (resolved.contracts.${contractType}.results.${name} or { });
+          requests = lib.mkForce resolved.contracts.${contractType}.requests;
+          providerRequests = lib.mkForce resolved.contracts.${contractType}.providerRequests;
+        }) resolved.contracts;
+      }
+    ) emitted;
 
   flattenMapServicesConfigToList =
     f: loc: config:
