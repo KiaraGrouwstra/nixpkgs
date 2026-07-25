@@ -90,6 +90,11 @@ let
       # domain-specific
       fetchers = callLibs ./fetchers.nix;
       services = callLibs ./services/lib.nix;
+      # Modules that are not specific to a module class
+      genericModules = {
+        meta-maintainers = ./modules/generic/meta-maintainers.nix;
+        assertions = ./modules/generic/assertions.nix;
+      };
 
       # Eval-time filesystem handling
       path = callLibs ./path;
