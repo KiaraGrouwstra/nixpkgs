@@ -62,7 +62,7 @@ let
 
   modularServiceConfiguration = portable-lib.configure {
     baseModules = [
-      (lib.modules.importApply ../../../../../lib/services/service.nix { inherit pkgs; })
+      (lib.importService { inherit pkgs; })
     ];
     extraRootModules = [
       ./service.nix

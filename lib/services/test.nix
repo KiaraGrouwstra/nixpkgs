@@ -9,7 +9,7 @@ let
 
   configured = portable-lib.configure {
     baseModules = [
-      (lib.modules.importApply ./service.nix {
+      (lib.importService {
         pkgs = throw "do not use pkgs in this test";
       })
     ];

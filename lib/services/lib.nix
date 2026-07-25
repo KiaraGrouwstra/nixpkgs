@@ -50,11 +50,9 @@ rec {
     # darwin/modules/services/system.nix
     { lib, config, pkgs, ... }:
     let
-      portable-lib = import <nixpkgs/lib/services/lib.nix> { inherit lib; };
-
-      modularServiceConfiguration = portable-lib.configure {
+      modularServiceConfiguration = lib.services.configure {
         baseModules = [
-          <nixpkgs/lib/services/service.nix>    # portable service base
+          (lib.importService { inherit pkgs; })   # core module
         ];
         extraRootModules = [
           ./launchd-service.nix    # launchd-specific options (plist generation, etc.)
