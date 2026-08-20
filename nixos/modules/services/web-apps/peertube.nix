@@ -504,6 +504,90 @@ in
       // cfgService;
     };
 
+    # PeerTube runs its schema migrations itself, inside `node dist/server`, so
+    # there is nothing here to run them. What this contributes is the database
+    # dump upstream asks for before every upgrade, and a refusal to start code
+    # older than the data it would be served: Sequelize migrations are one-way.
+    systemd.stateMigrations.peertube = {
+      version = cfg.package.version;
+      stateFile = "/var/lib/peertube/.nixos-state-migration";
+      onDowngrade = "refuse";
+
+      before = [ "peertube.service" ];
+      after = [
+        "network.target"
+      ]
+      ++ lib.optionals cfg.database.createLocally [
+        "postgresql.target"
+        "peertube-init-db.service"
+      ];
+      requires = lib.optionals cfg.database.createLocally [
+        "postgresql.target"
+        "peertube-init-db.service"
+      ];
+
+      # A database with no tables of its own is one `peertube-init-db` has just
+      # created. Distinguishing it matters for the log rather than for what
+      # runs, since neither case migrates anything.
+      freshInstallTest = ''
+        ${lib.optionalString (!cfg.database.createLocally && cfg.database.passwordFile != null) ''
+          umask 077
+          PGPASSWORD="$(cat ${cfg.database.passwordFile})"
+          export PGPASSWORD
+        ''}
+        result="$(psql -tAc \
+          "select count(*) from pg_class c \
+           join pg_namespace s on s.oid = c.relnamespace \
+           where s.nspname not in ('pg_catalog', 'pg_toast', 'information_schema') \
+           and s.nspname not like 'pg_temp%';")" || status=$?
+        if [ "''${status:-0}" -ne 0 ]; then
+          echo "cannot count the tables in the database: psql exited with status $status"
+          exit 2
+        fi
+        [ "$result" -eq 0 ]
+      '';
+
+      # Kept next to the data so that whoever has to restore it does not have to
+      # be told where to look.
+      backupDir = "/var/lib/peertube/backups";
+      backup = ''
+        ${lib.optionalString (!cfg.database.createLocally && cfg.database.passwordFile != null) ''
+          umask 077
+          PGPASSWORD="$(cat ${cfg.database.passwordFile})"
+          export PGPASSWORD
+        ''}
+        pg_dump -F c -f "$BACKUP/${cfg.database.name}.dump"
+      '';
+
+      path = [
+        (if cfg.database.createLocally then config.services.postgresql.package else pkgs.postgresql)
+      ];
+      environment = {
+        PGHOST = cfg.database.host;
+        PGPORT = toString cfg.database.port;
+        PGDATABASE = cfg.database.name;
+        PGUSER = cfg.database.user;
+      };
+      serviceConfig = {
+        User = cfg.user;
+        Group = cfg.group;
+        StateDirectory = "peertube";
+        StateDirectoryMode = "0750";
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_INET"
+          "AF_INET6"
+        ];
+        MemoryDenyWriteExecute = true;
+        # `@ipc` covers `pipe2`, which every pipeline and command substitution
+        # in a shell script needs. `peertube-init-db` can filter it because its
+        # script is a single `psql` invocation; a migration runner cannot.
+        SystemCallFilter =
+          "~" + lib.concatStringsSep " " ((lib.remove "@ipc" systemCallsList) ++ [ "@resources" ]);
+      }
+      // cfgService;
+    };
+
     systemd.services.peertube = {
       description = "PeerTube daemon";
       after = [
