@@ -2000,6 +2000,7 @@
   ./system/boot/systemd/oomd.nix
   ./system/boot/systemd/repart.nix
   ./system/boot/systemd/shutdown.nix
+  ./system/boot/systemd/state-migrations.nix
   ./system/boot/systemd/sysupdate.nix
   ./system/boot/systemd/sysusers.nix
   ./system/boot/systemd/tmpfiles.nix
