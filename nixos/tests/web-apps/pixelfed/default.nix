@@ -10,4 +10,5 @@ let
 in
 {
   standard = runTestOn supportedSystems ./standard.nix;
+  upgrade = runTestOn supportedSystems ./upgrade.nix;
 }

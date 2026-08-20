@@ -410,19 +410,16 @@ in
       };
     };
 
-    systemd.services.pixelfed-data-setup = {
-      description = "Pixelfed setup: migrations, environment file update, cache reload, data changes";
+    # Everything that has to be in place before any PHP program runs, and that
+    # does not itself need the database. The state migrations are ordered
+    # between this unit and `pixelfed-data-setup`, which does need it.
+    systemd.services.pixelfed-env-setup = {
+      description = "Pixelfed setup: environment file, static storage and code cache";
       wantedBy = [ "multi-user.target" ];
-      after = lib.optional cfg.database.createLocally dbUnit;
-      requires = lib.optional cfg.database.createLocally dbUnit;
-      path =
-        with pkgs;
-        [
-          bash
-          pixelfed-manage
-          rsync
-        ]
-        ++ extraPrograms;
+      path = with pkgs; [
+        bash
+        rsync
+      ];
 
       serviceConfig = {
         Type = "oneshot";
@@ -465,32 +462,94 @@ in
 
         # Install Horizon
         # FIXME: require write access to public/ — should be done as part of install — pixelfed-manage horizon:publish
+      '';
+    };
 
-        # Perform the first migration.
-        [[ ! -f ${cfg.dataDir}/.initial-migration ]] && pixelfed-manage migrate --force && touch ${cfg.dataDir}/.initial-migration
+    systemd.services.pixelfed-data-setup = {
+      description = "Pixelfed setup: cache reload, data changes";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "pixelfed-env-setup.service" ] ++ lib.optional cfg.database.createLocally dbUnit;
+      requires = [ "pixelfed-env-setup.service" ] ++ lib.optional cfg.database.createLocally dbUnit;
+      path =
+        with pkgs;
+        [
+          bash
+          pixelfed-manage
+        ]
+        ++ extraPrograms;
 
-        ${lib.optionalString cfg.database.automaticMigrations ''
-          # Force migrate the database.
-          pixelfed-manage migrate --force
-        ''}
+      serviceConfig = {
+        Type = "oneshot";
+        User = user;
+        Group = group;
+        StateDirectory = lib.mkIf (cfg.dataDir == "/var/lib/pixelfed") "pixelfed";
+        UMask = "077";
+      };
 
+      script = ''
         # Import location data
         pixelfed-manage import:cities
 
         ${lib.optionalString cfg.settings.ACTIVITY_PUB ''
           # ActivityPub federation bookkeeping
-          [[ ! -f ${cfg.dataDir}/.instance-actor-created ]] && pixelfed-manage instance:actor && touch ${cfg.dataDir}/.instance-actor-created
+          if [[ ! -f ${cfg.dataDir}/.instance-actor-created ]]; then
+            pixelfed-manage instance:actor
+            touch ${cfg.dataDir}/.instance-actor-created
+          fi
         ''}
 
         ${lib.optionalString cfg.settings.OAUTH_ENABLED ''
           # Generate Passport encryption keys
-          [[ ! -f ${cfg.dataDir}/.passport-keys-generated ]] && pixelfed-manage passport:keys && touch ${cfg.dataDir}/.passport-keys-generated
+          if [[ ! -f ${cfg.dataDir}/.passport-keys-generated ]]; then
+            pixelfed-manage passport:keys
+            touch ${cfg.dataDir}/.passport-keys-generated
+          fi
         ''}
 
         pixelfed-manage route:cache
         pixelfed-manage view:cache
         pixelfed-manage config:cache
       '';
+    };
+
+    systemd.stateMigrations.pixelfed = {
+      version = pixelfed.version;
+      stateFile = "${cfg.dataDir}/.nixos-state-migration";
+      before = [
+        "pixelfed-data-setup.service"
+        "phpfpm-pixelfed.service"
+        "pixelfed-horizon.service"
+      ];
+      after = [ "pixelfed-env-setup.service" ] ++ lib.optional cfg.database.createLocally dbUnit;
+      requires = [ "pixelfed-env-setup.service" ] ++ lib.optional cfg.database.createLocally dbUnit;
+
+      # Installations that predate this mechanism are recognised by the marker
+      # that the first migration used to leave behind. Without it they would
+      # look fresh and be migrated from scratch.
+      freshInstallTest = "test ! -f ${cfg.dataDir}/.initial-migration";
+
+      onFreshInstall = ''
+        pixelfed-manage migrate --force
+      '';
+
+      onUpgrade = lib.optionalString cfg.database.automaticMigrations ''
+        pixelfed-manage migrate --force
+      '';
+
+      path =
+        with pkgs;
+        [
+          bash
+          pixelfed-manage
+        ]
+        ++ extraPrograms;
+
+      serviceConfig = {
+        User = user;
+        Group = group;
+        StateDirectory = lib.mkIf (cfg.dataDir == "/var/lib/pixelfed") "pixelfed";
+        UMask = "077";
+      };
     };
 
     systemd.tmpfiles.rules = [
