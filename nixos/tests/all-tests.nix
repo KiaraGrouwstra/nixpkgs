@@ -1016,7 +1016,7 @@ in
   man = runTest ./man.nix;
   mariadb-galera = handleTest ./mysql/mariadb-galera.nix { };
   marytts = runTest ./marytts.nix;
-  mastodon = recurseIntoAttrs (handleTest ./web-apps/mastodon { inherit handleTestOn; });
+  mastodon = recurseIntoAttrs (handleTest ./web-apps/mastodon { inherit handleTestOn runTestOn; });
   mate = runTest ./mate.nix;
   mate-wayland = runTest ./mate-wayland.nix;
   matomo = runTest ./matomo.nix;

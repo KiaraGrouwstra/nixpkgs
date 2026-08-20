@@ -127,7 +127,15 @@ let
   commonUnits =
     lib.optional redisActuallyCreateLocally "redis-mastodon.service"
     ++ lib.optional databaseActuallyCreateLocally "postgresql.target"
-    ++ lib.optional cfg.automaticMigrations "mastodon-init-db.service";
+    ++ lib.optional cfg.automaticMigrations "mastodon-migrate-pre.service";
+
+  # The units serving the instance, as opposed to the ones preparing it. The
+  # state migrations bracket these: the pre-deploy phase before they start, the
+  # post-deploy phase once they have.
+  appUnits = [
+    "mastodon-web.service"
+  ]
+  ++ map (name: "${name}.service") (lib.attrNames sidekiqUnits ++ lib.attrNames streamingUnits);
 
   envFile = pkgs.writeText "mastodon.env" (
     lib.concatMapStrings (s: s + "\n") (
@@ -935,8 +943,31 @@ in
           after = [ "network.target" ];
         };
 
-        systemd.services.mastodon-init-db = lib.mkIf cfg.automaticMigrations {
-          script =
+        systemd.stateMigrations.mastodon = {
+          enable = cfg.automaticMigrations;
+          version = cfg.package.version;
+          stateFile = "/var/lib/mastodon/.nixos-state-migration";
+
+          # Upstream supports skipping individual PATCH releases, but asks for
+          # at least one deploy per MINOR release series.
+          maxSkip = "minor";
+
+          before = appUnits;
+          after = [
+            "network.target"
+            "mastodon-init-dirs.service"
+          ]
+          ++ lib.optional databaseActuallyCreateLocally "postgresql.target";
+          requires = [
+            "mastodon-init-dirs.service"
+          ]
+          ++ lib.optional databaseActuallyCreateLocally "postgresql.target";
+
+          # An empty schema is what a database that has never been seeded looks
+          # like. Needed because the first deployment of these migrations onto
+          # an existing instance also finds no recorded version, and must not
+          # load the schema over live data.
+          freshInstallTest =
             lib.optionalString (!databaseActuallyCreateLocally) ''
               umask 077
               export PGPASSWORD="$(cat '${cfg.database.passwordFile}')"
@@ -949,20 +980,25 @@ in
                   and s.nspname not like 'pg_temp%';")" || error_code=$?
               if [ "''${error_code:-0}" -ne 0 ]; then
                 echo "Failure checking if database is seeded. psql gave exit code $error_code"
-                exit "$error_code"
+                exit 2
               fi
-              if [ "$result" -eq 0 ]; then
-                echo "Seeding database"
-                SAFETY_ASSURED=1 rails db:schema:load
-                rails db:seed
-              else
-                echo "Migrating database (this might be a noop)"
-                rails db:migrate
-              fi
-            ''
-            + lib.optionalString (!databaseActuallyCreateLocally) ''
-              unset PGPASSWORD
+              [ "$result" -eq 0 ]
             '';
+
+          onFreshInstall = ''
+            SAFETY_ASSURED=1 rails db:schema:load
+            rails db:seed
+          '';
+
+          # Split the way upstream deploys: the migrations the new code needs in
+          # order to start run before it does, the rest once it is running.
+          onUpgrade = ''
+            SKIP_POST_DEPLOYMENT_MIGRATIONS=true rails db:migrate
+          '';
+          onUpgradePost = ''
+            rails db:migrate
+          '';
+
           path = [
             cfg.package
             (if databaseActuallyCreateLocally then config.services.postgresql.package else pkgs.postgresql)
@@ -976,7 +1012,6 @@ in
               PGUSER = cfg.database.user;
             };
           serviceConfig = {
-            Type = "oneshot";
             EnvironmentFile = [ "/var/lib/mastodon/.secrets_env" ] ++ cfg.extraEnvFiles;
             WorkingDirectory = cfg.package;
             # System Call Filtering
@@ -988,15 +1023,6 @@ in
             ];
           }
           // cfgService;
-          after = [
-            "network.target"
-            "mastodon-init-dirs.service"
-          ]
-          ++ lib.optional databaseActuallyCreateLocally "postgresql.target";
-          requires = [
-            "mastodon-init-dirs.service"
-          ]
-          ++ lib.optional databaseActuallyCreateLocally "postgresql.target";
         };
 
         systemd.services.mastodon-web = {
