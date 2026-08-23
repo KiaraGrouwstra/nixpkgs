@@ -112,6 +112,23 @@ let
         # is a cleaner fix than explicitly adding 'gzip' to systemPackages.
         documentation.info.enable = lib.mkDefault false;
 
+        # `systemd-machine-id-commit` calls `syncfs("/etc")`, `syncfs("/var")`
+        # and a bare `sync()`. `sync()` is not namespaced, so from a container
+        # it writes back the whole build host's page cache -- an uninterruptible
+        # sleep sized by whatever else that host is doing, which neither the
+        # unit's `TimeoutSec=90s` nor the `SIGKILL` after it can end. A QEMU node
+        # runs the same unit in 0.09 s, because there `sync()` reaches only the
+        # guest's own disk.
+        #
+        # Answering the unit's `@sync` calls with a successful no-op removes the
+        # cost without removing the unit: it still runs, its condition still
+        # fires, and it still commits the transient machine-id, so a test can
+        # still observe first-boot behaviour. Not flushing that write to disk
+        # costs the container nothing, since it is discarded when the test ends.
+        systemd.services.systemd-machine-id-commit.serviceConfig.SystemCallFilter = lib.mkDefault [
+          "~@sync:0"
+        ];
+
         # Gross, insecure hack to make login work. See above.
         security.pam.services.login = {
           text = ''
