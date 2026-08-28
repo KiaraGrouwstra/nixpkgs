@@ -100,7 +100,12 @@ let
       description = "${flavour} daemon - ${name}";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
-      path = [ pkgs.getent ];
+      path = [
+        pkgs.getent
+        # A template's change `command` is normally `systemctl try-restart
+        # <unit>`, which needs `systemctl` reachable from the agent.
+        pkgs.systemd
+      ];
       startLimitIntervalSec = 60;
       startLimitBurst = 3;
       serviceConfig = {
