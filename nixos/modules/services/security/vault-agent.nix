@@ -109,8 +109,11 @@ let
       # A consumer that also sets `stopIfChanged = false` would otherwise wait
       # for its secrets while this agent is still stopped. nginx does this.
       stopIfChanged = false;
-      startLimitIntervalSec = 60;
-      startLimitBurst = 3;
+      # Stricter than systemd's own default of 5 starts per 10s, and an
+      # agent whose reads legitimately retry can reach it; at ordinary
+      # priority a consumer has no way to relax it.
+      startLimitIntervalSec = lib.mkDefault 60;
+      startLimitBurst = lib.mkDefault 3;
       serviceConfig = {
         User = instance.user;
         Group = instance.group;
