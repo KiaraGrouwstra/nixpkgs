@@ -1,0 +1,28 @@
+# One line per request against https://cache.nixos.org, produced by scripts/measure.sh.
+# Sample: store paths in the local nixos-unstable closure that contain a desktop entry.
+hash	path	status	response_bytes	upstream_bytes	decompressed_bytes	nar_bytes	seconds
+0ij9i1lz7x4hbz3n69aimaadp2n48633	share/applications/Helix.desktop	200	4071	6766020	28824767	28846192	0.843931
+11xsgsghdpnnykz8dybdggk570vrl29g	share/applications/nixos-manual.desktop	200	192	299	720	832	0.049115
+5571i9sgh25p3idk687c215qyhsi40km	share/applications/im.dino.Dino.desktop	200	343	1603975	8093887	9345528	0.246305
+6qqg0rn1fg6gr3bw7gwbp32hp86y221v	share/applications/chromium-browser.desktop	200	8501	143391234	701314629	701338704	6.448083
+79yg09y5lg8bg6cin5rpj36p1d5n0c0p	share/applications/cups.desktop	200	2246	752826	2586222	9232368	0.079953
+8pj79vs5k6jp9rpb3rp92vcci0dq2vf1	share/applications/org.gnome.Zenity.desktop	200	2464	64846	198576	9309456	0.126674
+990fkc8a2nqgks20zhvb8grm9yd8158f	share/applications/vlc.desktop	200	15008	6241779	24285664	69750056	0.455027
+bprwv7i0b1w90vz17401770ws8ckglwf	share/applications/io.github.antimicrox.antimicrox.desktop	200	887	1406849	6781807	6891896	0.522270
+by4wdja9npd278y9hbx7qicnjqzjaca8	share/applications/org.gnome.Zenity.desktop	200	2464	127183	198728	9309600	0.047869
+d01dli4pxy7ymnjkf1f3m4nbs2hfbr48	share/applications/signal.desktop	200	284	1378	1628	182000792	0.158986
+d2a48mxsm97f6p63yzrs8h50xp9ifcqj	share/applications/btop.desktop	200	824	655360	2362544	2466880	1.367071
+h0agc7jqz21v9ci1yzd74390p58vfvh2	share/applications/org.quickshell.desktop	200	97	2035032	11614537	11617416	0.672799
+hjp25ksf3axb4czp7sllvzl1bkpfwsyg	share/applications/org.gtk.Demo4.desktop	200	188	3702784	14502844	30678744	0.546060
+hkg2i77ydzyym51dql6q375lnf29f17a	share/applications/org.gtk.Demo4.desktop	200	188	5259264	15506748	31851128	0.334223
+k46k4bg5i5m39j5zic2qvdyabcmawanh	share/applications/google-maps-geo-handler.desktop	200	1430	184684	879478	883320	0.149064
+lp0p3dawvhc0aj8pmrj90nx1d9n9w95b	share/applications/gcr-prompter.desktop	200	6510	586298	1875342	3177592	0.091689
+m1vzm2hqa21srvr99l601gcgvnxgrwyr	share/applications/org.keepassxc.KeePassXC.desktop	200	2022	7830382	18791190	41225512	1.324645
+m4fv23z27sy8fbpjs1v6d3p69qh3lsp7	share/applications/geoclue-demo-agent.desktop	200	280	235684	917552	940984	0.167477
+n8hxk1vw52zmfdjq3vxsdyallg9x2z9r	share/applications/Helix.desktop	303	0	2736	0	0	0.254456
+r8g7wx039a0kcc3chmxrni9qflxjs802	share/applications/com.mitchellh.ghostty.desktop	200	827	15252288	26458771	28529712	1.232503
+v7fvwaf6j1hwvb9dmwfa97nzmrlshqai	share/applications/gtk3-demo.desktop	200	201	4486662	11930537	43627528	0.373624
+y25bfpzx61dd58n0q5ks5hmxbaxph0ki	share/applications/aunpack.desktop	200	366	15158	80582	90232	0.760075
+yl5yl395iqx88kd1m7lx7p7b65n0jfx9	share/applications/gtk3-demo.desktop	200	201	3358720	11930433	43210032	1.710107
+z03k1vipk1pd9zgv7f3n53s9r6pssnfv	share/applications/iamb.desktop	200	271	18751968	83603855	83620496	2.904628
+zsywvnb16ip21c860v3cbdhydlgz2g21	share/applications/geoclue-where-am-i.desktop	200	376	223382	833776	856624	0.346201
