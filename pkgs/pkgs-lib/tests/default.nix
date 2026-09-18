@@ -23,6 +23,7 @@ let
   structured = {
     formats = import ./formats.nix { inherit pkgs; };
     files = recurseIntoAttrs (import ./files.nix { inherit pkgs; });
+    config-files = recurseIntoAttrs (import ./config-files.nix { inherit pkgs; });
     java-properties = recurseIntoAttrs {
       jdk11 = pkgs.callPackage ../formats/java-properties/test { jdk = pkgs.jdk11_headless; };
       jdk17 = pkgs.callPackage ../formats/java-properties/test { jdk = pkgs.jdk17_headless; };

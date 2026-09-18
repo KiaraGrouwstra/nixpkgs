@@ -944,6 +944,7 @@ with pkgs;
     })
     formats
     files
+    configFiles
     ;
 
   testers = callPackage ../build-support/testers { };
