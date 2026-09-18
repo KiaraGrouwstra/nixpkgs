@@ -943,6 +943,7 @@ with pkgs;
       inherit pkgs;
     })
     formats
+    files
     ;
 
   testers = callPackage ../build-support/testers { };
