@@ -1,4 +1,4 @@
-{ python3Packages }:
+{ configFiles, python3Packages }:
 
 let
   litellm = python3Packages.litellm;
@@ -10,5 +10,13 @@ python3Packages.toPythonApplication (
       ++ litellm.optional-dependencies.proxy
       ++ litellm.optional-dependencies.extra_proxy
       ++ litellm.optional-dependencies.proxy-runtime;
+
+    passthru = (oldAttrs.passthru or { }) // {
+      config = configFiles {
+        name = "litellm";
+        relativeTo = "the directory that holds the configuration of LiteLLM";
+        modules = [ ./config-module.nix ];
+      };
+    };
   })
 )
