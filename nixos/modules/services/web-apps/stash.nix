@@ -368,6 +368,7 @@ let
     };
 
   secretOptionType =
+    name:
     let
       contractSecretsType = types.submodule {
         imports = [ lib.contracts.fileSecrets.interface ];
@@ -386,6 +387,15 @@ let
                 defaultText = literalExpression "config.services.stash.group";
                 readOnly = true;
               };
+            };
+          };
+        };
+        options.response = mkOption {
+          default = { };
+          type = types.submodule {
+            options.path = mkOption {
+              default = config.contracts.fileSecrets.results."stash-${name}".path;
+              defaultText = literalExpression ''config.contracts.fileSecrets.results."stash-${name}".path'';
             };
           };
         };
@@ -461,8 +471,25 @@ in
       };
 
       passwordFile = mkOption {
-        type = types.nullOr secretOptionType;
-        default = null;
+        type = types.nullOr (secretOptionType "passwordFile");
+        # Use the contract when a username is set and no other password is given.
+        default =
+          if
+            (cfg.username != null || cfg.settings.username or null != null)
+            && cfg.settings.password or null == null
+          then
+            { }
+          else
+            null;
+        defaultText = literalExpression ''
+          if
+            (config.services.stash.username != null || config.services.stash.settings.username or null != null)
+            && config.services.stash.settings.password or null == null
+          then
+            { }
+          else
+            null
+        '';
         example = "/path/to/password/file";
         description = ''
           Path to file containing password for login.
@@ -475,11 +502,13 @@ in
       };
 
       jwtSecretKey = mkOption {
-        type = secretOptionType;
+        type = secretOptionType "jwtSecretKey";
+        default = { };
         description = "Path to file containing a secret used to sign JWT tokens.";
       };
       sessionStoreKey = mkOption {
-        type = secretOptionType;
+        type = secretOptionType "sessionStoreKey";
+        default = { };
         description = "Path to file containing a secret for session store.";
       };
 
@@ -506,6 +535,15 @@ in
   };
 
   config = mkIf cfg.enable {
+    # Send each secret option that uses the contract to the provider.
+    contracts.fileSecrets.want = {
+      stash-passwordFile = mkIf (lib.isAttrs cfg.passwordFile) { inherit (cfg.passwordFile) request; };
+      stash-jwtSecretKey = mkIf (lib.isAttrs cfg.jwtSecretKey) { inherit (cfg.jwtSecretKey) request; };
+      stash-sessionStoreKey = mkIf (lib.isAttrs cfg.sessionStoreKey) {
+        inherit (cfg.sessionStoreKey) request;
+      };
+    };
+
     assertions = [
       {
         assertion =

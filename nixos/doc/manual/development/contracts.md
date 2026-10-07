@@ -124,17 +124,39 @@ A provider reads `providerRequests.<provider>`, and sets `providers.<provider>` 
 }
 ```
 
-The user sends the `request` of a consumer option to `want`, and sets the `response` of the option from `results`.
-The user also selects the provider, and sets the options of the provider for each request:
+A consumer module sends the `request` of its options to `want`, and sets the default of `response` from `results`.
+This example is a simplified version of `services.stash.passwordFile`:
 
 ```nix
-{ config, ... }:
+{ config, lib, ... }:
+let
+  cfg = config.services.stash;
+in
 {
-  contracts.fileSecrets.want.stash-passwordFile = {
-    inherit (config.services.stash.passwordFile) request;
+  options.services.stash.passwordFile = lib.mkOption {
+    type = lib.types.submodule {
+      imports = [ lib.contracts.fileSecrets.interface ];
+      options.response = lib.mkOption {
+        default = { };
+        type = lib.types.submodule {
+          options.path = lib.mkOption {
+            default = config.contracts.fileSecrets.results.stash-passwordFile.path;
+          };
+        };
+      };
+    };
   };
-  services.stash.passwordFile.response = config.contracts.fileSecrets.results.stash-passwordFile;
 
+  config.contracts.fileSecrets.want.stash-passwordFile = {
+    inherit (cfg.passwordFile) request;
+  };
+}
+```
+
+The user selects the provider, and sets the options of the provider for each request:
+
+```nix
+{
   contracts.fileSecrets.defaultProvider = "hardcoded-secret";
   testing.hardcoded-secret.fileSecrets.stash-passwordFile.providerOptions.content = "MyPassword";
 }
