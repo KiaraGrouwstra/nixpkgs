@@ -181,22 +181,22 @@ Example, a provider with the provider option at `services.bar.secrets.files`:
 ```
 
 A consumer module sends the `request` of its options to `want`.
-Example, a consumer option `services.foo.secret` of the contract type `fileSecrets`:
+Example, a simplified version of the consumer option `services.stash.passwordSecret`:
 
 ```nix
 { config, lib, ... }:
 let
-  cfg = config.services.foo;
+  cfg = config.services.stash;
 in
 {
-  options.services.foo.secret = lib.mkOption {
+  options.services.stash.passwordSecret = lib.mkOption {
     type = lib.types.submodule {
       imports = [ lib.contracts.fileSecrets.interface ];
     };
   };
 
-  config.contracts.fileSecrets.want.foo-secret = {
-    inherit (cfg.secret) request;
+  config.contracts.fileSecrets.want.stash-passwordSecret = {
+    inherit (cfg.passwordSecret) request;
   };
 }
 ```
@@ -210,8 +210,8 @@ Example, with the consumer from the example before and the provider `testing.har
 { config, ... }:
 {
   contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
-  services.foo.secret.response = config.contracts.fileSecrets.results.foo-secret;
-  testing.hardcoded-secret.fileSecrets.foo-secret.providerOptions.content = "MyPassword";
+  services.stash.passwordSecret.response = config.contracts.fileSecrets.results.stash-passwordSecret;
+  testing.hardcoded-secret.fileSecrets.stash-passwordSecret.providerOptions.content = "MyPassword";
 }
 ```
 
@@ -222,7 +222,8 @@ To send one entry to a different provider, set `instances.<name>` to that provid
 ```nix
 { config, ... }:
 {
-  contracts.fileSecrets.instances.foo-secret = config.contracts.fileSecrets.providers.other-provider;
+  contracts.fileSecrets.instances.stash-passwordSecret =
+    config.contracts.fileSecrets.providers.other-provider;
 }
 ```
 

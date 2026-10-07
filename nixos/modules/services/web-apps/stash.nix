@@ -524,6 +524,18 @@ in
       mkDefault cfg.sessionStoreKeySecret.response.path
     );
 
+    # Send the request of each contract option that is set to `want`.
+    # The user sets the `response`, for example from `results`.
+    contracts.fileSecrets.want = {
+      stash-passwordSecret = mkIf (cfg.passwordSecret != null) { inherit (cfg.passwordSecret) request; };
+      stash-jwtSecretKeySecret = mkIf (cfg.jwtSecretKeySecret != null) {
+        inherit (cfg.jwtSecretKeySecret) request;
+      };
+      stash-sessionStoreKeySecret = mkIf (cfg.sessionStoreKeySecret != null) {
+        inherit (cfg.sessionStoreKeySecret) request;
+      };
+    };
+
     assertions = [
       {
         assertion =
