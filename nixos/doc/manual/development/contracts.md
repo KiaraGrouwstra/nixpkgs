@@ -214,7 +214,7 @@ in
     };
   };
 
-  config.contracts.fileSecrets.want.stash-passwordSecret = {
+  config.contracts.fileSecrets.want.stash.passwordSecret = {
     inherit (cfg.passwordSecret) request;
   };
 }
@@ -229,8 +229,8 @@ Example, with the consumer from the example before and the provider `testing.har
 { config, ... }:
 {
   contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
-  services.stash.passwordSecret.response = config.contracts.fileSecrets.results.stash-passwordSecret;
-  testing.hardcoded-secret.fileSecrets.stash-passwordSecret.providerOptions.content = "MyPassword";
+  services.stash.passwordSecret.response = config.contracts.fileSecrets.results.stash.passwordSecret;
+  testing.hardcoded-secret.fileSecrets.stash.passwordSecret.providerOptions.content = "MyPassword";
 }
 ```
 
@@ -241,7 +241,7 @@ To send one entry to a different provider, set `instances` at the path of the en
 ```nix
 { config, ... }:
 {
-  contracts.fileSecrets.instances.stash-passwordSecret =
+  contracts.fileSecrets.instances.stash.passwordSecret =
     config.contracts.fileSecrets.providers.other-provider;
 }
 ```
