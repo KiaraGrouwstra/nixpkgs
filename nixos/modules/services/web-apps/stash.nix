@@ -370,24 +370,18 @@ let
     };
 
   # Type of the options that take a file secrets contract.
-  secretContractType = types.submodule {
-    imports = [ lib.contracts.fileSecrets.interface ];
-    options.request = mkOption {
-      default = { };
-      type = types.submodule {
-        options = {
-          mode = mkOption { readOnly = true; };
-          owner = mkOption {
-            default = cfg.user;
-            defaultText = literalExpression "config.services.stash.user";
-            readOnly = true;
-          };
-          group = mkOption {
-            default = cfg.group;
-            defaultText = literalExpression "config.services.stash.group";
-            readOnly = true;
-          };
-        };
+  secretContractType = lib.contracts.fileSecrets.mkContract {
+    request = {
+      mode.readOnly = true;
+      owner = {
+        default = cfg.user;
+        defaultText = literalExpression "config.services.stash.user";
+        readOnly = true;
+      };
+      group = {
+        default = cfg.group;
+        defaultText = literalExpression "config.services.stash.group";
+        readOnly = true;
       };
     };
   };
