@@ -14,33 +14,10 @@ in
         Each contract type has an `interface`: a module with the options
         `request` and `response`.
         Consumers and providers import this module into their submodule types.
+        To make the submodule type of a consumer, use `mkContract`.
       '';
       default = { };
-      type = types.attrsOf (
-        types.submodule {
-          options = {
-            meta = mkOption {
-              description = "Information about the contract type and its maintenance.";
-              type = types.submodule {
-                options = {
-                  description = mkOption {
-                    description = "What the contract type is for.";
-                    type = types.str;
-                  };
-                  maintainers = mkOption {
-                    description = "Maintainers of the contract type.";
-                    type = types.listOf types.attrs;
-                  };
-                };
-              };
-            };
-            interface = mkOption {
-              description = "Module with the options `request` and `response`.";
-              type = types.deferredModule;
-            };
-          };
-        }
-      );
+      type = types.attrsOf lib.contract.definitionType;
     };
 
     contracts = mkOption {

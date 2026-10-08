@@ -46,6 +46,24 @@ This example is a simplified version of `services.stash.passwordFile`:
 }
 ```
 
+The function `mkContract` of a contract type makes the same type from a set of overrides.
+For each option of the interface, such as `request`, give the attributes to add to its options:
+
+```nix
+{
+  options.services.stash.passwordFile = lib.mkOption {
+    type = lib.contracts.fileSecrets.mkContract {
+      request.owner = {
+        default = cfg.user;
+        readOnly = true;
+      };
+    };
+  };
+}
+```
+
+`mkContract` also defines each option in the overrides as `{ }`, so that the user can omit `request` if each option of `request` has a default.
+
 The consumer reads the path of the file from `cfg.passwordFile.response.path`.
 
 A consumer can also accept a plain path, with `types.oneOf [ types.path contractType ]`.
@@ -108,10 +126,11 @@ It puts the content of the secret in the Nix store, so use it only for tests.
 ## Contract types {#contracts-types}
 
 `lib.contracts` contains the contract types of nixpkgs.
-Each contract type has `meta.description`, `meta.maintainers` and an `interface` module.
+Each contract type has `meta.description`, `meta.maintainers`, an `interface` module and the function `mkContract`.
 
 The option [](#opt-contractTypes) contains the contract types that a configuration can use.
 In NixOS, it contains each contract type in `lib.contracts`.
+The type of a contract type is `lib.contract.definitionType`.
 To add a contract type, write its `meta` and `interface` in a new file in `lib/contracts/definitions`, and add that file to `lib/contracts/definitions/default.nix`.
 
 The routing module is `lib.contract.module`.

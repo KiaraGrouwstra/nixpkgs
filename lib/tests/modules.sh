@@ -453,6 +453,12 @@ checkConfigOutput '^6$' config.contracts.sum.results.c3.db.primary.value ./contr
 checkConfigOutput '^"c1:x,c2:x,c3:db"$' config.wantedEntries ./contracts-nested.nix
 checkConfigError 'contracts.sum.want.c3.db.primary: no provider' config.contracts.sum.results.c3.db.primary.value ./contracts-nested.nix ./contracts-nested-no-provider.nix
 
+# contracts: `mkContract` adds overrides to the options of the interface
+checkConfigOutput '^42$' config.consumer.request.value ./contracts-mkcontract.nix
+checkConfigError 'The option .consumer.request.value. is read-only' config.consumer.request.value ./contracts-mkcontract.nix ./contracts-mkcontract-set-readonly.nix
+checkConfigError 'is not of type .signed integer.' config.consumer.response.value ./contracts-mkcontract.nix ./contracts-mkcontract-wrong-type.nix
+checkConfigOutput '^"0400 me me /run/secret"$' config.secretSummary ./contracts-mkcontract.nix
+
 # submoduleWith
 
 ## specialArgs should work
