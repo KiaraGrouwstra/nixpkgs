@@ -158,14 +158,14 @@ in
         default = { };
         type = lib.types.submodule {
           options.path = lib.mkOption {
-            default = config.contracts.fileSecrets.results.stash-passwordFile.path;
+            default = config.contracts.fileSecrets.results.stash.passwordFile.path;
           };
         };
       };
     };
   };
 
-  config.contracts.fileSecrets.want.stash-passwordFile = {
+  config.contracts.fileSecrets.want.stash.passwordFile = {
     inherit (cfg.passwordFile) request;
   };
 }
@@ -176,7 +176,7 @@ The user selects the provider, and sets the options of the provider for each req
 ```nix
 {
   contracts.fileSecrets.defaultProvider = "hardcoded-secret";
-  testing.hardcoded-secret.fileSecrets.stash-passwordFile.providerOptions.content = "MyPassword";
+  testing.hardcoded-secret.fileSecrets.stash.passwordFile.providerOptions.content = "MyPassword";
 }
 ```
 

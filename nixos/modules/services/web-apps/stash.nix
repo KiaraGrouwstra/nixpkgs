@@ -394,8 +394,8 @@ let
           default = { };
           type = types.submodule {
             options.path = mkOption {
-              default = config.contracts.fileSecrets.results."stash-${name}".path;
-              defaultText = literalExpression ''config.contracts.fileSecrets.results."stash-${name}".path'';
+              default = config.contracts.fileSecrets.results.stash.${name}.path;
+              defaultText = literalExpression "config.contracts.fileSecrets.results.stash.\${name}.path";
             };
           };
         };
@@ -536,10 +536,10 @@ in
 
   config = mkIf cfg.enable {
     # Send each secret option that uses the contract to the provider.
-    contracts.fileSecrets.want = {
-      stash-passwordFile = mkIf (lib.isAttrs cfg.passwordFile) { inherit (cfg.passwordFile) request; };
-      stash-jwtSecretKey = mkIf (lib.isAttrs cfg.jwtSecretKey) { inherit (cfg.jwtSecretKey) request; };
-      stash-sessionStoreKey = mkIf (lib.isAttrs cfg.sessionStoreKey) {
+    contracts.fileSecrets.want.stash = {
+      passwordFile = mkIf (lib.isAttrs cfg.passwordFile) { inherit (cfg.passwordFile) request; };
+      jwtSecretKey = mkIf (lib.isAttrs cfg.jwtSecretKey) { inherit (cfg.jwtSecretKey) request; };
+      sessionStoreKey = mkIf (lib.isAttrs cfg.sessionStoreKey) {
         inherit (cfg.sessionStoreKey) request;
       };
     };
