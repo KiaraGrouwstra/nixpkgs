@@ -1,15 +1,17 @@
 {
   config,
   lib,
+  options,
   pkgs,
   ...
 }:
 let
   cfg = config.testing.hardcoded-secret;
+  opt = options.testing.hardcoded-secret;
 
-  inherit (lib) mapAttrs' mkOption nameValuePair;
+  inherit (lib) mkOption;
   inherit (lib.types)
-    attrsOf
+    nestedAttrsOf
     str
     submodule
     ;
@@ -22,8 +24,8 @@ in
       default = "/run/hardcodedsecrets";
       description = ''
         Directory in which the provider writes the secret files.
-        Each secret file has the name of its entry in
-        [](#opt-testing.hardcoded-secret.fileSecrets).
+        The path of each secret file in this directory is the path of its entry in
+        [](#opt-testing.hardcoded-secret.fileSecrets), for example `stash/passwordFile`.
       '';
     };
 
@@ -40,7 +42,7 @@ in
       '';
       example = lib.literalExpression ''
         {
-          mySecret = {
+          myService.mySecret = {
             request = {
               owner = "me";
               group = "me";
@@ -50,9 +52,13 @@ in
           };
         }
       '';
-      type = attrsOf (
+      type = nestedAttrsOf (
         submodule (
-          { name, ... }:
+          { options, ... }:
+          let
+            # Path of this entry in `fileSecrets`, for example `[ "stash" "passwordFile" ]`.
+            entryPath = lib.drop (lib.length opt.fileSecrets.loc) (lib.init options.response.loc);
+          in
           {
             imports = [ lib.contracts.fileSecrets.interface ];
 
@@ -70,8 +76,8 @@ in
                 default = { };
                 type = submodule {
                   options.path = mkOption {
-                    default = "${cfg.directory}/${name}";
-                    defaultText = lib.literalExpression ''"''${config.testing.hardcoded-secret.directory}/<name>"'';
+                    default = "${cfg.directory}/${lib.concatStringsSep "/" entryPath}";
+                    defaultText = lib.literalExpression ''"''${config.testing.hardcoded-secret.directory}/<path>"'';
                   };
                 };
               };
@@ -103,20 +109,23 @@ in
       config.contracts.fileSecrets.providerRequests.hardcoded-secret;
     contracts.fileSecrets.providers.hardcoded-secret = cfg.fileSecrets;
 
-    system.activationScripts = mapAttrs' (
-      n: cfg':
+    system.activationScripts = lib.concatMapNestedAttrs' opt.fileSecrets.type (
+      path: cfg':
       let
+        n = lib.concatStringsSep "_" path;
         source = writeText "hardcodedsecret_${n}_content" cfg'.providerOptions.content;
 
         inherit (cfg') request response;
       in
-      nameValuePair "hardcodedsecret_${n}" ''
-        mkdir -p "$(dirname "${response.path}")"
-        touch "${response.path}"
-        chmod ${request.mode} "${response.path}"
-        chown ${request.owner}:${request.group} "${response.path}"
-        cp ${source} "${response.path}"
-      ''
+      {
+        "hardcodedsecret_${n}" = ''
+          mkdir -p "$(dirname "${response.path}")"
+          touch "${response.path}"
+          chmod ${request.mode} "${response.path}"
+          chown ${request.owner}:${request.group} "${response.path}"
+          cp ${source} "${response.path}"
+        '';
+      }
     ) cfg.fileSecrets;
   };
 }

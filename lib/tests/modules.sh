@@ -446,6 +446,13 @@ checkConfigOutput '^3$' config.value.b.d.e ./declare-nested-attrs.nix
 checkConfigError 'A definition for option .* is not of type .*' config.value.b.f ./declare-nested-attrs-unsound.nix
 checkConfigError 'expected an attribute set with keys from \[request, result\]' config.value.consumer ./declare-nested-attrs-misshapen.nix
 
+# contracts: route nested `want` entries to a provider and back
+checkConfigOutput '^112$' config.contracts.sum.results.c1.x.value ./contracts-nested.nix
+checkConfigOutput '^3$' config.contracts.sum.results.c2.x.value ./contracts-nested.nix
+checkConfigOutput '^6$' config.contracts.sum.results.c3.db.primary.value ./contracts-nested.nix
+checkConfigOutput '^"c1:x,c2:x,c3:db"$' config.wantedEntries ./contracts-nested.nix
+checkConfigError 'contracts.sum.want.c3.db.primary: no provider' config.contracts.sum.results.c3.db.primary.value ./contracts-nested.nix ./contracts-nested-no-provider.nix
+
 # submoduleWith
 
 ## specialArgs should work

@@ -61,17 +61,27 @@ Do not add other options at the top level of an entry. That level is for the con
 This example is a simplified version of `testing.hardcoded-secret.fileSecrets`:
 
 ```nix
+{ lib, options, ... }:
+let
+  opt = options.testing.hardcoded-secret;
+in
 {
   options.testing.hardcoded-secret.fileSecrets = lib.mkOption {
-    type = lib.types.attrsOf (
+    type = lib.types.nestedAttrsOf (
       lib.types.submodule (
-        { name, ... }:
+        { options, ... }:
+        let
+          # Path of this entry in `fileSecrets`, for example `[ "stash" "passwordFile" ]`.
+          entryPath = lib.drop (lib.length opt.fileSecrets.loc) (lib.init options.response.loc);
+        in
         {
           imports = [ lib.contracts.fileSecrets.interface ];
           options.response = lib.mkOption {
             default = { };
             type = lib.types.submodule {
-              options.path = lib.mkOption { default = "${cfg.directory}/${name}"; };
+              options.path = lib.mkOption {
+                default = "${cfg.directory}/${lib.concatStringsSep "/" entryPath}";
+              };
             };
           };
           options.providerOptions = lib.mkOption {
@@ -86,6 +96,11 @@ This example is a simplified version of `testing.hardcoded-secret.fileSecrets`:
   };
 }
 ```
+
+The entries can be in nested attribute sets, as in [`want`](#contracts-routing).
+Use the path of an entry, and not only its name, to make a unique resource for each entry.
+Two consumers can use the same option name.
+To apply a function to each entry, use `lib.concatMapNestedAttrs'` with the type of the option.
 
 At activation, this provider writes each file with the mode, owner and group from `request`.
 It puts the content of the secret in the Nix store, so use it only for tests.
@@ -106,13 +121,16 @@ It does not depend on NixOS, so other module systems can also import it.
 
 For each contract type, [](#opt-contracts) sends the requests of consumers to a provider, and sends the responses back:
 
-- `contracts.<type>.want.<name>`: an entry with a `request` from a consumer.
-  Each name must be unique for all consumers, for example `<consumer>-<option>`.
-- `contracts.<type>.providers.<provider>`: an attribute set with an entry for each request that the provider fulfills.
+- `contracts.<type>.want.<consumer>.<option>`: an entry with a `request` from a consumer.
+  Each consumer puts its entries in an attribute set with its own name.
+  Entries can be in nested attribute sets of any depth, for example `want.<consumer>.db.primary`.
+  An attribute set that contains only names of interface options, such as `request`, is an entry and not a namespace.
+  Empty attribute sets, for example from `mkIf false`, do not go to a provider.
+- `contracts.<type>.providers.<provider>`: an attribute set with an entry for each request that the provider fulfills, at the same path as in `want`.
 - `contracts.<type>.defaultProvider`: the name of the provider that gets the requests.
 - `contracts.<type>.providerRequests.<provider>`: the requests that a provider must fulfill.
   This is `want` for `defaultProvider`, and `{ }` for the other providers.
-- `contracts.<type>.results.<name>`: the `response` from `defaultProvider` for each entry in `want`.
+- `contracts.<type>.results.<consumer>.<option>`: the `response` from `defaultProvider` for each entry in `want`, at the same path.
 
 A provider reads `providerRequests.<provider>`, and sets `providers.<provider>` to its entries:
 

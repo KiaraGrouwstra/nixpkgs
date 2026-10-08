@@ -57,23 +57,53 @@ in
             default = { };
             type = types.submodule (
               { config, ... }:
+              let
+                entryType = types.submodule { imports = [ contractType.interface ]; };
+                # An entry has only the keys of the interface, such as `request`.
+                # Other attribute sets are namespaces, for example `want.<consumer>`.
+                isEntry = v: v != { } && lib.isNestedAttrsLeaf lib.all entryType v;
+                # Apply `f path entry` to each entry in `want`.
+                # Remove empty namespaces, for example from `mkIf false`,
+                # because a provider reads `{ }` as an entry.
+                mapEntries =
+                  f:
+                  let
+                    go =
+                      path:
+                      lib.concatMapAttrs (
+                        name: v:
+                        let
+                          path' = path ++ [ name ];
+                          mapped = go path' v;
+                        in
+                        if isEntry v then
+                          { ${name} = f path' v; }
+                        else
+                          lib.optionalAttrs (mapped != { }) { ${name} = mapped; }
+                      );
+                  in
+                  go [ ] config.want;
+              in
               {
                 options = {
                   want = mkOption {
                     description = ''
                       Requests from consumers.
-                      Each name must be unique for all consumers,
-                      for example `<consumer>-<option>`.
+                      Entries can be in nested attribute sets of any depth.
+                      Each consumer puts its entries in an attribute set with its own name,
+                      for example `want.<consumer>.<option>`.
+                      An attribute set that contains only names of interface options,
+                      such as `request`, is an entry and not a namespace.
                     '';
                     default = { };
-                    type = types.attrsOf (types.submodule { imports = [ contractType.interface ]; });
+                    type = types.nestedAttrsOf entryType;
                   };
 
                   requests = mkOption {
-                    description = "The `request` of each entry in `want`.";
+                    description = "The `request` of each entry in `want`, at the same path.";
                     readOnly = true;
                     type = types.attrsOf types.raw;
-                    default = lib.mapAttrs (_: want: { inherit (want) request; }) config.want;
+                    default = mapEntries (_: want: { inherit (want) request; });
                     defaultText = lib.literalMD "the `request` of each entry in `want`";
                   };
 
@@ -82,7 +112,7 @@ in
                       Providers of this contract type.
                       Each provider is an attribute set with an entry
                       that has a `response` for each request that the provider gets
-                      from `providerRequests.<provider>`.
+                      from `providerRequests.<provider>`, at the same path.
                     '';
                     default = { };
                     # Lazy, so that a provider can read its own `providerRequests` entry.
@@ -110,16 +140,16 @@ in
                   };
 
                   results = mkOption {
-                    description = "The `response` from the provider for each entry in `want`.";
+                    description = "The `response` from the provider for each entry in `want`, at the same path.";
                     readOnly = true;
                     type = types.attrsOf types.raw;
-                    default = lib.mapAttrs (
-                      name: _:
+                    default = mapEntries (
+                      path: _:
                       if config.defaultProvider == null then
-                        throw "contracts.${contractName}.want.${name}: no provider. Set `contracts.${contractName}.defaultProvider`."
+                        throw "contracts.${contractName}.want.${lib.showAttrPath path}: no provider. Set `contracts.${contractName}.defaultProvider`."
                       else
-                        config.providers.${config.defaultProvider}.${name}.response
-                    ) config.want;
+                        (lib.getAttrFromPath path config.providers.${config.defaultProvider}).response
+                    );
                     defaultText = lib.literalMD "the `response` from `defaultProvider` for each entry in `want`";
                   };
                 };
