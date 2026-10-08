@@ -76,11 +76,12 @@ The provider sets a `default` for each option in `response`, and uses the option
 Options that are specific to the provider go in `providerOptions`.
 Do not add other options at the top level of an entry. That level is for the contract.
 
-This example is a simplified version of `testing.hardcoded-secret.fileSecrets`:
+This example declares a provider of file secrets:
 
 ```nix
-{ lib, options, ... }:
+{ config, lib, options, ... }:
 let
+  cfg = config.testing.hardcoded-secret;
   opt = options.testing.hardcoded-secret;
 in
 {
@@ -126,10 +127,15 @@ It puts the content of the secret in the Nix store, so use it only for tests.
 The function `mkProviderType` of a contract type makes a type of the same shape.
 `overrides` adds attributes to the options of the interface, as in `mkContract`.
 `providerOptions` contains the options of `providerOptions`.
-`fulfill` is a function from the `request` of an entry to its `response`:
+`fulfill` is a function from the `request` of an entry to its `response`.
+This example is a simplified version of `testing.hardcoded-secret.fileSecrets`, and declares the same option as the example before:
 
 ```nix
-{ lib, ... }:
+{ config, lib, options, ... }:
+let
+  cfg = config.testing.hardcoded-secret;
+  opt = options.testing.hardcoded-secret;
+in
 {
   options.testing.hardcoded-secret.fileSecrets = lib.mkOption {
     type = lib.contracts.fileSecrets.mkProviderType {
