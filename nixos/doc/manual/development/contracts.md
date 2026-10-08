@@ -123,10 +123,39 @@ To apply a function to each entry, use `lib.concatMapNestedAttrs'` with the type
 At activation, this provider writes each file with the mode, owner and group from `request`.
 It puts the content of the secret in the Nix store, so use it only for tests.
 
+The function `mkProviderType` of a contract type makes a type of the same shape.
+`overrides` adds attributes to the options of the interface, as in `mkContract`.
+`providerOptions` contains the options of `providerOptions`.
+`fulfill` is a function from the `request` of an entry to its `response`:
+
+```nix
+{ lib, ... }:
+{
+  options.testing.hardcoded-secret.fileSecrets = lib.mkOption {
+    type = lib.contracts.fileSecrets.mkProviderType {
+      overrides.request = {
+        owner.default = "root";
+        group.default = "root";
+      };
+      providerOptions.content = lib.mkOption { type = lib.types.str; };
+      fulfill' =
+        { loc, ... }:
+        {
+          path = "${cfg.directory}/${lib.concatStringsSep "/" (lib.drop (lib.length opt.fileSecrets.loc) loc)}";
+        };
+    };
+  };
+}
+```
+
+Use `fulfill'` if the response also needs the location `loc` of the entry, its last attribute name `name`, or its configuration `instance`.
+Each attribute of the response from `fulfill` or `fulfill'` has `mkDefault` priority.
+Thus a definition of a `response` option replaces it.
+
 ## Contract types {#contracts-types}
 
 `lib.contracts` contains the contract types of nixpkgs.
-Each contract type has `meta.description`, `meta.maintainers`, an `interface` module and the function `mkContract`.
+Each contract type has `meta.description`, `meta.maintainers`, an `interface` module, and the functions `mkContract` and `mkProviderType`.
 
 The option [](#opt-contractTypes) contains the contract types that a configuration can use.
 In NixOS, it contains each contract type in `lib.contracts`.
