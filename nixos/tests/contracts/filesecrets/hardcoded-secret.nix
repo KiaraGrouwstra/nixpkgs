@@ -9,18 +9,13 @@ let
 in
 test {
   name = "contracts-secrets-hardcoded-secret";
-  providerRoot = [
-    "testing"
-    "hardcoded-secret"
-    "fileSecrets"
-    "mysecret"
-  ];
+  provider = "hardcoded-secret";
   extraModules = [
     ../../../modules/testing/hardcoded-secret.nix
     (
       { config, ... }:
       {
-        testing.hardcoded-secret.fileSecrets.mysecret.providerOptions.content = config.test.content;
+        testing.hardcoded-secret.fileSecrets.test.providerOptions.content = config.test.content;
       }
     )
   ];
