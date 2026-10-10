@@ -77,7 +77,13 @@ in
       config.contracts.fileSecrets.providerRequests.hardcoded-secret;
     contracts.fileSecrets.providers.hardcoded-secret = cfg.fileSecrets;
 
-    system.activationScripts = lib.concatMapNestedAttrs' opt.fileSecrets.type (
+    # Write each secret in a service and not in an activation script.
+    # An activation script can run before the owner of the secret exists:
+    # activation scripts without dependencies run in alphabetical order,
+    # and `systemd-sysusers` and `userborn` create users after activation.
+    # The services run before `sysinit.target`, thus before all services
+    # that have default dependencies, such as the consumers of the secrets.
+    systemd.services = lib.concatMapNestedAttrs' opt.fileSecrets.type (
       path: cfg':
       let
         n = lib.concatStringsSep "_" path;
@@ -86,13 +92,29 @@ in
         inherit (cfg') request response;
       in
       {
-        "hardcodedsecret_${n}" = ''
-          mkdir -p "$(dirname "${response.path}")"
-          touch "${response.path}"
-          chmod ${request.mode} "${response.path}"
-          chown ${request.owner}:${request.group} "${response.path}"
-          cp ${source} "${response.path}"
-        '';
+        "hardcodedsecret_${n}" = {
+          description = "Hardcoded secret ${lib.showAttrPath path}";
+          wantedBy = [ "sysinit.target" ];
+          after = [
+            "local-fs.target"
+            "systemd-sysusers.service"
+            "userborn.service"
+          ];
+          before = [
+            "sysinit.target"
+            "shutdown.target"
+          ];
+          conflicts = [ "shutdown.target" ];
+          unitConfig.DefaultDependencies = false;
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script = ''
+            install -D -m ${request.mode} -o ${request.owner} -g ${request.group} \
+              ${source} "${response.path}"
+          '';
+        };
       }
     ) cfg.fileSecrets;
   };

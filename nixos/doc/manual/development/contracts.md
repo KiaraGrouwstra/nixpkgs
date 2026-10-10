@@ -121,7 +121,8 @@ Use the path of an entry, and not only its name, to make a unique resource for e
 Two consumers can use the same option name.
 To apply a function to each entry, use `lib.concatMapNestedAttrs'` with the type of the option.
 
-At activation, this provider writes each file with the mode, owner and group from `request`.
+For each entry, this provider starts a service that writes the file with the mode, owner and group from `request`.
+The service runs before `sysinit.target`, thus the file exists before the services that use it start.
 It puts the content of the secret in the Nix store, so use it only for tests.
 
 The function `mkProviderType` of a contract type makes a type of the same shape.
