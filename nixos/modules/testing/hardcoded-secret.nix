@@ -54,7 +54,7 @@ in
         submodule (
           { name, ... }:
           {
-            imports = [ ../contracts/file-secrets.nix ];
+            imports = [ lib.contracts.fileSecrets.interface ];
 
             options = {
               request = mkOption {
@@ -98,6 +98,11 @@ in
   };
 
   config = {
+    # Fulfill the requests that the contracts system sends to this provider.
+    testing.hardcoded-secret.fileSecrets =
+      config.contracts.fileSecrets.providerRequests.hardcoded-secret;
+    contracts.fileSecrets.providers.hardcoded-secret = cfg.fileSecrets;
+
     system.activationScripts = mapAttrs' (
       n: cfg':
       let

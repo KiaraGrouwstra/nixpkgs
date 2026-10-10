@@ -13,7 +13,7 @@ Status: experimental. The interfaces can change.
 ## File secrets {#contracts-file-secrets}
 
 The file secrets contract gives a secret to a consumer in a file with given permissions.
-Its interface module is `nixos/modules/contracts/file-secrets.nix`, with these options:
+Its interface module is `lib.contracts.fileSecrets.interface`, with these options:
 
 - `request.mode`: the mode that the file must have. The default is `"0400"`.
 - `request.owner`: the user that must own the file.
@@ -31,7 +31,7 @@ This example is a simplified version of `services.stash.passwordFile`:
 {
   options.services.stash.passwordFile = lib.mkOption {
     type = lib.types.submodule {
-      imports = [ ../../contracts/file-secrets.nix ];
+      imports = [ lib.contracts.fileSecrets.interface ];
       options.request = lib.mkOption {
         default = { };
         type = lib.types.submodule {
@@ -67,7 +67,7 @@ This example is a simplified version of `testing.hardcoded-secret.fileSecrets`:
       lib.types.submodule (
         { name, ... }:
         {
-          imports = [ ../contracts/file-secrets.nix ];
+          imports = [ lib.contracts.fileSecrets.interface ];
           options.response = lib.mkOption {
             default = { };
             type = lib.types.submodule {
@@ -90,22 +90,54 @@ This example is a simplified version of `testing.hardcoded-secret.fileSecrets`:
 At activation, this provider writes each file with the mode, owner and group from `request`.
 It puts the content of the secret in the Nix store, so use it only for tests.
 
-## Connect a consumer to a provider {#contracts-connect}
+## Contract types {#contracts-types}
 
-The user connects each consumer option to a provider entry.
-The user sets the `request` of the provider entry from the consumer, and the `response` of the consumer from the provider entry:
+`lib.contracts` contains the contract types of nixpkgs.
+Each contract type has `meta.description`, `meta.maintainers` and an `interface` module.
+
+The option [](#opt-contractTypes) contains the contract types that a configuration can use.
+In NixOS, it contains each contract type in `lib.contracts`.
+To add a contract type, write its `meta` and `interface` in a new file in `lib/contracts/definitions`, and add that file to `lib/contracts/definitions/default.nix`.
+
+The routing module is `lib.contract.module`.
+It does not depend on NixOS, so other module systems can also import it.
+
+## Route requests to a provider {#contracts-routing}
+
+For each contract type, [](#opt-contracts) sends the requests of consumers to a provider, and sends the responses back:
+
+- `contracts.<type>.want.<name>`: an entry with a `request` from a consumer.
+  Each name must be unique for all consumers, for example `<consumer>-<option>`.
+- `contracts.<type>.providers.<provider>`: an attribute set with an entry for each request that the provider fulfills.
+- `contracts.<type>.defaultProvider`: the name of the provider that gets the requests.
+- `contracts.<type>.providerRequests.<provider>`: the requests that a provider must fulfill.
+  This is `want` for `defaultProvider`, and `{ }` for the other providers.
+- `contracts.<type>.results.<name>`: the `response` from `defaultProvider` for each entry in `want`.
+
+A provider reads `providerRequests.<provider>`, and sets `providers.<provider>` to its entries:
 
 ```nix
 { config, ... }:
 {
-  services.stash.passwordFile.response =
-    config.testing.hardcoded-secret.fileSecrets.stash-password.response;
-
-  testing.hardcoded-secret.fileSecrets.stash-password = {
-    request = config.services.stash.passwordFile.request;
-    providerOptions.content = "MyPassword";
-  };
+  testing.hardcoded-secret.fileSecrets = config.contracts.fileSecrets.providerRequests.hardcoded-secret;
+  contracts.fileSecrets.providers.hardcoded-secret = config.testing.hardcoded-secret.fileSecrets;
 }
 ```
 
-To use a different provider, change these two definitions.
+The user sends the `request` of a consumer option to `want`, and sets the `response` of the option from `results`.
+The user also selects the provider, and sets the options of the provider for each request:
+
+```nix
+{ config, ... }:
+{
+  contracts.fileSecrets.want.stash-passwordFile = {
+    inherit (config.services.stash.passwordFile) request;
+  };
+  services.stash.passwordFile.response = config.contracts.fileSecrets.results.stash-passwordFile;
+
+  contracts.fileSecrets.defaultProvider = "hardcoded-secret";
+  testing.hardcoded-secret.fileSecrets.stash-passwordFile.providerOptions.content = "MyPassword";
+}
+```
+
+To use a different provider, change `defaultProvider`, and set the options of that provider.

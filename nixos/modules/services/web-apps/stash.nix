@@ -370,7 +370,7 @@ let
   secretOptionType =
     let
       contractSecretsType = types.submodule {
-        imports = [ ../../contracts/file-secrets.nix ];
+        imports = [ lib.contracts.fileSecrets.interface ];
         options.request = mkOption {
           default = { };
           type = types.submodule {
