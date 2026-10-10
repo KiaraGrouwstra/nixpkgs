@@ -377,6 +377,9 @@
     "index.html#contracts-routing",
     "index.html#contracts-connect"
   ],
+  "contracts-chaining": [
+    "index.html#contracts-chaining"
+  ],
   "module-contracts": [
     "index.html#module-contracts"
   ],
