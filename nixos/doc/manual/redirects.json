@@ -380,6 +380,9 @@
   "contracts-chaining": [
     "index.html#contracts-chaining"
   ],
+  "contracts-cross-node": [
+    "index.html#contracts-cross-node"
+  ],
   "module-contracts": [
     "index.html#module-contracts"
   ],
