@@ -35,7 +35,7 @@ in
             type = types.submodule (
               { config, ... }:
               let
-                entryType = types.submodule { imports = [ contractType.interface ]; };
+                entryType = types.submodule { imports = [ contractType.consumerInterface ]; };
                 # An entry has only the keys of the interface, such as `request`.
                 # Other attribute sets are namespaces, for example `want.<consumer>`.
                 isEntry = v: v != { } && lib.isNestedAttrsLeaf lib.all entryType v;
@@ -117,17 +117,22 @@ in
                   };
 
                   results = mkOption {
-                    description = "The `response` from the provider for each entry in `want`, at the same path.";
+                    description = ''
+                      For each entry in `want`, at the same path,
+                      the `request` of the entry and the `response` from the provider in one attribute set.
+                      Thus a consumer reads a request value from the same place as the response.
+                      A `response` attribute takes precedence over a `request` attribute with the same name.
+                    '';
                     readOnly = true;
                     type = types.attrsOf types.raw;
                     default = mapEntries (
-                      path: _:
+                      path: want:
                       if config.defaultProvider == null then
                         throw "contracts.${contractName}.want.${lib.showAttrPath path}: no provider. Set `contracts.${contractName}.defaultProvider`."
                       else
-                        (lib.getAttrFromPath path config.providers.${config.defaultProvider}).response
+                        want.request // (lib.getAttrFromPath path config.providers.${config.defaultProvider}).response
                     );
-                    defaultText = lib.literalMD "the `response` from `defaultProvider` for each entry in `want`";
+                    defaultText = lib.literalMD "the `request` of each entry in `want`, with the `response` from `defaultProvider`";
                   };
                 };
               }
