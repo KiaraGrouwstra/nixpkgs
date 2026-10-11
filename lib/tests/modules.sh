@@ -479,6 +479,13 @@ checkConfigOutput '^6$' config.consumerValue ./contracts-cross-node.nix
 checkConfigOutput '^"consumer-value"$' config.providerEntries ./contracts-cross-node.nix
 checkConfigError 'contracts.number.want.consumer-value: no provider' config.consumerOnlyValue ./contracts-cross-node.nix
 
+# contracts: a consumer can set an alias from `requestAliases`, and the provider does not get the alias
+checkConfigOutput '^6$' config.contracts.number.results.app.x.value ./contracts-request-alias.nix
+checkConfigOutput '^7$' config.consumer.request.value ./contracts-request-alias.nix
+checkConfigOutput '^"value"$' config.providerRequestNames ./contracts-request-alias.nix
+checkConfigOutput '^"value"$' config.resultNames ./contracts-request-alias.nix
+ABORT_ON_WARN=1 checkConfigError 'The option .request.oldValue. of the contract type .number. is renamed to .request.value.' config.contracts.number.results.app.x.value ./contracts-request-alias.nix
+
 # submoduleWith
 
 ## specialArgs should work

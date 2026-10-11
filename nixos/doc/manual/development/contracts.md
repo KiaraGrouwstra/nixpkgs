@@ -80,7 +80,12 @@ Do not add other options at the top level of an entry. That level is for the con
 This example declares a provider of file secrets:
 
 ```nix
-{ config, lib, options, ... }:
+{
+  config,
+  lib,
+  options,
+  ...
+}:
 let
   cfg = config.testing.hardcoded-secret;
   opt = options.testing.hardcoded-secret;
@@ -133,7 +138,12 @@ The function `mkProviderType` of a contract type makes a type of the same shape.
 This example is a simplified version of `testing.hardcoded-secret.fileSecrets`, and declares the same option as the example before:
 
 ```nix
-{ config, lib, options, ... }:
+{
+  config,
+  lib,
+  options,
+  ...
+}:
 let
   cfg = config.testing.hardcoded-secret;
   opt = options.testing.hardcoded-secret;
@@ -195,7 +205,8 @@ A provider reads `providerRequests.<provider>`, and sets `providers.<provider>` 
 ```nix
 { config, ... }:
 {
-  testing.hardcoded-secret.fileSecrets = config.contracts.fileSecrets.providerRequests.hardcoded-secret;
+  testing.hardcoded-secret.fileSecrets =
+    config.contracts.fileSecrets.providerRequests.hardcoded-secret;
   contracts.fileSecrets.providers.hardcoded-secret = config.testing.hardcoded-secret.fileSecrets;
 }
 ```
@@ -302,3 +313,36 @@ In a NixOS test, the module argument `nodes` contains the configuration of each 
     };
 }
 ```
+
+## Rename a request option {#contracts-rename-request}
+
+To rename an option of `request`, add the old name as an alias in `requestAliases` of the contract type.
+Consumers can then set the old name or the new name.
+Providers get only the options of `interface`: `requests`, `providerRequests` and `results` do not have the aliases.
+
+For example, to rename the option `request.oldValue` to `request.value`:
+
+```nix
+{
+  requestAliases = [
+    (
+      { config, options, ... }:
+      {
+        options.oldValue = lib.mkOption {
+          description = "Alias of `value`.";
+          type = lib.types.int;
+          visible = false;
+          apply = lib.warn "The option `request.oldValue` of the contract type `myContract` is renamed to `request.value`.";
+        };
+        config = lib.mkIf options.oldValue.isDefined {
+          value = lib.mkDefault config.oldValue;
+        };
+      }
+    )
+  ];
+}
+```
+
+The `apply` function shows a warning when a consumer sets the old name.
+Do not use `lib.mkRenamedOptionModule` here.
+It shows a warning only in a module that has the option `warnings`, and `request` does not have it.

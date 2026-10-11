@@ -36,6 +36,8 @@ in
               { config, ... }:
               let
                 entryType = types.submodule { imports = [ contractType.consumerInterface ]; };
+                # The `request` of an entry, without the aliases from `requestAliases`.
+                request = want: lib.getAttrs contractType.requestOptionNames want.request;
                 # An entry has only the keys of the interface, such as `request`.
                 # Other attribute sets are namespaces, for example `want.<consumer>`.
                 isEntry = v: v != { } && lib.isNestedAttrsLeaf lib.all entryType v;
@@ -77,10 +79,13 @@ in
                   };
 
                   requests = mkOption {
-                    description = "The `request` of each entry in `want`, at the same path.";
+                    description = ''
+                      The `request` of each entry in `want`, at the same path.
+                      It does not have the aliases from `requestAliases`.
+                    '';
                     readOnly = true;
                     type = types.attrsOf types.raw;
-                    default = mapEntries (_: want: { inherit (want) request; });
+                    default = mapEntries (_: want: { request = request want; });
                     defaultText = lib.literalMD "the `request` of each entry in `want`";
                   };
 
@@ -121,6 +126,7 @@ in
                       For each entry in `want`, at the same path,
                       the `request` of the entry and the `response` from the provider in one attribute set.
                       Thus a consumer reads a request value from the same place as the response.
+                      The `request` does not have the aliases from `requestAliases`.
                       A `response` attribute takes precedence over a `request` attribute with the same name.
                     '';
                     readOnly = true;
@@ -130,7 +136,7 @@ in
                       if config.defaultProvider == null then
                         throw "contracts.${contractName}.want.${lib.showAttrPath path}: no provider. Set `contracts.${contractName}.defaultProvider`."
                       else
-                        want.request // (lib.getAttrFromPath path config.providers.${config.defaultProvider}).response
+                        request want // (lib.getAttrFromPath path config.providers.${config.defaultProvider}).response
                     );
                     defaultText = lib.literalMD "the `request` of each entry in `want`, with the `response` from `defaultProvider`";
                   };

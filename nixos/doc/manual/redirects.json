@@ -383,6 +383,9 @@
   "contracts-cross-node": [
     "index.html#contracts-cross-node"
   ],
+  "contracts-rename-request": [
+    "index.html#contracts-rename-request"
+  ],
   "module-contracts": [
     "index.html#module-contracts"
   ],

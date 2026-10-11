@@ -43,9 +43,33 @@ in
       type = types.deferredModule;
     };
 
+    requestAliases = mkOption {
+      description = ''
+        Modules that add aliases to the options of `request`,
+        for example the old name of a renamed option.
+        Consumers can set an alias.
+        Providers do not get the aliases:
+        `contracts.<type>.requests` and `contracts.<type>.results`
+        have only the `request` options of `interface`.
+        See [](#contracts-rename-request) for an example.
+      '';
+      type = types.listOf types.deferredModule;
+      default = [ ];
+    };
+
+    requestOptionNames = mkOption {
+      description = "Names of the `request` options of `interface`, without the aliases.";
+      type = types.listOf types.str;
+      internal = true;
+      readOnly = true;
+      default = lib.attrNames (subOptions "request");
+      defaultText = lib.literalMD "the names of the `request` options of `interface`";
+    };
+
     consumerInterface = mkOption {
       description = ''
         The `interface` as a consumer sees it.
+        `request` also has the options of `requestAliases`.
         `response` also has the options of `request`, as in `contracts.<type>.results`.
         A `response` option takes precedence over a `request` option with the same name.
         These options do not have the `default` and `apply` of the `request` options,
@@ -57,6 +81,9 @@ in
       readOnly = true;
       default = {
         imports = [ config.interface ];
+        options.request = mkOption {
+          type = types.submodule { imports = config.requestAliases; };
+        };
         options.response = mkOption {
           type = types.submodule {
             options = lib.mapAttrs (
@@ -69,7 +96,7 @@ in
           };
         };
       };
-      defaultText = lib.literalMD "`interface`, with the `request` options also in `response`";
+      defaultText = lib.literalMD "`interface`, with `requestAliases` in `request`, and the `request` options also in `response`";
     };
 
     mkContract = mkOption {

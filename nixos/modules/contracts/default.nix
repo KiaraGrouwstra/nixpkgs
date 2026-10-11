@@ -6,6 +6,6 @@
 
   # `mkContract` and `mkProviderType` are read-only, so set only the options that a definition sets.
   contractTypes = lib.mapAttrs (_: contractType: {
-    inherit (contractType) meta interface;
+    inherit (contractType) meta interface requestAliases;
   }) lib.contracts;
 }
