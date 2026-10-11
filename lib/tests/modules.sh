@@ -486,6 +486,13 @@ checkConfigOutput '^"value"$' config.providerRequestNames ./contracts-request-al
 checkConfigOutput '^"value"$' config.resultNames ./contracts-request-alias.nix
 ABORT_ON_WARN=1 checkConfigError 'The option .request.oldValue. of the contract type .number. is renamed to .request.value.' config.contracts.number.results.app.x.value ./contracts-request-alias.nix
 
+# contracts: rename a contract type, and send the requests of the old name to the provider of the new name
+checkConfigOutput '^6$' config.contracts.number.results.old.x.value ./contracts-type-rename.nix
+checkConfigOutput '^2$' config.contracts.count.results.new.x.value ./contracts-type-rename.nix
+checkConfigOutput '^"new,old"$' config.wantedNames ./contracts-type-rename.nix
+checkConfigOutput '^"The contract type .number. is renamed to .count.\."$' config.warnings.0 ./contracts-type-rename.nix
+checkConfigError 'contracts.number.want.old.x: no provider' config.contracts.number.results.old.x.value ./contracts-type-rename.nix ./contracts-type-rename-no-provider.nix
+
 # submoduleWith
 
 ## specialArgs should work

@@ -346,3 +346,41 @@ For example, to rename the option `request.oldValue` to `request.value`:
 The `apply` function shows a warning when a consumer sets the old name.
 Do not use `lib.mkRenamedOptionModule` here.
 It shows a warning only in a module that has the option `warnings`, and `request` does not have it.
+
+## Rename a contract type {#contracts-rename-type}
+
+To rename a contract type, keep the old name as a deprecated contract type with the same `interface` and `requestAliases`.
+Then send the requests of the old type to the provider of the new type.
+This is the same as [](#contracts-cross-node), but in one configuration.
+Consumers of the old type do not change.
+
+For example, to rename the contract type `oldContract` to `newContract`:
+
+```nix
+{ config, lib, ... }:
+let
+  inherit (config.contracts) newContract oldContract;
+in
+{
+  contractTypes.oldContract = {
+    meta = {
+      description = "Deprecated: renamed to `newContract`.";
+      maintainers = [ ];
+    };
+    inherit (config.contractTypes.newContract) interface requestAliases;
+  };
+
+  # Send the requests of `oldContract` to `newContract`, and the responses back.
+  contracts.newContract.want = oldContract.requests;
+  contracts.oldContract = lib.mkIf (newContract.defaultProvider != null) {
+    providers.newContract = newContract.providers.${newContract.defaultProvider};
+    defaultProvider = "newContract";
+  };
+
+  warnings = lib.optional (
+    oldContract.want != { }
+  ) "The contract type `oldContract` is renamed to `newContract`.";
+}
+```
+
+In nixpkgs, add the old contract type to `lib/contracts/definitions/`, and add the other definitions to `nixos/modules/contracts/default.nix`.
