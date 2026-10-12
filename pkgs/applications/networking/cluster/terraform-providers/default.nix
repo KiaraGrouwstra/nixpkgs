@@ -117,6 +117,11 @@ let
             CGO_ENABLED = "1";
           };
         });
+    # The `main` package of the provider is not at the root of the repository.
+    # The repository also has a CLI, which is not built here.
+    tasansga_lldap = automated-providers.tasansga_lldap.overrideAttrs (_: {
+      subPackages = [ "cmd/terraform-provider-lldap" ];
+    });
   };
 
   # Put all the providers we not longer support in this list.
