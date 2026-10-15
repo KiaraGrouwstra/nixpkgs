@@ -48,6 +48,7 @@ A consumer can keep an option without a contract next to the contract option.
 For example, `services.stash.passwordFile` takes a plain path.
 If the user sets `services.stash.passwordSecret`, the module sets `passwordFile` to `cfg.passwordSecret.response.path` with `lib.mkDefault`.
 A consumer can also accept a value with or without a contract in one option, with `types.oneOf [ types.path contractType ]`.
+`lib.contract.isInstance` tells which of the two the user set: it is `true` for an attribute set with a `response`.
 
 ## Providers {#contracts-providers}
 
