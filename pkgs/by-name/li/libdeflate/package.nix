@@ -23,7 +23,12 @@ stdenv.mkDerivation (finalAttrs: {
   cmakeFlags = [
     "-DLIBDEFLATE_BUILD_TESTS=ON"
   ]
-  ++ lib.optionals stdenv.hostPlatform.isStatic [ "-DLIBDEFLATE_BUILD_SHARED_LIB=OFF" ];
+  ++ lib.optionals stdenv.hostPlatform.isStatic [ "-DLIBDEFLATE_BUILD_SHARED_LIB=OFF" ]
+  ++ lib.optionals stdenv.hostPlatform.isWasi [
+    # The programs and the tests use `mmap`, which WASI does not have.
+    "-DLIBDEFLATE_BUILD_GZIP=OFF"
+    "-DLIBDEFLATE_BUILD_TESTS=OFF"
+  ];
 
   nativeBuildInputs = [ cmake ] ++ lib.optional stdenv.hostPlatform.isDarwin fixDarwinDylibNames;
   buildInputs = [ zlib ];
@@ -46,7 +51,7 @@ stdenv.mkDerivation (finalAttrs: {
     license = lib.licenses.mit;
     homepage = "https://github.com/ebiggers/libdeflate";
     changelog = "https://github.com/ebiggers/libdeflate/blob/v${finalAttrs.version}/NEWS.md";
-    platforms = lib.platforms.unix ++ lib.platforms.windows;
+    platforms = lib.platforms.unix ++ lib.platforms.windows ++ lib.platforms.wasi;
     maintainers = with lib.maintainers; [
       kaction
     ];
