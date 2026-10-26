@@ -69,15 +69,16 @@ stdenv.mkDerivation (finalAttrs: {
   '';
 
   cmakeFlags =
-    lib.attrsets.mapAttrsToList (name: value: "-DZSTD_${name}:BOOL=${if value then "ON" else "OFF"}")
-      {
-        BUILD_SHARED = !static;
-        BUILD_STATIC = enableStatic;
-        BUILD_CONTRIB = buildContrib;
-        PROGRAMS_LINK_SHARED = !static;
-        LEGACY_SUPPORT = legacySupport;
-        BUILD_TESTS = doCheck;
-      };
+    lib.attrsets.mapAttrsToList (name: value: "-DZSTD_${name}:BOOL=${if value then "ON" else "OFF"}") {
+      BUILD_SHARED = !static;
+      BUILD_STATIC = enableStatic;
+      BUILD_CONTRIB = buildContrib;
+      PROGRAMS_LINK_SHARED = !static;
+      LEGACY_SUPPORT = legacySupport;
+      BUILD_TESTS = doCheck;
+    }
+    # The programs use signals and `chown`, which WASI does not have.
+    ++ lib.optionals stdenv.hostPlatform.isWasi [ "-DZSTD_BUILD_PROGRAMS:BOOL=OFF" ];
 
   cmakeDir = "../build/cmake";
   dontUseCmakeBuildDir = true;
@@ -97,6 +98,9 @@ stdenv.mkDerivation (finalAttrs: {
 
   preInstall = ''
     mkdir -p $bin/bin
+  ''
+  # The shell scripts need `bash` and `grep`, which are not available on WASI.
+  + lib.optionalString (!stdenv.hostPlatform.isWasi) ''
     substituteInPlace ../programs/zstdgrep \
       --replace ":-grep" ":-${gnugrep}/bin/grep" \
       --replace ":-zstdcat" ":-$bin/bin/zstdcat"
