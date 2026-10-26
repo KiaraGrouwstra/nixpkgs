@@ -51,7 +51,9 @@ stdenv.mkDerivation (finalAttrs: {
   ]
   ++ lib.optional (
     stdenv.buildPlatform.parsed.kernel.name != stdenv.hostPlatform.parsed.kernel.name
-  ) "UNAME=${stdenv.hostPlatform.uname.system}";
+  ) "UNAME=${stdenv.hostPlatform.uname.system}"
+  # Build only the installed utilities. Some test utilities use `mkstemp`, which WASI does not have.
+  ++ lib.optional stdenv.hostPlatform.isWasi "UTILS=$(INSTALLABLE)";
 
   postPatch = ''
     # we don't want to build HTML documentation
@@ -82,7 +84,7 @@ stdenv.mkDerivation (finalAttrs: {
   meta = {
     description = "Library for reading and writing gif images";
     homepage = "https://giflib.sourceforge.net/";
-    platforms = lib.platforms.unix ++ lib.platforms.windows;
+    platforms = lib.platforms.unix ++ lib.platforms.windows ++ lib.platforms.wasi;
     license = lib.licenses.mit;
     maintainers = [ ];
     branch = "5.2";
