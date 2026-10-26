@@ -48,13 +48,15 @@ stdenv.mkDerivation (finalAttrs: {
       ./mingw-boolean.patch
     ];
 
-  outputs = [
-    "bin"
-    "dev"
-    "out"
-    "man"
-    "doc"
-  ];
+  # On WASI, the build makes no tools and no manual pages.
+  outputs =
+    lib.optionals (!stdenv.hostPlatform.isWasi) [ "bin" ]
+    ++ [
+      "dev"
+      "out"
+    ]
+    ++ lib.optionals (!stdenv.hostPlatform.isWasi) [ "man" ]
+    ++ [ "doc" ];
 
   nativeBuildInputs = [
     cmake
@@ -77,6 +79,12 @@ stdenv.mkDerivation (finalAttrs: {
     # https://github.com/libjpeg-turbo/libjpeg-turbo/issues/428
     # https://github.com/libjpeg-turbo/libjpeg-turbo/commit/88bf1d16786c74f76f2e4f6ec2873d092f577c75
     (lib.cmakeFeature "FLOATTEST" "fp-contract")
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isWasi [
+    # The TurboJPEG API, the tools and the tests use `setjmp`, which WASI does not have.
+    (lib.cmakeBool "WITH_TURBOJPEG" false)
+    (lib.cmakeBool "WITH_TOOLS" false)
+    (lib.cmakeBool "WITH_TESTS" false)
   ];
 
   doInstallCheck = true;
