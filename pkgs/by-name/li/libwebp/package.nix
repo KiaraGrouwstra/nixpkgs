@@ -4,14 +4,15 @@
   fetchFromGitHub,
   fetchpatch,
   cmake,
-  threadingSupport ? true, # multi-threading
+  threadingSupport ? !stdenv.hostPlatform.isWasi, # multi-threading
   openglSupport ? false,
   libglut,
   libGL,
   libGLU, # OpenGL (required for vwebp)
-  pngSupport ? true,
+  # libpng and the JPEG decoder of the tools use `setjmp`, which WASI does not have.
+  pngSupport ? !stdenv.hostPlatform.isWasi,
   libpng, # PNG image format
-  jpegSupport ? true,
+  jpegSupport ? !stdenv.hostPlatform.isWasi,
   libjpeg, # JPEG image format
   tiffSupport ? true,
   libtiff, # TIFF image format
