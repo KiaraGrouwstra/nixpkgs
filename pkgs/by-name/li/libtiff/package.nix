@@ -56,8 +56,8 @@ stdenv.mkDerivation (finalAttrs: {
     mv VERSION VERSION.txt
   '';
 
-  outputs = [
-    "bin"
+  # On WASI, the build makes no tools.
+  outputs = lib.optionals (!stdenv.hostPlatform.isWasi) [ "bin" ] ++ [
     "dev"
     "dev_private"
     "out"
@@ -83,21 +83,27 @@ stdenv.mkDerivation (finalAttrs: {
   # Things listed in the
   # pkg-config file need to be propagated or else
   # they will not be picked up properly
-  propagatedBuildInputs = [
-    libjpeg
-    zlib
-    zstd
-    libdeflate
-    xz
-    # libwebp depends on us; this will cause infinite recursion otherwise
-    (libwebp.override { tiffSupport = false; })
-  ]
-  ++ lib.optionals withLerc [
-    lerc
-  ];
+  propagatedBuildInputs =
+    # The JPEG codec uses `setjmp`, which WASI does not have.
+    lib.optionals (!stdenv.hostPlatform.isWasi) [ libjpeg ]
+    ++ [
+      zlib
+      zstd
+      libdeflate
+      xz
+      # libwebp depends on us; this will cause infinite recursion otherwise
+      (libwebp.override { tiffSupport = false; })
+    ]
+    ++ lib.optionals withLerc [
+      lerc
+    ];
 
   cmakeFlags = [
     "-DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isWasi [
+    # Some tools use `tmpfile`, which WASI does not have.
+    (lib.cmakeBool "tiff-tools" false)
   ];
 
   enableParallelBuilding = true;
@@ -131,7 +137,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://libtiff.gitlab.io/libtiff";
     changelog = "https://libtiff.gitlab.io/libtiff/releases/v${finalAttrs.version}.html";
     license = lib.licenses.libtiff;
-    platforms = lib.platforms.unix ++ lib.platforms.windows;
+    platforms = lib.platforms.unix ++ lib.platforms.windows ++ lib.platforms.wasi;
     pkgConfigModules = [ "libtiff-4" ];
     teams = [ lib.teams.geospatial ];
   };
