@@ -1,0 +1,90 @@
+diff --git a/MagickCore/delegate.c b/MagickCore/delegate.c
+index 0637b7a..b7a9de1 100644
+--- a/MagickCore/delegate.c
++++ b/MagickCore/delegate.c
+@@ -87,7 +87,7 @@
+   #if TARGET_OS_IOS || TARGET_OS_WATCH || TARGET_OS_TV
+     #define system(s) ((s)==NULL ? 0 : -1)
+   #endif // end iOS
+-#elif defined(__ANDROID__)
++#elif defined(__ANDROID__) || defined(__wasi__)
+   #define system(s) ((s)==NULL ? 0 : -1)
+ #endif
+ #define DelegateFilename  "delegates.xml"
+diff --git a/MagickCore/studio.h b/MagickCore/studio.h
+index a3debf1..830eb16 100644
+--- a/MagickCore/studio.h
++++ b/MagickCore/studio.h
+@@ -196,8 +196,10 @@ extern int vsnprintf(char *,size_t,const char *,va_list);
+ #   include <dirent.h>
+ #   define NAMLEN(dirent) strlen((dirent)->d_name)
+ #  endif
+-#  include <sys/wait.h>
+-#  include <pwd.h>
++#  if !defined(__wasi__)
++#   include <sys/wait.h>
++#   include <pwd.h>
++#  endif
+ # endif
+ # if !defined(S_ISDIR)
+ #  define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
+@@ -233,6 +235,14 @@ extern int vsnprintf(char *,size_t,const char *,va_list);
+ # include "MagickCore/magick-type.h"
+ #endif
+ 
++#if defined(__wasi__)
++/*
++  WASI cannot start processes.
++*/
++# define popen(command,type)  (errno=ENOSYS,(FILE *) NULL)
++# define pclose(file)  (errno=ENOSYS,-1)
++#endif
++
+ #if defined (MAGICKCORE_WINDOWS_SUPPORT) || defined(__MINGW32__)
+ # define P_MODE (_S_IREAD | _S_IWRITE)
+ # define S_MODE (_S_IREAD | _S_IWRITE)
+diff --git a/MagickCore/utility.c b/MagickCore/utility.c
+index 26df67d..5bc70f6 100644
+--- a/MagickCore/utility.c
++++ b/MagickCore/utility.c
+@@ -656,7 +656,7 @@ MagickPrivate void ExpandFilename(char *path)
+     }
+   else
+     {
+-#if defined(MAGICKCORE_POSIX_SUPPORT) && !defined(__OS2__)
++#if defined(MAGICKCORE_POSIX_SUPPORT) && !defined(__OS2__) && !defined(__wasi__)
+       char
+ #if defined(MAGICKCORE_HAVE_GETPWNAM_R)
+         buffer[MagickPathExtent],
+diff --git a/MagickWand/studio.h b/MagickWand/studio.h
+index 92d245e..ed6d6b1 100644
+--- a/MagickWand/studio.h
++++ b/MagickWand/studio.h
+@@ -180,8 +180,10 @@ extern int vsnprintf(char *,size_t,const char *,va_list);
+ #   include <dirent.h>
+ #   define NAMLEN(dirent) strlen((dirent)->d_name)
+ #  endif
+-#  include <sys/wait.h>
+-#  include <pwd.h>
++#  if !defined(__wasi__)
++#   include <sys/wait.h>
++#   include <pwd.h>
++#  endif
+ # endif
+ # if !defined(S_ISDIR)
+ #  define S_ISDIR(mode) (((mode) & S_IFMT) == S_IFDIR)
+@@ -210,6 +212,14 @@ extern int vsnprintf(char *,size_t,const char *,va_list);
+ # include <stat.h>
+ #endif
+ 
++#if defined(__wasi__)
++/*
++  WASI cannot start processes.
++*/
++# define popen(command,type)  (errno=ENOSYS,(FILE *) NULL)
++# define pclose(file)  (errno=ENOSYS,-1)
++#endif
++
+ #if defined(MAGICKWAND_WINDOWS_SUPPORT) || defined(__MINGW32__)
+ # define P_MODE (_S_IREAD | _S_IWRITE)
+ # define S_MODE (_S_IREAD | _S_IWRITE)
