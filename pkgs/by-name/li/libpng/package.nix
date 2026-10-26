@@ -46,9 +46,19 @@ stdenv'.mkDerivation (finalAttrs: {
 
   propagatedBuildInputs = [ zlib ];
 
+  # The test programs use `tmpfile`, which WASI does not have.
+  configureFlags = lib.optional stdenv.hostPlatform.isWasi "--disable-tests";
+
   strictDeps = true;
 
   doCheck = true;
+
+  # WASI has `setjmp` only through the exception handling proposal.
+  # Consumers that include `png.h` must also use these flags.
+  env = lib.optionalAttrs stdenv.hostPlatform.isWasi {
+    NIX_CFLAGS_COMPILE = "-mexception-handling -mllvm -wasm-enable-sjlj -mllvm -wasm-use-legacy-eh=false";
+    NIX_LDFLAGS = "-lsetjmp";
+  };
 
   passthru = {
     inherit zlib;
