@@ -492,6 +492,13 @@ checkConfigError 'defaultProviderName. is not of type .null or value "urlbuilder
 checkConfigError 'is not of type .signed integer.' config.contracts.number.results.app.x.value ./contracts-mkprovidertype.nix ./contracts-mkprovidertype-wrong-request.nix
 checkConfigError "set .fulfill. or .fulfill'., not the two" config.both.x.request.value ./contracts-mkprovidertype.nix ./contracts-mkprovidertype-two-fulfill.nix
 
+# contracts: a contract instance in the request of another contract, and the consumer routes the two instances
+checkConfigOutput '^"postgresql:///appdb\?passfile=/run/secrets/postgres"$' config.app.db.response.url ./contracts-nested-request.nix ./contracts-nested-request-route.nix
+checkConfigOutput '^"postgres"$' config.app.db.response.passwordFileOwner ./contracts-nested-request.nix ./contracts-nested-request-route.nix
+checkConfigOutput '^"0400"$' config.secretProvider.app.dbPassword.request.mode ./contracts-nested-request.nix ./contracts-nested-request-route.nix
+# contracts: the routing does not find an instance in a request
+checkConfigError 'The option .path. was accessed but has no value defined' config.app.db.response.url ./contracts-nested-request.nix
+
 # contracts: connect a consumer and a provider in two different evaluations
 checkConfigOutput '^6$' config.consumerValue ./contracts-cross-node.nix
 checkConfigOutput '^"consumer-value"$' config.providerEntries ./contracts-cross-node.nix
