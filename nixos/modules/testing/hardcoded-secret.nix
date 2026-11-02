@@ -38,7 +38,7 @@ in
         This makes the tests more accurate, ensuring the permissions
         set by the contract consumer are correct.
 
-        For each entry, a service writes `providerOptions.content` to `response.path`,
+        For each entry, a service writes `providerOptions.content` to the path in `response`,
         with the `mode`, `owner` and `group` from `request`.
         The service runs after `systemd-sysusers` or `userborn`, and before `sysinit.target`,
         thus the file exists before the services that use it start.
@@ -73,13 +73,8 @@ in
               };
 
               response = mkOption {
-                default = { };
-                type = submodule {
-                  options.path = mkOption {
-                    default = "${cfg.directory}/${name}";
-                    defaultText = lib.literalExpression ''"''${config.testing.hardcoded-secret.directory}/<name>"'';
-                  };
-                };
+                default = "${cfg.directory}/${name}";
+                defaultText = lib.literalExpression ''"''${config.testing.hardcoded-secret.directory}/<name>"'';
               };
 
               providerOptions = mkOption {
@@ -137,7 +132,7 @@ in
         };
         script = ''
           install -D -m ${request.mode} -o ${request.owner} -g ${request.group} \
-            ${source} "${response.path}"
+            ${source} "${response}"
         '';
       }
     ) cfg.fileSecrets;

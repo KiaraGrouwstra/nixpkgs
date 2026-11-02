@@ -63,20 +63,13 @@ in
       };
 
       response = mkOption {
-        description = "Response of the file secrets contract: the provider states where the file is.";
-        type = types.submodule {
-          options = {
-            path = mkOption {
-              type = types.str;
-              description = ''
-                Path to the file containing the secret generated out of band.
+        type = types.str;
+        description = ''
+          Response of the file secrets contract: the path to the file containing the secret generated out of band.
 
-                This path will exist after deploying to a target host,
-                it is not available through the nix store.
-              '';
-            };
-          };
-        };
+          This path will exist after deploying to a target host,
+          it is not available through the nix store.
+        '';
       };
     };
   };

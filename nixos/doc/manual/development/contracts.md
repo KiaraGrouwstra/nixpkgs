@@ -41,7 +41,7 @@ Example, a simplified version of the consumer option `services.stash.passwordFil
 ```
 
 The consumer reads the resource from `response`.
-In the example, the path of the secret file is `cfg.passwordFile.response.path`.
+In the example, the path of the secret file is `cfg.passwordFile.response`.
 
 A consumer can also accept a value without a contract, with `types.oneOf`.
 For example, `services.stash.passwordFile` also accepts a plain path, with `types.oneOf [ types.path contractType ]`.
@@ -49,7 +49,7 @@ For example, `services.stash.passwordFile` also accepts a plain path, with `type
 ## Providers {#contracts-providers}
 
 A provider declares an attribute set of submodules that import the same interface module.
-The provider sets a `default` for each option in `response`, and uses the options in `request` to make the resource.
+The provider sets a `default` for `response`, or for each option in `response` if it is a submodule, and uses the options in `request` to make the resource.
 
 Options that are specific to the provider go in `providerOptions`.
 Do not add other options at the top level of an entry. That level is for the contract.
@@ -69,12 +69,7 @@ Example, a simplified version of the provider option `testing.hardcoded-secret.f
         { name, ... }:
         {
           imports = [ lib.contracts.fileSecrets.interface ];
-          options.response = lib.mkOption {
-            default = { };
-            type = lib.types.submodule {
-              options.path = lib.mkOption { default = "${cfg.directory}/${name}"; };
-            };
-          };
+          options.response = lib.mkOption { default = "${cfg.directory}/${name}"; };
           options.providerOptions = lib.mkOption {
             default = { };
             type = lib.types.submodule {

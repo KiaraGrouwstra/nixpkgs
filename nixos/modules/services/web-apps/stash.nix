@@ -397,7 +397,7 @@ let
     ];
 
   # A secret option holds either a plain path or a file secrets contract.
-  secretPath = secret: if builtins.isAttrs secret then secret.response.path else secret;
+  secretPath = secret: if builtins.isAttrs secret then secret.response else secret;
 in
 {
   meta = {

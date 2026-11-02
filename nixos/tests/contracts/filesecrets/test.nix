@@ -65,23 +65,23 @@ in
       inherit (getAttrFromPath providerRoot nodes.machine) response;
     in
     ''
-      owner = machine.succeed("stat -c '%U' ${response.path}").strip()
+      owner = machine.succeed("stat -c '%U' ${response}").strip()
       print(f"Got owner {owner}")
       if owner != "${cfg.test.owner}":
           raise Exception(f"Owner should be '${cfg.test.owner}' but got '{owner}'")
 
-      group = machine.succeed("stat -c '%G' ${response.path}").strip()
+      group = machine.succeed("stat -c '%G' ${response}").strip()
       print(f"Got group {group}")
       if group != "${cfg.test.group}":
           raise Exception(f"Group should be '${cfg.test.group}' but got '{group}'")
 
-      mode = str(int(machine.succeed("stat -c '%a' ${response.path}").strip()))
+      mode = str(int(machine.succeed("stat -c '%a' ${response}").strip()))
       print(f"Got mode {mode}")
       wantedMode = str(int("${cfg.test.mode}"))
       if mode != wantedMode:
           raise Exception(f"Mode should be '{wantedMode}' but got '{mode}'")
 
-      content = machine.succeed("cat ${response.path}").strip()
+      content = machine.succeed("cat ${response}").strip()
       print(f"Got content {content}")
       if content != "${cfg.test.content}":
           raise Exception(f"Content should be '${cfg.test.content}' but got '{content}'")
