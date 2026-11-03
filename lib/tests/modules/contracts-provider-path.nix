@@ -57,9 +57,18 @@ in
     };
 
     contracts.number = {
-      want = lib.genAttrs [ "a" "b" "c" "d" ] (_: {
-        request.value = 10;
-      });
+      instances =
+        lib.mapAttrs
+          (_: provider: {
+            request.value = 10;
+            provider = config.contracts.number.providers.${provider};
+          })
+          {
+            a = "one";
+            b = "two";
+            c = "three";
+            d = "four";
+          };
       providers = {
         one.module = options.services.one;
         two = {
@@ -71,12 +80,6 @@ in
           contract = [ ];
         };
         four.module = options.services.four;
-      };
-      instances = {
-        a = config.contracts.number.providers.one;
-        b = config.contracts.number.providers.two;
-        c = config.contracts.number.providers.three;
-        d = config.contracts.number.providers.four;
       };
     };
   };

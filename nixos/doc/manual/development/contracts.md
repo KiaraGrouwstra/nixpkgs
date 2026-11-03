@@ -17,38 +17,37 @@ For the behavior of a provider, refer to the options of the provider, for exampl
 
 ## Consumers {#contracts-consumers}
 
-A consumer declares an option with a submodule type that imports the interface module.
-With option declaration merging, the consumer can add a `default` to an option of the interface, or make it `readOnly`.
+A consumer sends a `request` to an entry of `contracts.<type>.instances`, and reads the `response` of that entry.
+Each name must be unique for all consumers, for example `<consumer>-<option>`.
+The entry imports the interface module of the contract type, thus it has the options `request` and `response`.
 
-Example, a simplified version of the consumer option `services.stash.passwordSecret`:
+Example, a simplified version of the consumer `services.stash`:
 
 ```nix
+{ config, lib, ... }:
+let
+  cfg = config.services.stash;
+in
 {
-  options.services.stash.passwordSecret = lib.mkOption {
-    type = lib.types.submodule {
-      imports = [ lib.contracts.fileSecrets.interface ];
-      options.request = lib.mkOption {
-        default = { };
-        type = lib.types.submodule {
-          options.owner = lib.mkOption {
-            default = cfg.user;
-            readOnly = true;
-          };
-        };
-      };
+  options.services.stash.passwordFromContract = lib.mkEnableOption "the password from the file secrets contract";
+
+  config = lib.mkIf cfg.passwordFromContract {
+    contracts.fileSecrets.instances.stash-password.request = {
+      mode = "0400";
+      owner = cfg.user;
+      group = cfg.group;
     };
+    services.stash.passwordFile = lib.mkDefault config.contracts.fileSecrets.instances.stash-password.response.path;
   };
 }
 ```
 
-The consumer reads the resource from `response`.
-In the example, the path of the secret file is `cfg.passwordSecret.response.path`.
+The consumer sets the values of the `request` with a normal priority.
+If the user sets a different value, the two definitions conflict.
 
-A consumer can keep an option without a contract next to the contract option.
+A consumer can keep an option without a contract next to the contract.
 For example, `services.stash.passwordFile` takes a plain path.
-If the user sets `services.stash.passwordSecret`, the module sets `passwordFile` to `cfg.passwordSecret.response.path` with `lib.mkDefault`.
-A consumer can also accept a value with or without a contract in one option, with `types.oneOf [ types.path contractType ]`.
-`lib.contract.isInstance` tells which of the two the user set: it is `true` for an attribute set with a `response`.
+If the user sets `services.stash.passwordFromContract`, the module sets `passwordFile` to the path in the `response` with `lib.mkDefault`.
 
 ## Providers {#contracts-providers}
 
@@ -94,25 +93,27 @@ Example, a simplified version of the provider option `testing.hardcoded-secret.f
 
 ## Connect a consumer to a provider {#contracts-connect}
 
-The user connects each consumer option to a provider entry.
-The user sets the `request` of the provider entry from the consumer, and the `response` of the consumer from the provider entry.
+The user selects the provider of each entry, refer to [](#contracts-routing).
+The user can also connect an entry to a provider manually.
+Then the user sets the `provider` of the entry to `null`, sets the `request` of the provider entry from the entry, and sets the `response` of the entry from the provider entry.
 Example, with the consumer and the provider from the examples before:
 
 ```nix
 { config, ... }:
 {
-  services.stash.passwordSecret.response =
-    config.testing.hardcoded-secret.fileSecrets."stash-password".response;
+  services.stash.passwordFromContract = true;
+
+  contracts.fileSecrets.instances.stash-password = {
+    provider = null;
+    response = config.testing.hardcoded-secret.fileSecrets."stash-password".response;
+  };
 
   testing.hardcoded-secret.fileSecrets."stash-password" = {
-    request = config.services.stash.passwordSecret.request;
+    request = config.contracts.fileSecrets.instances.stash-password.request;
     providerOptions.content = "MyPassword";
   };
 }
 ```
-
-To use a different provider, change these two definitions.
-[](#opt-contracts) can also make these connections, refer to [](#contracts-routing).
 
 ## Contract types {#contracts-types}
 
@@ -121,7 +122,7 @@ Each contract type has `meta.description`, `meta.maintainers` and an `interface`
 
 The option [](#opt-contractTypes) contains the contract types that a configuration can use.
 In NixOS, it contains each contract type in `lib.contracts`.
-For each contract type, [](#opt-contracts) has an option with its `meta.description`, and with its `request` and `response` options under `want`.
+For each contract type, [](#opt-contracts) has an option with its `meta.description`, and with its `request` and `response` options under `instances.<name>`.
 To add a contract type, write its `meta` and `interface` in a new file in `lib/contracts/definitions`, and add that file to `lib/contracts/definitions/default.nix`.
 
 The routing module is `lib.contract.module`.
@@ -131,16 +132,14 @@ It does not depend on NixOS, so other module systems can also import it.
 
 For each contract type, [](#opt-contracts) sends the requests of consumers to a provider, and sends the responses back:
 
-- `contracts.<type>.want.<name>`: an entry with a `request` from a consumer.
-  Each name must be unique for all consumers, for example `<consumer>-<option>`.
+- `contracts.<type>.instances.<name>`: an entry with a `request` from a consumer, the `response` for the consumer, and the `provider` that gets the `request` and sets the `response`.
+  The default of `provider` is `defaultProvider`.
+  A definition of `response` by the user replaces the response of the provider.
 - `contracts.<type>.providers.<provider>`: where to find the *provider option*, the option of the provider that has an entry for each request that the provider fulfills.
   `module` is the options of the provider, and `contract` is the path of the provider option in `module`.
 - `contracts.<type>.defaultProvider`: the provider that gets the requests, one of `providers`.
-- `contracts.<type>.instances.<name>`: the provider that gets the entry `<name>` of `want`.
-  The default is `defaultProvider`.
 - `contracts.<type>.providerRequests.<provider>`: the requests that a provider must fulfill.
-  These are the entries of `want` that `instances` sends to the provider, and `{ }` for providers not routed to fulfill requests.
-- `contracts.<type>.results.<name>`: the `response` from the provider in `instances` for each entry in `want`.
+  These are the `request` of each entry of `instances` with this provider in `provider`, and `{ }` for providers that no entry has.
 
 A provider reads `providerRequests.<provider>` into its provider option, and sets `providers.<provider>.module` to its options.
 `providers.<provider>.contract` is the path of the provider option in `module`:
@@ -181,52 +180,47 @@ Example, a provider with the provider option at `services.bar.secrets.files`:
 }
 ```
 
-A consumer module sends the `request` of its options to `want`.
-Example, a simplified version of the consumer option `services.stash.passwordSecret`:
-
-```nix
-{ config, lib, ... }:
-let
-  cfg = config.services.stash;
-in
-{
-  options.services.stash.passwordSecret = lib.mkOption {
-    type = lib.types.submodule {
-      imports = [ lib.contracts.fileSecrets.interface ];
-    };
-  };
-
-  config.contracts.fileSecrets.want.stash-passwordSecret = {
-    inherit (cfg.passwordSecret) request;
-  };
-}
-```
-
-The consumer does not set a default for `response`, thus the user must connect each option.
+The default of `defaultProvider` is `null`, thus by default no provider gets the requests, and the `response` of an entry has no value.
 This is because a provider such as `testing.hardcoded-secret` is not safe for production.
-The user selects the provider, sets the `response` of the consumer from `results`, and sets the options of the provider for each request.
-Example, with the consumer from the example before and the provider `testing.hardcoded-secret`:
+The user selects the provider, and sets the options of the provider for each request.
+Example, with the consumer `services.stash` and the provider `testing.hardcoded-secret`:
 
 ```nix
 { config, ... }:
 {
   contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
-  services.stash.passwordSecret.response = config.contracts.fileSecrets.results.stash-passwordSecret;
-  testing.hardcoded-secret.fileSecrets.stash-passwordSecret.providerOptions.content = "MyPassword";
+  services.stash.passwordFromContract = true;
+  testing.hardcoded-secret.fileSecrets.stash-password.providerOptions.content = "MyPassword";
 }
 ```
 
 To use a different provider, change `defaultProvider`, and set the options of that provider.
 
-To send one entry to a different provider, set `instances.<name>` to that provider:
+To send one entry to a different provider, set `instances.<name>.provider` to that provider:
 
 ```nix
 { config, ... }:
 {
-  contracts.fileSecrets.instances.stash-passwordSecret =
+  contracts.fileSecrets.instances.stash-password.provider =
     config.contracts.fileSecrets.providers.other-provider;
 }
 ```
 
-To connect one entry manually, as in [](#contracts-connect), set `instances.<name>` to `null`.
-Then no provider gets the request of that entry from `providerRequests`, and `results.<name>` is not available.
+To connect one entry manually, set `instances.<name>.provider` to `null`, as in [](#contracts-connect).
+Then no provider gets the request of that entry from `providerRequests`.
+
+Another module system can import `lib.contract.module`, for example in a submodule.
+Each evaluation has its own `contracts`.
+To connect an entry in a submodule to a provider of the configuration, set the `response` of the inner entry from an entry of the configuration, with the same `request`:
+
+```nix
+{ config, ... }:
+{
+  contracts.fileSecrets.instances.foo-password.request =
+    config.services.foo.contracts.fileSecrets.instances.password.request;
+  services.foo.contracts.fileSecrets.instances.password = {
+    provider = null;
+    inherit (config.contracts.fileSecrets.instances.foo-password) response;
+  };
+}
+```

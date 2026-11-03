@@ -85,10 +85,11 @@ in
         Contract instances, one attribute set for each contract type
         in [](#opt-contractTypes).
 
-        A consumer sends its requests to `contracts.<type>.want`.
+        A consumer sets the `request` of its entries in `contracts.<type>.instances`,
+        and reads their `response`.
         A provider adds its option to `contracts.<type>.providers`.
         The user selects a provider with `contracts.<type>.defaultProvider`,
-        and reads the responses from `contracts.<type>.results`.
+        or for one entry with `contracts.<type>.instances.<name>.provider`.
       '';
       default = { };
       type = types.submodule {
@@ -105,34 +106,48 @@ in
               { config, ... }:
               {
                 options = {
-                  want = mkOption {
+                  instances = mkOption {
                     description = ''
-                      Requests from consumers.
+                      Instances of the contract type `${contractName}`.
                       Each name must be unique for all consumers,
                       for example `<consumer>-<option>`.
 
                       Each entry has the options `request` and `response` of the interface of `${contractName}`.
-                      A consumer sets only the `request`.
-                      The `response` comes from the provider, through `results`.
+                      A consumer sets the `request`, and reads the `response`.
+                      The `response` comes from the provider in `provider`.
 
                       **Example:**
 
                       ```nix
-                      contracts.${contractName}.want."<consumer>-<option>" = {
-                        inherit (config.services."<consumer>"."<option>") request;
-                      };
+                      contracts.${contractName}.instances."<consumer>-<option>".request = { };
+                      services."<consumer>"."<option>" = config.contracts.${contractName}.instances."<consumer>-<option>".response;
                       ```
                     '';
                     default = { };
-                    type = types.attrsOf (types.submodule { imports = [ contractType.interface ]; });
-                  };
+                    type = types.attrsOf (
+                      types.submodule (
+                        instance@{ name, ... }:
+                        {
+                          imports = [ contractType.interface ];
 
-                  requests = mkOption {
-                    description = "The `request` of each entry in `want`.";
-                    readOnly = true;
-                    type = types.attrsOf types.raw;
-                    default = lib.mapAttrs (_: want: { inherit (want) request; }) config.want;
-                    defaultText = lib.literalMD "the `request` of each entry in `want`";
+                          options.provider = mkOption {
+                            description = ''
+                              The provider that gets the `request` and sets the `response`, one of `providers`.
+                              To connect this entry to a provider manually, set it to `null`,
+                              and set the `response`.
+                            '';
+                            type = types.nullOr providerRefType;
+                            default = config.defaultProvider;
+                            defaultText = lib.literalExpression "config.contracts.${contractName}.defaultProvider";
+                          };
+
+                          # A definition of the user replaces the response of the provider.
+                          config.response = lib.mkIf (instance.config.provider != null) (
+                            lib.mkOptionDefault instance.config.provider.value.${name}.response
+                          );
+                        }
+                      )
+                    );
                   };
 
                   providers = mkOption {
@@ -201,40 +216,21 @@ in
                   defaultProvider = mkOption {
                     description = ''
                       The provider that gets the requests, one of `providers`.
-                      To send an entry to a different provider, set `instances`.
+                      To send an entry to a different provider, set `instances.<name>.provider`.
                     '';
                     default = null;
                     type = types.nullOr providerRefType;
                     example = lib.literalExpression "config.contracts.fileSecrets.providers.hardcoded-secret";
                   };
 
-                  instances = mkOption {
-                    description = ''
-                      For each entry in `want`, with the same name,
-                      the provider that has the instance of the entry, one of `providers`.
-                      The default is `defaultProvider`.
-                      To connect an entry to a provider manually, set it to `null`.
-                      A definition for one entry does not remove the default of the other entries.
-
-                      **Example:**
-
-                      ```nix
-                      contracts.${contractName}.defaultProvider = config.contracts.${contractName}.providers."<provider>";
-                      contracts.${contractName}.instances."<consumer>-<option>" =
-                        config.contracts.${contractName}.providers."<other-provider>";
-                      ```
-                    '';
-                    type = types.attrsOf (types.nullOr providerRefType);
-                  };
-
                   providerRequests = mkOption {
                     description = ''
                       The requests that each provider must fulfill:
-                      the entries of `requests` that `instances` sends to the provider.
+                      the `request` of each entry in `instances` with this provider in `provider`.
                       A provider reads `providerRequests.<provider>`,
-                      and not `requests`.
+                      and not `instances`.
                       Each provider in `providers` has an entry,
-                      which is empty when `instances` sends no request to the provider.
+                      which is empty when no entry of `instances` has the provider.
 
                       **Example:**
 
@@ -246,40 +242,15 @@ in
                     type = types.attrsOf (types.attrsOf types.raw);
                     default = lib.mapAttrs (
                       _: provider:
-                      lib.filterAttrs (
-                        name: _: config.instances.${name} != null && config.instances.${name}.loc == provider.loc
-                      ) config.requests
+                      lib.mapAttrs (_: instance: { inherit (instance) request; }) (
+                        lib.filterAttrs (
+                          _: instance: instance.provider != null && instance.provider.loc == provider.loc
+                        ) config.instances
+                      )
                     ) config.providers;
-                    defaultText = lib.literalMD "the entries of `requests` that `instances` sends to each provider";
-                  };
-
-                  results = mkOption {
-                    description = ''
-                      The `response` from the provider in `instances` for each entry in `want`, with the same name.
-
-                      The user sets the `response` of a consumer option from this option:
-
-                      ```nix
-                      services."<consumer>"."<option>".response = config.contracts.${contractName}.results."<consumer>-<option>";
-                      ```
-                    '';
-                    readOnly = true;
-                    # Lazy, so that an entry without a provider does not make the other entries fail.
-                    type = types.lazyAttrsOf types.raw;
-                    default = lib.mapAttrs (
-                      name: _:
-                      if config.instances.${name} == null then
-                        throw "contracts.${contractName}.want.${name}: no provider. Set `contracts.${contractName}.defaultProvider` or `contracts.${contractName}.instances.${name}`."
-                      else
-                        config.instances.${name}.value.${name}.response
-                    ) config.want;
-                    defaultText = lib.literalMD "the `response` from the provider in `instances` for each entry in `want`";
+                    defaultText = lib.literalMD "the `request` of each entry in `instances` with this provider";
                   };
                 };
-
-                # A default for each entry, and not for the option,
-                # so that a definition of one entry does not remove the defaults of the other entries.
-                config.instances = lib.mapAttrs (_: _: lib.mkOptionDefault config.defaultProvider) config.want;
               }
             );
           }

@@ -50,7 +50,7 @@ in
           # Send the request through the contracts module, as a consumer does.
           contracts.fileSecrets = {
             defaultProvider = config.contracts.fileSecrets.providers.${provider};
-            want.test.request = {
+            instances.test.request = {
               inherit (config.test) owner group mode;
             };
           };
@@ -68,7 +68,7 @@ in
     { nodes, ... }:
     let
       cfg = nodes.machine;
-      response = cfg.contracts.fileSecrets.results.test;
+      inherit (cfg.contracts.fileSecrets.instances.test) response;
     in
     ''
       owner = machine.succeed("stat -c '%U' ${response.path}").strip()
