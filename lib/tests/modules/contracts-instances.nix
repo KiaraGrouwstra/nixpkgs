@@ -68,6 +68,16 @@ in
         contracts.number.instances.x.request.value = 30;
       };
     };
+
+    # For each provider, the paths and the request values in `instanceList`, as one string.
+    instanceLists = mkOption {
+      default = lib.mapAttrs (
+        _: provider:
+        lib.concatMapStringsSep " " (
+          { path, instance }: "${lib.showAttrPath path}=${toString instance.request.value}"
+        ) provider.instanceList
+      ) config.contracts.number.providers;
+    };
   };
 
   config = {

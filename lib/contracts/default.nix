@@ -4,6 +4,7 @@
 let
   inherit (lib)
     all
+    concatLists
     concatMapAttrs
     concatMapStrings
     drop
@@ -14,6 +15,7 @@ let
     length
     literalExpression
     literalMD
+    mapAttrsToList
     mkOption
     optionalAttrs
     showOption
@@ -27,11 +29,13 @@ in
     Declare it at `options.contracts.<name>` in a module.
     Each entry of `instances` imports `interface`, thus it has the options `request` and `response`.
     The entries of `instances` can be in nested attribute sets of any depth.
+    In the option names of an entry, `<name>` is the path of the entry, for example `stash.password`.
     Each entry gets its path in `instances` as the module argument `instancePath`.
 
     A provider adds an entry with its name to `providers`.
+    `providers.<provider>.instances` and `providers.<provider>.instanceList` contain the entries of this provider.
     A provider can also declare options in `instances` through option declaration merging:
-    its options for one entry in `instances.<path>.providerOptions.<provider>`,
+    its options for one entry in `instances.<name>.providerOptions.<provider>`,
     and a `config.response` for the entries in `providers.<provider>.instances`.
 
     # Type
@@ -126,6 +130,23 @@ in
                 in
                 optionalAttrs (filtered != { }) { ${name} = filtered; }
             );
+          # The entries in a result of `filterInstances`, in a list, with their paths.
+          instancesToList =
+            path: instances:
+            concatLists (
+              mapAttrsToList (
+                name: v:
+                if isInstance v then
+                  [
+                    {
+                      path = path ++ [ name ];
+                      instance = v;
+                    }
+                  ]
+                else
+                  instancesToList (path ++ [ name ]) v
+              ) instances
+            );
         in
         {
           options = {
@@ -138,6 +159,8 @@ in
                 An attribute set that contains only option names of an entry, such as `request`, is an entry.
                 Other attribute sets, and `{ }`, are namespaces.
                 Thus a name in a namespace must not be an option name of an entry, such as `request`.
+                In the option names of an entry, `<name>` is the path of the entry, that is one or more names,
+                for example `stash.password` in `instances.stash.password.request`.
 
                 Each entry has the options `request` and `response` of the contract type.
                 A consumer sets the `request`, and reads the `response`.
@@ -186,6 +209,11 @@ in
               type = types.attrsOf (
                 types.submodule (
                   { name, ... }:
+                  let
+                    instances = filterInstances (
+                      instance: instance.provider != null && instance.provider.name == name
+                    ) config.instances;
+                  in
                   {
                     options = {
                       name = mkOption {
@@ -209,10 +237,21 @@ in
                           Namespaces without such entries are not in this attribute set.
                         '';
                         type = types.lazyAttrsOf types.raw;
-                        default = filterInstances (
-                          instance: instance.provider != null && instance.provider.name == name
-                        ) config.instances;
+                        default = instances;
                         defaultText = literalMD "the entries of `instances` with this provider in `provider`, at the same paths";
+                        readOnly = true;
+                      };
+
+                      instanceList = mkOption {
+                        description = ''
+                          The entries of `instances` with this provider in `provider`, in a list.
+                          Each item has the attributes `path` and `instance`.
+                          `path` is the path of the entry in `instances`, for example `[ "stash" "password" ]`.
+                          `instance` is the entry.
+                        '';
+                        type = types.listOf types.raw;
+                        default = instancesToList [ ] instances;
+                        defaultText = literalMD "the entries of `instances` with this provider in `provider`, with their paths";
                         readOnly = true;
                       };
                     };

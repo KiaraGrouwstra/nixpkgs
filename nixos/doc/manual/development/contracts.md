@@ -25,6 +25,7 @@ The entries can be in nested attribute sets of any depth.
 An attribute set that contains only option names of an entry, such as `request`, is an entry.
 Other attribute sets, and `{ }`, are namespaces.
 Thus a name in a namespace must not be an option name of an entry: `request`, `response`, `provider` or `providerOptions`.
+In the option names of an entry, such as `instances.<name>.request`, `<name>` is the path of the entry, that is one or more names, for example `stash.password`.
 
 Example, a simplified version of the consumer `services.stash`:
 
@@ -61,7 +62,8 @@ The user selects the provider with a reference to that entry, refer to [](#contr
 `contracts.<type>.providers.<provider>.instances` contains the entries of `instances` that the user sent to the provider, at the same paths.
 It does not contain namespaces without such entries.
 The provider uses the `request` of each of these entries to make the resource.
-To find the entries in the nested attribute sets, use `lib.concatMapNestedAttrs'` or `lib.mapNestedAttrs'` with the type of `instances`.
+`contracts.<type>.providers.<provider>.instanceList` contains the same entries in a list.
+Each item has the path of the entry in `path`, for example `[ "stash" "password" ]`, and the entry in `instance`.
 
 The provider also declares options in `contracts.<type>.instances`.
 These declarations merge with the declarations of the contract type:
@@ -81,17 +83,11 @@ In `providerOptions.<provider>`, an option of the provider cannot conflict with 
 Example, a simplified version of the provider `testing.hardcoded-secret`:
 
 ```nix
-{
-  config,
-  options,
-  lib,
-  ...
-}:
+{ config, lib, ... }:
 let
   inherit (lib) mkOption types;
   cfg = config.testing.hardcoded-secret;
   provider = config.contracts.fileSecrets.providers.hardcoded-secret;
-  instancesType = (options.contracts.fileSecrets.type.getSubOptions [ ]).instances.type;
 in
 {
   options.contracts.fileSecrets.instances = mkOption {
@@ -116,12 +112,15 @@ in
 
   config = {
     contracts.fileSecrets.providers.hardcoded-secret = { };
-    systemd.services = lib.concatMapNestedAttrs' instancesType (path: instance: {
-      "hardcodedsecret_${lib.concatStringsSep "_" path}" = {
-        # Writes `instance.providerOptions.hardcoded-secret.content` to `instance.response.path`,
-        # with the permissions in `instance.request`.
-      };
-    }) provider.instances;
+    systemd.services = lib.listToAttrs (
+      map (
+        { path, instance }:
+        lib.nameValuePair "hardcodedsecret_${lib.concatStringsSep "__" path}" {
+          # Writes `instance.providerOptions.hardcoded-secret.content` to `instance.response.path`,
+          # with the permissions in `instance.request`.
+        }
+      ) provider.instanceList
+    );
   };
 }
 ```

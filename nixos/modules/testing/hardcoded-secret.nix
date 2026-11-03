@@ -1,6 +1,5 @@
 {
   config,
-  options,
   lib,
   pkgs,
   ...
@@ -18,8 +17,6 @@ let
 
   # This provider in `contracts.fileSecrets.providers`.
   provider = config.contracts.fileSecrets.providers.hardcoded-secret;
-  # The type of `contracts.fileSecrets.instances`, to find its entries.
-  instancesType = (options.contracts.fileSecrets.type.getSubOptions [ ]).instances.type;
 in
 {
   options.testing.hardcoded-secret.directory = mkOption {
@@ -84,16 +81,17 @@ in
     # and `systemd-sysusers` and `userborn` create users after activation.
     # The services run before `sysinit.target`, thus before all services
     # that have default dependencies, such as the consumers of the secrets.
-    systemd.services = lib.concatMapNestedAttrs' instancesType (
-      path: instance:
-      let
-        n = concatStringsSep "_" path;
-        source = writeText "hardcodedsecret_${n}_content" instance.providerOptions.hardcoded-secret.content;
+    systemd.services = lib.listToAttrs (
+      map (
+        { path, instance }:
+        let
+          # `__` and not `_`, thus `a.b` and `a_b` do not have the same name.
+          n = concatStringsSep "__" path;
+          source = writeText "hardcodedsecret_${n}_content" instance.providerOptions.hardcoded-secret.content;
 
-        inherit (instance) request response;
-      in
-      {
-        "hardcodedsecret_${n}" = {
+          inherit (instance) request response;
+        in
+        lib.nameValuePair "hardcodedsecret_${n}" {
           description = "Hardcoded secret ${lib.showAttrPath path}";
           wantedBy = [ "sysinit.target" ];
           after = [
@@ -115,8 +113,8 @@ in
             install -D -m ${request.mode} -o ${request.owner} -g ${request.group} \
               ${source} "${response.path}"
           '';
-        };
-      }
-    ) provider.instances;
+        }
+      ) provider.instanceList
+    );
   };
 }

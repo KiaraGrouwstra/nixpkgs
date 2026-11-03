@@ -484,6 +484,8 @@ checkConfigError 'attribute .g. in selection path .* not found' config.contracts
 checkConfigError 'attribute .h. in selection path .* not found' config.contracts.number.providers.one.instances.ns.h ./contracts-instances.nix
 checkConfigError 'attribute .empty. in selection path .* not found' config.contracts.number.providers.one.instances.ns.empty ./contracts-instances.nix
 checkConfigError 'attribute .j. in selection path .* not found' config.contracts.number.providers.one.instances.ns.j ./contracts-instances.nix
+checkConfigOutput '^"a=10 b=10 e=10 ns.g=10 sub-x=30"$' config.instanceLists.one ./contracts-instances.nix
+checkConfigOutput '^"f=10 ns.h.i=10"$' config.instanceLists.two ./contracts-instances.nix
 
 # submoduleWith
 
