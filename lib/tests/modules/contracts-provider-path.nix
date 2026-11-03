@@ -60,6 +60,7 @@ in
       instances =
         lib.mapAttrs
           (_: provider: {
+            enable = true;
             request.value = 10;
             provider = config.contracts.number.providers.${provider};
           })

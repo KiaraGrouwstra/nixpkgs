@@ -369,6 +369,7 @@ let
           '';
     };
 
+  secrets = config.contracts.fileSecrets.instances;
 in
 {
   meta = {
@@ -434,41 +435,13 @@ in
         '';
       };
 
-      passwordFromContract = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to get the login password from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash-password` of `contracts.fileSecrets.instances`,
-          and sets {option}`services.stash.passwordFile` to the path in its `response`.
-        '';
-      };
-
       jwtSecretKeyFile = mkOption {
         type = types.path;
         description = "Path to file containing a secret used to sign JWT tokens.";
       };
-      jwtSecretKeyFromContract = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to get the secret used to sign JWT tokens from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash-jwtSecretKey` of `contracts.fileSecrets.instances`,
-          and sets {option}`services.stash.jwtSecretKeyFile` to the path in its `response`.
-        '';
-      };
       sessionStoreKeyFile = mkOption {
         type = types.path;
         description = "Path to file containing a secret for session store.";
-      };
-      sessionStoreKeyFromContract = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to get the secret for the session store from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash-sessionStoreKey` of `contracts.fileSecrets.instances`,
-          and sets {option}`services.stash.sessionStoreKeyFile` to the path in its `response`.
-        '';
       };
 
       mutableSettings = mkOption {
@@ -494,18 +467,18 @@ in
   };
 
   config = mkIf cfg.enable {
-    # A secret from the contract gives the path of its `*File` option.
-    services.stash.passwordFile = mkIf cfg.passwordFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash-password.response.path
+    # An enabled entry of the contract gives the path of its `*File` option.
+    services.stash.passwordFile = mkIf secrets.stash-password.enable (
+      mkDefault secrets.stash-password.response.path
     );
-    services.stash.jwtSecretKeyFile = mkIf cfg.jwtSecretKeyFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash-jwtSecretKey.response.path
+    services.stash.jwtSecretKeyFile = mkIf secrets.stash-jwtSecretKey.enable (
+      mkDefault secrets.stash-jwtSecretKey.response.path
     );
-    services.stash.sessionStoreKeyFile = mkIf cfg.sessionStoreKeyFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash-sessionStoreKey.response.path
+    services.stash.sessionStoreKeyFile = mkIf secrets.stash-sessionStoreKey.enable (
+      mkDefault secrets.stash-sessionStoreKey.response.path
     );
 
-    # Send a request for each secret from the contract.
+    # Send a request for each secret. The user enables the entries to use.
     # A definition of the user for a value of a request conflicts with the definition here.
     contracts.fileSecrets.instances =
       let
@@ -516,9 +489,9 @@ in
         };
       in
       {
-        stash-password = mkIf cfg.passwordFromContract { inherit request; };
-        stash-jwtSecretKey = mkIf cfg.jwtSecretKeyFromContract { inherit request; };
-        stash-sessionStoreKey = mkIf cfg.sessionStoreKeyFromContract { inherit request; };
+        stash-password = { inherit request; };
+        stash-jwtSecretKey = { inherit request; };
+        stash-sessionStoreKey = { inherit request; };
       };
 
     assertions = [
@@ -537,8 +510,8 @@ in
       in
       {
         # A definition with a higher priority than `mkDefault` replaces the path from the contract.
-        assertion = !cfg."${name}FromContract" || fileOption.highestPrio >= (mkDefault null).priority;
-        message = "Set only one of `services.stash.${name}File` and `services.stash.${name}FromContract`.";
+        assertion = !secrets."stash-${name}".enable || fileOption.highestPrio >= (mkDefault null).priority;
+        message = "Set only one of `services.stash.${name}File` and `contracts.fileSecrets.instances.stash-${name}.enable`.";
       }
     );
 

@@ -456,6 +456,8 @@ checkConfigOutput '^5$' config.contracts.number.instances.b.response.value ./con
 checkConfigOutput '^7$' config.contracts.number.instances.c.response.value ./contracts-instances.nix
 checkConfigError 'accessed but has no value defined' config.contracts.number.instances.d.response.value ./contracts-instances.nix
 checkConfigError 'attribute .c. in selection path' config.contracts.number.providerRequests.one.c ./contracts-instances.nix
+checkConfigError 'attribute .e. in selection path' config.contracts.number.providerRequests.one.e ./contracts-instances.nix
+checkConfigError 'accessed but has no value defined' config.contracts.number.instances.e.response.value ./contracts-instances.nix
 checkConfigOutput '^31$' config.services.sub.contracts.number.instances.x.response.value ./contracts-instances.nix
 
 # submoduleWith

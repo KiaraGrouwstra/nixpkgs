@@ -50,6 +50,7 @@ in
           # Send the request through the contracts module, as a consumer does.
           contracts.fileSecrets = {
             defaultProvider = config.contracts.fileSecrets.providers.${provider};
+            instances.test.enable = true;
             instances.test.request = {
               inherit (config.test) owner group mode;
             };

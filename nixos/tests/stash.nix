@@ -13,6 +13,11 @@ import ./make-test-python.nix (
       { config, ... }:
       {
         contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
+        contracts.fileSecrets.instances = {
+          stash-password.enable = true;
+          stash-jwtSecretKey.enable = true;
+          stash-sessionStoreKey.enable = true;
+        };
         testing.hardcoded-secret.fileSecrets = {
           stash-password.providerOptions.content = "MyPassword";
           stash-jwtSecretKey.providerOptions.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -24,9 +29,6 @@ import ./make-test-python.nix (
           enable = true;
 
           username = "test";
-          passwordFromContract = true;
-          jwtSecretKeyFromContract = true;
-          sessionStoreKeyFromContract = true;
 
           plugins =
             let

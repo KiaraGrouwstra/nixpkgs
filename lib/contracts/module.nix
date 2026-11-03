@@ -113,13 +113,15 @@ in
                       for example `<consumer>-<option>`.
 
                       Each entry has the options `request` and `response` of the interface of `${contractName}`.
-                      A consumer sets the `request`, and reads the `response`.
+                      A consumer sets the `request` of each entry that it can use, and reads the `response` if `enable` is `true`.
+                      The user sets `enable`.
                       The `response` comes from the provider in `provider`.
 
                       **Example:**
 
                       ```nix
                       contracts.${contractName}.instances."<consumer>-<option>".request = { };
+                      contracts.${contractName}.instances."<consumer>-<option>".enable = true;
                       services."<consumer>"."<option>" = config.contracts.${contractName}.instances."<consumer>-<option>".response;
                       ```
                     '';
@@ -129,6 +131,11 @@ in
                         instance@{ name, ... }:
                         {
                           imports = [ contractType.interface ];
+
+                          options.enable = lib.mkEnableOption ''
+                            this entry.
+                            If `true`, the `provider` gets the `request`, and the consumer uses the `response`
+                          '';
 
                           options.provider = mkOption {
                             description = ''
@@ -142,7 +149,7 @@ in
                           };
 
                           # A definition of the user replaces the response of the provider.
-                          config.response = lib.mkIf (instance.config.provider != null) (
+                          config.response = lib.mkIf (instance.config.enable && instance.config.provider != null) (
                             lib.mkOptionDefault instance.config.provider.value.${name}.response
                           );
                         }
@@ -226,7 +233,7 @@ in
                   providerRequests = mkOption {
                     description = ''
                       The requests that each provider must fulfill:
-                      the `request` of each entry in `instances` with this provider in `provider`.
+                      the `request` of each enabled entry in `instances` with this provider in `provider`.
                       A provider reads `providerRequests.<provider>`,
                       and not `instances`.
                       Each provider in `providers` has an entry,
@@ -244,11 +251,11 @@ in
                       _: provider:
                       lib.mapAttrs (_: instance: { inherit (instance) request; }) (
                         lib.filterAttrs (
-                          _: instance: instance.provider != null && instance.provider.loc == provider.loc
+                          _: instance: instance.enable && instance.provider != null && instance.provider.loc == provider.loc
                         ) config.instances
                       )
                     ) config.providers;
-                    defaultText = lib.literalMD "the `request` of each entry in `instances` with this provider";
+                    defaultText = lib.literalMD "the `request` of each enabled entry in `instances` with this provider";
                   };
                 };
               }

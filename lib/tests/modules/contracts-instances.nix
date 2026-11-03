@@ -42,6 +42,7 @@ in
         imports = [ lib.contract.module ];
         contractTypes = { inherit number; };
         contracts.number.instances.x.request.value = 30;
+        contracts.number.instances.x.enable = true;
       };
     };
   };
@@ -54,18 +55,25 @@ in
       defaultProvider = config.contracts.number.providers.one;
       instances = {
         # The response comes from `defaultProvider`.
+        a.enable = true;
         a.request.value = 10;
         # A definition of the user replaces the response of the provider.
+        b.enable = true;
         b.request.value = 10;
         b.response.value = 5;
         # No provider: the user connects the entry.
+        c.enable = true;
         c.request.value = 10;
         c.provider = null;
         c.response.value = 7;
         # No provider, and no response.
+        d.enable = true;
         d.request.value = 10;
         d.provider = null;
+        # Not enabled: the provider does not get the request.
+        e.request.value = 10;
         # The user connects the entry of the other evaluation.
+        sub-x.enable = true;
         sub-x.request = config.services.sub.contracts.number.instances.x.request;
       };
     };
