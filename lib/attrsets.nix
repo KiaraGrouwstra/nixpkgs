@@ -2271,6 +2271,7 @@ rec {
     For submodule types, given their native type check works only after merge,
     instead check key presence, controlled by `predicate` (`lib.any` or `lib.all`)
     depending on whether the element submodule should allow additional keys.
+    For submodule types, an empty attribute set is a namespace, not a leaf.
 
     # Inputs
 
@@ -2308,7 +2309,7 @@ rec {
     if elemOptAttrs == { } then
       elemType.check v
     else
-      lib.isAttrs v && predicate (k: elemOptAttrs ? ${k}) (lib.attrNames v);
+      lib.isAttrs v && v != { } && predicate (k: elemOptAttrs ? ${k}) (lib.attrNames v);
 
   /**
     Map a function over all leaves in a `nestedAttrsOf` structure.

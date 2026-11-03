@@ -1913,6 +1913,7 @@ rec {
                 # Decide whether to recurse or delegate to the element type.
                 # For an element type without options, such as `int`, a value is a leaf if `elemType.check` accepts it.
                 # For an element type with options, we consider a value a leaf if its keys match the element type's known options.
+                # An empty attribute set is a namespace, for example a namespace without entries from `mkIf false`.
                 # Otherwise it is an intermediate namespace attrset and we recurse.
                 # This is a way to cope with submodule types, as their `check` function accepts any attrset.
                 # While it would be nice to check their elements' types as well,
@@ -1923,7 +1924,7 @@ rec {
                   if elemOptAttrs == { } then
                     elemType.check d.value
                   else
-                    lib.all (k: elemOptAttrs ? ${k}) (lib.attrNames d.value);
+                    d.value != { } && lib.all (k: elemOptAttrs ? ${k}) (lib.attrNames d.value);
                 goDeeper = lib.all (d: lib.isAttrs d.value && !isLeafLike d) subDefs;
 
                 # When the element type is a structured submodule (has known options)

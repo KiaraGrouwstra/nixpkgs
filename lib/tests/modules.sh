@@ -451,6 +451,10 @@ checkConfigError 'A definition for option .* is not of type .*' config.value.a.b
 checkConfigError 'A definition for option .* is not of type .*' config.value.b.f ./declare-nested-attrs-unsound.nix
 checkConfigError 'expected an attribute set with keys from \[request, result\]' config.value.consumer ./declare-nested-attrs-misshapen.nix
 checkConfigOutput '^2$' config.value.a.b.y ./declare-nested-attrs-merge.nix
+checkConfigOutput '^{}$' config.value.a ./declare-nested-attrs-empty.nix
+checkConfigOutput '^{}$' config.value.b.c ./declare-nested-attrs-empty.nix
+checkConfigOutput '^{}$' config.value.e.f ./declare-nested-attrs-empty.nix
+checkConfigOutput '^2$' config.value.d.x ./declare-nested-attrs-empty.nix
 
 # contracts: each entry of `instances` has a `request` and a `response`
 checkConfigOutput '^11$' config.contracts.number.instances.a.response.value ./contracts-instances.nix

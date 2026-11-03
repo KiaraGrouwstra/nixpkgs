@@ -2436,6 +2436,16 @@ runTests {
     expected = false;
   };
 
+  # isNestedAttrsLeaf: submodule type with lib.all - an empty attribute set is a namespace
+  testIsNestedAttrsLeafSubmoduleAllEmpty = {
+    expr =
+      let
+        elementType = types.submodule { options.foo = lib.mkOption { type = types.int; }; };
+      in
+      isNestedAttrsLeaf lib.all elementType { };
+    expected = false;
+  };
+
   # isNestedAttrsLeaf: submodule type - intermediate attrset not a leaf (no keys match)
   testIsNestedAttrsLeafSubmoduleIntermediate = {
     expr =
