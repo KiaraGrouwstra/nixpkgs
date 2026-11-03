@@ -1,6 +1,5 @@
 {
   config,
-  options,
   lib,
   pkgs,
   ...
@@ -15,6 +14,21 @@ let
     submodule
     ;
   inherit (pkgs) writeText;
+
+  # The options of this provider for one secret.
+  providerOptions = {
+    options.content = mkOption {
+      type = str;
+      description = ''
+        Content of the secret as a string.
+
+        This will be stored in the nix store and should only be used for testing or maybe in dev.
+      '';
+    };
+  };
+
+  # Add this provider to the types of the contract options.
+  providerType = lib.types.nullOr (lib.types.enum [ "hardcoded-secret" ]);
 in
 {
   options.testing.hardcoded-secret = {
@@ -86,16 +100,7 @@ in
               providerOptions = mkOption {
                 description = "Options of this provider that are not part of the file secrets contract.";
                 default = { };
-                type = submodule {
-                  options.content = mkOption {
-                    type = str;
-                    description = ''
-                      Content of the secret as a string.
-
-                      This will be stored in the nix store and should only be used for testing or maybe in dev.
-                    '';
-                  };
-                };
+                type = submodule providerOptions;
               };
             };
           }
@@ -104,11 +109,39 @@ in
     };
   };
 
+  options.contracts.fileSecrets.defaultProvider = mkOption { type = providerType; };
+  options.contracts.fileSecrets.instances = mkOption {
+    type = attrsOf (
+      submodule (
+        { name, config, ... }:
+        {
+          options.provider = mkOption { type = providerType; };
+          options.providerOptions.hardcoded-secret = mkOption {
+            description = "Options of the provider `testing.hardcoded-secret` for this entry.";
+            default = { };
+            type = submodule providerOptions;
+          };
+          config.response = lib.mkIf (config.provider == "hardcoded-secret") (
+            lib.mkOptionDefault cfg.fileSecrets.${name}.response
+          );
+        }
+      )
+    );
+  };
+
   config = {
-    # Fulfill the requests that the contracts system sends to this provider.
+    # Fulfill the requests of the entries of `contracts.fileSecrets.instances` with this provider.
     testing.hardcoded-secret.fileSecrets =
-      config.contracts.fileSecrets.providerRequests.hardcoded-secret;
-    contracts.fileSecrets.providers.hardcoded-secret.module = options.testing.hardcoded-secret;
+      lib.mapAttrs
+        (_: instance: {
+          inherit (instance) request;
+          providerOptions = instance.providerOptions.hardcoded-secret;
+        })
+        (
+          lib.filterAttrs (
+            _: instance: instance.provider == "hardcoded-secret"
+          ) config.contracts.fileSecrets.instances
+        );
 
     # Write each secret in a service and not in an activation script.
     # An activation script can run before the owner of the secret exists:

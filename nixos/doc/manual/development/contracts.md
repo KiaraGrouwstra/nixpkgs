@@ -91,10 +91,63 @@ Example, a simplified version of the provider option `testing.hardcoded-secret.f
 }
 ```
 
+A provider also extends the type of `contracts.<type>`, so that the user can select it.
+It adds its name to the types of `contracts.<type>.defaultProvider` and `contracts.<type>.instances.<name>.provider`.
+It adds its options for one entry at `contracts.<type>.instances.<name>.providerOptions.<provider>`.
+It sets the `response` of each entry with its name in `provider`, with `lib.mkOptionDefault`, thus a definition of the user replaces it.
+These declarations merge with the declarations of the contracts module.
+Do not set `description` in them: the contracts module sets it, and a second `description` is an error.
+
+Example, a simplified version of the provider `testing.hardcoded-secret`:
+
+```nix
+{ config, lib, ... }:
+let
+  inherit (lib) mkOption types;
+  cfg = config.testing.hardcoded-secret;
+  providerType = types.nullOr (types.enum [ "hardcoded-secret" ]);
+in
+{
+  options.contracts.fileSecrets.defaultProvider = mkOption { type = providerType; };
+  options.contracts.fileSecrets.instances = mkOption {
+    type = types.attrsOf (
+      types.submodule (
+        { name, config, ... }:
+        {
+          options.provider = mkOption { type = providerType; };
+          options.providerOptions.hardcoded-secret = mkOption {
+            description = "Options of the provider `testing.hardcoded-secret` for this entry.";
+            default = { };
+            type = types.submodule {
+              options.content = mkOption { type = types.str; };
+            };
+          };
+          config.response = lib.mkIf (config.provider == "hardcoded-secret") (
+            lib.mkOptionDefault cfg.fileSecrets.${name}.response
+          );
+        }
+      )
+    );
+  };
+
+  config.testing.hardcoded-secret.fileSecrets =
+    lib.mapAttrs
+      (_: instance: {
+        inherit (instance) request;
+        providerOptions = instance.providerOptions.hardcoded-secret;
+      })
+      (
+        lib.filterAttrs (
+          _: instance: instance.provider == "hardcoded-secret"
+        ) config.contracts.fileSecrets.instances
+      );
+}
+```
+
 ## Connect a consumer to a provider {#contracts-connect}
 
 The user selects the provider of each entry, refer to [](#contracts-routing).
-The user can also connect an entry to a provider manually.
+The user can also connect an entry to a provider option manually.
 Then the user sets the `provider` of the entry to `null`, sets the `request` of the provider entry from the entry, and sets the `response` of the entry from the provider entry.
 Example, with the consumer and the provider from the examples before:
 
@@ -130,55 +183,15 @@ It does not depend on NixOS, so other module systems can also import it.
 
 ## Route requests to a provider {#contracts-routing}
 
-For each contract type, [](#opt-contracts) sends the requests of consumers to a provider, and sends the responses back:
+For each contract type, [](#opt-contracts) has these options:
 
-- `contracts.<type>.instances.<name>`: an entry with a `request` from a consumer, the `response` for the consumer, and the `provider` that gets the `request` and sets the `response`.
+- `contracts.<type>.instances.<name>`: an entry with a `request` from a consumer, the `response` for the consumer, the `provider` that gets the `request` and sets the `response`, and `providerOptions`, the options of the providers for this entry.
   The default of `provider` is `defaultProvider`.
   A definition of `response` by the user replaces the response of the provider.
-- `contracts.<type>.providers.<provider>`: where to find the *provider option*, the option of the provider that has an entry for each request that the provider fulfills.
-  `module` is the options of the provider, and `contract` is the path of the provider option in `module`.
-- `contracts.<type>.defaultProvider`: the provider that gets the requests, one of `providers`.
-- `contracts.<type>.providerRequests.<provider>`: the requests that a provider must fulfill.
-  These are the `request` of each entry of `instances` with this provider in `provider`, and `{ }` for providers that no entry has.
+- `contracts.<type>.defaultProvider`: the name of the provider that gets the requests.
 
-A provider reads `providerRequests.<provider>` into its provider option, and sets `providers.<provider>.module` to its options.
-`providers.<provider>.contract` is the path of the provider option in `module`:
-
-- By convention, the provider option is an option in `module` with the name of the contract type, for example `options.testing.hardcoded-secret.fileSecrets`.
-  The default of `contract`, `[ "<type>" ]`, finds this provider option, thus the provider does not set `contract`.
-- If the provider option has a different name, or is in a nested set of options, set `contract` to its path in `module`.
-- If `module` is the provider option, set `contract` to `[ ]`.
-- If the path gets to an option before its end, the remaining path is in the value of that option.
-
-Use the convention if possible: then the provider option of each provider has the same path in its options.
-With `module`, a tool can find the other options of the provider, for example to make a configuration form for the provider.
-In such a form, the options in `module` apply to the full provider, and the options in `providerOptions` of the provider option apply to one entry.
-
-Example, the provider `testing.hardcoded-secret` of the contract type `fileSecrets`:
-
-```nix
-{ config, options, ... }:
-{
-  testing.hardcoded-secret.fileSecrets =
-    config.contracts.fileSecrets.providerRequests.hardcoded-secret;
-  contracts.fileSecrets.providers.hardcoded-secret.module = options.testing.hardcoded-secret;
-}
-```
-
-Example, a provider with the provider option at `services.bar.secrets.files`:
-
-```nix
-{ options, ... }:
-{
-  contracts.fileSecrets.providers.bar = {
-    module = options.services.bar;
-    contract = [
-      "secrets"
-      "files"
-    ];
-  };
-}
-```
+The type of `provider` and `defaultProvider` is `null` or one of the names that the providers in the configuration add.
+Thus the module system rejects the name of a provider that the configuration does not import.
 
 The default of `defaultProvider` is `null`, thus by default no provider gets the requests, and the `response` of an entry has no value.
 This is because a provider such as `testing.hardcoded-secret` is not safe for production.
@@ -186,11 +199,12 @@ The user selects the provider, and sets the options of the provider for each req
 Example, with the consumer `services.stash` and the provider `testing.hardcoded-secret`:
 
 ```nix
-{ config, ... }:
 {
-  contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
+  contracts.fileSecrets = {
+    defaultProvider = "hardcoded-secret";
+    instances.stash-password.providerOptions.hardcoded-secret.content = "MyPassword";
+  };
   services.stash.passwordFromContract = true;
-  testing.hardcoded-secret.fileSecrets.stash-password.providerOptions.content = "MyPassword";
 }
 ```
 
@@ -199,15 +213,12 @@ To use a different provider, change `defaultProvider`, and set the options of th
 To send one entry to a different provider, set `instances.<name>.provider` to that provider:
 
 ```nix
-{ config, ... }:
 {
-  contracts.fileSecrets.instances.stash-password.provider =
-    config.contracts.fileSecrets.providers.other-provider;
+  contracts.fileSecrets.instances.stash-password.provider = "other-provider";
 }
 ```
 
 To connect one entry manually, set `instances.<name>.provider` to `null`, as in [](#contracts-connect).
-Then no provider gets the request of that entry from `providerRequests`.
 
 Another module system can import `lib.contract.module`, for example in a submodule.
 Each evaluation has its own `contracts`.

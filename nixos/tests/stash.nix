@@ -10,13 +10,15 @@ import ./make-test-python.nix (
     meta.maintainers = pkgs.stash.meta.maintainers;
 
     nodes.machine =
-      { config, ... }:
+      { ... }:
       {
-        contracts.fileSecrets.defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
-        testing.hardcoded-secret.fileSecrets = {
-          stash-password.providerOptions.content = "MyPassword";
-          stash-jwtSecretKey.providerOptions.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-          stash-sessionStoreKey.providerOptions.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        contracts.fileSecrets = {
+          defaultProvider = "hardcoded-secret";
+          instances = {
+            stash-password.providerOptions.hardcoded-secret.content = "MyPassword";
+            stash-jwtSecretKey.providerOptions.hardcoded-secret.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            stash-sessionStoreKey.providerOptions.hardcoded-secret.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+          };
         };
 
         services.stash = {

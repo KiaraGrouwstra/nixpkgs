@@ -1,11 +1,6 @@
 # Each entry of `contracts.<type>.instances` has a `request` and a `response`.
-# The provider `one` adds 1 to the requests that it gets.
-{
-  lib,
-  config,
-  options,
-  ...
-}:
+# The provider `one` adds `providerOptions.one.offset` to the requests that it gets.
+{ lib, config, ... }:
 let
   inherit (lib) mkOption types;
   intOption = mkOption {
@@ -28,11 +23,31 @@ in
   imports = [ lib.contract.module ];
 
   options = {
-    services.one.number = mkOption {
-      type = types.raw;
-      default = lib.mapAttrs (_: entry: {
-        response.value = entry.request.value + 1;
-      }) config.contracts.number.providerRequests.one;
+    # The provider `one` adds its name to the types of `provider` and `defaultProvider`,
+    # and sets the `response` of each entry with its name in `provider`.
+    contracts.number.defaultProvider = mkOption {
+      type = types.nullOr (types.enum [ "one" ]);
+    };
+    contracts.number.instances = mkOption {
+      type = types.attrsOf (
+        types.submodule (
+          { config, ... }:
+          {
+            options.provider = mkOption {
+              type = types.nullOr (types.enum [ "one" ]);
+            };
+            options.providerOptions.one.offset = mkOption {
+              type = types.int;
+              default = 1;
+            };
+            config.response = lib.mkIf (config.provider == "one") (
+              lib.mkOptionDefault {
+                value = config.request.value + config.providerOptions.one.offset;
+              }
+            );
+          }
+        )
+      );
     };
 
     # A consumer in a different evaluation, with its own `contracts`.
@@ -50,8 +65,7 @@ in
     contractTypes = { inherit number; };
 
     contracts.number = {
-      providers.one.module = options.services.one;
-      defaultProvider = config.contracts.number.providers.one;
+      defaultProvider = "one";
       instances = {
         # The response comes from `defaultProvider`.
         a.request.value = 10;
@@ -65,6 +79,9 @@ in
         # No provider, and no response.
         d.request.value = 10;
         d.provider = null;
+        # An option of the provider for this entry.
+        e.request.value = 10;
+        e.providerOptions.one.offset = 5;
         # The user connects the entry of the other evaluation.
         sub-x.request = config.services.sub.contracts.number.instances.x.request;
       };

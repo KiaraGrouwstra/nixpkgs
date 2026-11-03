@@ -441,21 +441,13 @@ checkConfigOutput '^"hello"$' config.packageInvalidIdentifier.pname ./declare-mk
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifier.defaultText.text ./declare-mkPackageOption.nix
 checkConfigOutput '^"pkgs\.\\"123\\"\.\\"with\\\\\\"quote\\"\.hello"$' options.packageInvalidIdentifierExample.example.text ./declare-mkPackageOption.nix
 
-# contracts: find the provider option from `module` and `contract`
-checkConfigOutput '^11$' config.contracts.number.instances.a.response.value ./contracts-provider-path.nix
-checkConfigOutput '^12$' config.contracts.number.instances.b.response.value ./contracts-provider-path.nix
-checkConfigOutput '^13$' config.contracts.number.instances.c.response.value ./contracts-provider-path.nix
-checkConfigOutput '^14$' config.contracts.number.instances.d.response.value ./contracts-provider-path.nix
-STRICT_EVAL=1 checkConfigOutput '^\["services","two","numbers"\]$' config.contracts.number.providers.two.loc ./contracts-provider-path.nix
-STRICT_EVAL=1 checkConfigOutput '^\["services","four","number"\]$' config.contracts.number.providers.four.loc ./contracts-provider-path.nix
-checkConfigError 'a provider `module` must be an option' config.contracts.number.providers.wrong.loc ./contracts-provider-path.nix ./contracts-provider-path-wrong.nix
-
 # contracts: each entry of `instances` has a `request` and a `response`
 checkConfigOutput '^11$' config.contracts.number.instances.a.response.value ./contracts-instances.nix
 checkConfigOutput '^5$' config.contracts.number.instances.b.response.value ./contracts-instances.nix
 checkConfigOutput '^7$' config.contracts.number.instances.c.response.value ./contracts-instances.nix
 checkConfigError 'accessed but has no value defined' config.contracts.number.instances.d.response.value ./contracts-instances.nix
-checkConfigError 'attribute .c. in selection path' config.contracts.number.providerRequests.one.c ./contracts-instances.nix
+checkConfigOutput '^15$' config.contracts.number.instances.e.response.value ./contracts-instances.nix
+checkConfigError 'is not of type .null or value "one" \(singular enum\).' config.contracts.number.instances.a.provider ./contracts-instances.nix ./contracts-instances-unknown-provider.nix
 checkConfigOutput '^31$' config.services.sub.contracts.number.instances.x.response.value ./contracts-instances.nix
 
 # submoduleWith

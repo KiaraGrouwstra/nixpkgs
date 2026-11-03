@@ -20,7 +20,7 @@ test {
         test.owner = "secretowner";
         test.group = "secretgroup";
         test.content = "a super secret secret!";
-        testing.hardcoded-secret.fileSecrets.test.providerOptions.content = config.test.content;
+        contracts.fileSecrets.instances.test.providerOptions.hardcoded-secret.content = config.test.content;
       }
     )
   ];

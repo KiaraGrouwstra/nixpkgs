@@ -9,7 +9,7 @@ let
 in
 {
   name,
-  # Name of the provider in `contracts.fileSecrets.providers`.
+  # Name of the provider, a value of `contracts.fileSecrets.defaultProvider`.
   provider,
   extraModules ? [ ],
 }:
@@ -49,7 +49,7 @@ in
         {
           # Send the request through the contracts module, as a consumer does.
           contracts.fileSecrets = {
-            defaultProvider = config.contracts.fileSecrets.providers.${provider};
+            defaultProvider = provider;
             instances.test.request = {
               inherit (config.test) owner group mode;
             };
