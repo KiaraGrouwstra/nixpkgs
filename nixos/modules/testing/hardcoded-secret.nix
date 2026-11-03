@@ -1,5 +1,6 @@
 {
   config,
+  options,
   lib,
   pkgs,
   ...
@@ -7,9 +8,9 @@
 let
   cfg = config.testing.hardcoded-secret;
 
-  inherit (lib) mapAttrs' mkOption nameValuePair;
+  inherit (lib) concatStringsSep mkOption;
   inherit (lib.types)
-    attrsOf
+    nestedAttrsOf
     str
     submodule
     ;
@@ -17,6 +18,8 @@ let
 
   # This provider in `contracts.fileSecrets.providers`.
   provider = config.contracts.fileSecrets.providers.hardcoded-secret;
+  # The type of `contracts.fileSecrets.instances`, to find its entries.
+  instancesType = (options.contracts.fileSecrets.type.getSubOptions [ ]).instances.type;
 in
 {
   options.testing.hardcoded-secret.directory = mkOption {
@@ -24,15 +27,16 @@ in
     default = "/run/hardcodedsecrets";
     description = ''
       Directory in which the provider writes the secret files.
-      Each secret file has the name of its entry in
-      [](#opt-contracts.fileSecrets.instances).
+      Each secret file has the path of its entry in
+      [](#opt-contracts.fileSecrets.instances),
+      for example `stash/password` for `instances.stash.password`.
     '';
   };
 
   options.contracts.fileSecrets.instances = mkOption {
-    type = attrsOf (
+    type = nestedAttrsOf (
       submodule (
-        { name, ... }:
+        { instancePath, ... }:
         {
           options.providerOptions.hardcoded-secret = mkOption {
             description = ''
@@ -63,8 +67,8 @@ in
               };
             };
           };
-          config.response = lib.mkIf (provider.instances ? ${name}) (
-            lib.mkOptionDefault { path = "${cfg.directory}/${name}"; }
+          config.response = lib.mkIf (lib.hasAttrByPath instancePath provider.instances) (
+            lib.mkOptionDefault { path = "${cfg.directory}/${concatStringsSep "/" instancePath}"; }
           );
         }
       )
@@ -80,35 +84,38 @@ in
     # and `systemd-sysusers` and `userborn` create users after activation.
     # The services run before `sysinit.target`, thus before all services
     # that have default dependencies, such as the consumers of the secrets.
-    systemd.services = mapAttrs' (
-      n: instance:
+    systemd.services = lib.concatMapNestedAttrs' instancesType (
+      path: instance:
       let
+        n = concatStringsSep "_" path;
         source = writeText "hardcodedsecret_${n}_content" instance.providerOptions.hardcoded-secret.content;
 
         inherit (instance) request response;
       in
-      nameValuePair "hardcodedsecret_${n}" {
-        description = "Hardcoded secret ${n}";
-        wantedBy = [ "sysinit.target" ];
-        after = [
-          "local-fs.target"
-          "systemd-sysusers.service"
-          "userborn.service"
-        ];
-        before = [
-          "sysinit.target"
-          "shutdown.target"
-        ];
-        conflicts = [ "shutdown.target" ];
-        unitConfig.DefaultDependencies = false;
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
+      {
+        "hardcodedsecret_${n}" = {
+          description = "Hardcoded secret ${lib.showAttrPath path}";
+          wantedBy = [ "sysinit.target" ];
+          after = [
+            "local-fs.target"
+            "systemd-sysusers.service"
+            "userborn.service"
+          ];
+          before = [
+            "sysinit.target"
+            "shutdown.target"
+          ];
+          conflicts = [ "shutdown.target" ];
+          unitConfig.DefaultDependencies = false;
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script = ''
+            install -D -m ${request.mode} -o ${request.owner} -g ${request.group} \
+              ${source} "${response.path}"
+          '';
         };
-        script = ''
-          install -D -m ${request.mode} -o ${request.owner} -g ${request.group} \
-            ${source} "${response.path}"
-        '';
       }
     ) provider.instances;
   };

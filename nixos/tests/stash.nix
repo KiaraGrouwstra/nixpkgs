@@ -15,9 +15,11 @@ import ./make-test-python.nix (
         contracts.fileSecrets = {
           defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
           instances = {
-            stash-password.providerOptions.hardcoded-secret.content = "MyPassword";
-            stash-jwtSecretKey.providerOptions.hardcoded-secret.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-            stash-sessionStoreKey.providerOptions.hardcoded-secret.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+            stash.password.providerOptions.hardcoded-secret.content = "MyPassword";
+            stash.jwtSecretKey.providerOptions.hardcoded-secret.content =
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            stash.sessionStoreKey.providerOptions.hardcoded-secret.content =
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
           };
         };
 

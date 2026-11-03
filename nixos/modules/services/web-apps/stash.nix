@@ -439,7 +439,7 @@ in
         default = false;
         description = ''
           Whether to get the login password from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash-password` of `contracts.fileSecrets.instances`,
+          If `true`, stash sends a request to the entry `stash.password` of `contracts.fileSecrets.instances`,
           and sets {option}`services.stash.passwordFile` to the path in its `response`.
         '';
       };
@@ -453,7 +453,7 @@ in
         default = false;
         description = ''
           Whether to get the secret used to sign JWT tokens from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash-jwtSecretKey` of `contracts.fileSecrets.instances`,
+          If `true`, stash sends a request to the entry `stash.jwtSecretKey` of `contracts.fileSecrets.instances`,
           and sets {option}`services.stash.jwtSecretKeyFile` to the path in its `response`.
         '';
       };
@@ -466,7 +466,7 @@ in
         default = false;
         description = ''
           Whether to get the secret for the session store from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash-sessionStoreKey` of `contracts.fileSecrets.instances`,
+          If `true`, stash sends a request to the entry `stash.sessionStoreKey` of `contracts.fileSecrets.instances`,
           and sets {option}`services.stash.sessionStoreKeyFile` to the path in its `response`.
         '';
       };
@@ -496,13 +496,13 @@ in
   config = mkIf cfg.enable {
     # A secret from the contract gives the path of its `*File` option.
     services.stash.passwordFile = mkIf cfg.passwordFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash-password.response.path
+      mkDefault config.contracts.fileSecrets.instances.stash.password.response.path
     );
     services.stash.jwtSecretKeyFile = mkIf cfg.jwtSecretKeyFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash-jwtSecretKey.response.path
+      mkDefault config.contracts.fileSecrets.instances.stash.jwtSecretKey.response.path
     );
     services.stash.sessionStoreKeyFile = mkIf cfg.sessionStoreKeyFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash-sessionStoreKey.response.path
+      mkDefault config.contracts.fileSecrets.instances.stash.sessionStoreKey.response.path
     );
 
     # Send a request for each secret from the contract.
@@ -516,9 +516,9 @@ in
         };
       in
       {
-        stash-password = mkIf cfg.passwordFromContract { inherit request; };
-        stash-jwtSecretKey = mkIf cfg.jwtSecretKeyFromContract { inherit request; };
-        stash-sessionStoreKey = mkIf cfg.sessionStoreKeyFromContract { inherit request; };
+        stash.password = mkIf cfg.passwordFromContract { inherit request; };
+        stash.jwtSecretKey = mkIf cfg.jwtSecretKeyFromContract { inherit request; };
+        stash.sessionStoreKey = mkIf cfg.sessionStoreKeyFromContract { inherit request; };
       };
 
     assertions = [

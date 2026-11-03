@@ -473,6 +473,17 @@ checkConfigError 'attribute .won. missing' config.contracts.number.instances.a.p
 checkConfigError 'is not of type .null or provider of the contract type .number..' config.contracts.number.instances.a.provider ./contracts-instances.nix ./contracts-instances-other-contract.nix
 checkConfigError 'has conflicting providers' config.contracts.number.defaultProvider ./contracts-instances.nix ./contracts-instances-conflicting-providers.nix
 checkConfigOutput '^31$' config.services.sub.contracts.number.instances.x.response.value ./contracts-instances.nix
+# contracts: the entries of `instances` can be in nested attribute sets
+checkConfigOutput '^11$' config.contracts.number.instances.ns.g.response.value ./contracts-instances.nix
+checkConfigOutput '^20$' config.contracts.number.instances.ns.h.i.response.value ./contracts-instances.nix
+checkConfigOutput '^{}$' config.contracts.number.instances.ns.empty ./contracts-instances.nix
+checkConfigOutput '^{}$' config.contracts.number.instances.ns.j ./contracts-instances.nix
+checkConfigOutput '^10$' config.contracts.number.providers.two.instances.ns.h.i.request.value ./contracts-instances.nix
+checkConfigError 'attribute .g. in selection path .* not found' config.contracts.number.providers.two.instances.ns.g ./contracts-instances.nix
+# contracts: `providers.<name>.instances` has no namespaces without entries of the provider
+checkConfigError 'attribute .h. in selection path .* not found' config.contracts.number.providers.one.instances.ns.h ./contracts-instances.nix
+checkConfigError 'attribute .empty. in selection path .* not found' config.contracts.number.providers.one.instances.ns.empty ./contracts-instances.nix
+checkConfigError 'attribute .j. in selection path .* not found' config.contracts.number.providers.one.instances.ns.j ./contracts-instances.nix
 
 # submoduleWith
 

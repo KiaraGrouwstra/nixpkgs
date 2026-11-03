@@ -34,15 +34,15 @@ let
     in
     {
       options.contracts.number.instances = mkOption {
-        type = types.attrsOf (
+        type = types.nestedAttrsOf (
           types.submodule (
-            { name, config, ... }:
+            { instancePath, config, ... }:
             {
               options.providerOptions.${providerName}.offset = mkOption {
                 type = types.int;
                 default = 1;
               };
-              config.response = lib.mkIf (provider.instances ? ${name}) (
+              config.response = lib.mkIf (lib.hasAttrByPath instancePath provider.instances) (
                 lib.mkOptionDefault { value = response config; }
               );
             }
@@ -94,6 +94,14 @@ in
         f.provider = config.contracts.number.providers.two;
         # The user connects the entry of the other evaluation.
         sub-x.request = config.services.sub.contracts.number.instances.x.request;
+        # Entries in nested attribute sets.
+        ns.g.request.value = 10;
+        ns.h.i.request.value = 10;
+        ns.h.i.provider = config.contracts.number.providers.two;
+        # An empty namespace, and not an entry.
+        ns.empty = { };
+        # No entry.
+        ns.j = lib.mkIf false { request.value = 10; };
       };
     };
 

@@ -19,7 +19,12 @@ For the behavior of a provider, refer to the options of the provider in `instanc
 ## Consumers {#contracts-consumers}
 
 A consumer sends a `request` to an entry of `contracts.<type>.instances`, and reads the `response` of that entry.
-Each name must be unique for all consumers, for example `<consumer>-<option>`.
+Each consumer puts its entries in an attribute set with its own name, for example `instances.<consumer>.<option>`.
+
+The entries can be in nested attribute sets of any depth.
+An attribute set that contains only option names of an entry, such as `request`, is an entry.
+Other attribute sets, and `{ }`, are namespaces.
+Thus a name in a namespace must not be an option name of an entry: `request`, `response`, `provider` or `providerOptions`.
 
 Example, a simplified version of the consumer `services.stash`:
 
@@ -32,12 +37,12 @@ in
   options.services.stash.passwordFromContract = lib.mkEnableOption "the password from the file secrets contract";
 
   config = lib.mkIf cfg.passwordFromContract {
-    contracts.fileSecrets.instances.stash-password.request = {
+    contracts.fileSecrets.instances.stash.password.request = {
       mode = "0400";
       owner = cfg.user;
       group = cfg.group;
     };
-    services.stash.passwordFile = lib.mkDefault config.contracts.fileSecrets.instances.stash-password.response.path;
+    services.stash.passwordFile = lib.mkDefault config.contracts.fileSecrets.instances.stash.password.response.path;
   };
 }
 ```
@@ -53,14 +58,17 @@ If the user sets `services.stash.passwordFromContract`, the module sets `passwor
 
 A provider adds an entry with its name to `contracts.<type>.providers`, for example `contracts.fileSecrets.providers.hardcoded-secret = { };`.
 The user selects the provider with a reference to that entry, refer to [](#contracts-routing).
-`contracts.<type>.providers.<provider>.instances` contains the entries of `instances` that the user sent to the provider.
+`contracts.<type>.providers.<provider>.instances` contains the entries of `instances` that the user sent to the provider, at the same paths.
+It does not contain namespaces without such entries.
 The provider uses the `request` of each of these entries to make the resource.
+To find the entries in the nested attribute sets, use `lib.concatMapNestedAttrs'` or `lib.mapNestedAttrs'` with the type of `instances`.
 
 The provider also declares options in `contracts.<type>.instances`.
 These declarations merge with the declarations of the contract type:
 
 - Its options for one entry go in `instances.<name>.providerOptions.<provider>`.
 - It sets the `response` of each entry in `providers.<provider>.instances`, with `lib.mkOptionDefault`, thus a definition of the user replaces it.
+  Each entry gets its path in `instances` as the module argument `instancePath`, for example `[ "stash" "password" ]`.
 
 Do not set `description` in a declaration of an option of the contract type: the contract type sets it, and a second `description` is an error.
 
@@ -73,17 +81,23 @@ In `providerOptions.<provider>`, an option of the provider cannot conflict with 
 Example, a simplified version of the provider `testing.hardcoded-secret`:
 
 ```nix
-{ config, lib, ... }:
+{
+  config,
+  options,
+  lib,
+  ...
+}:
 let
   inherit (lib) mkOption types;
   cfg = config.testing.hardcoded-secret;
   provider = config.contracts.fileSecrets.providers.hardcoded-secret;
+  instancesType = (options.contracts.fileSecrets.type.getSubOptions [ ]).instances.type;
 in
 {
   options.contracts.fileSecrets.instances = mkOption {
-    type = types.attrsOf (
+    type = types.nestedAttrsOf (
       types.submodule (
-        { name, ... }:
+        { instancePath, ... }:
         {
           options.providerOptions.hardcoded-secret = mkOption {
             description = "Options of the provider `testing.hardcoded-secret` for this entry.";
@@ -92,8 +106,8 @@ in
               options.content = mkOption { type = types.str; };
             };
           };
-          config.response = lib.mkIf (provider.instances ? ${name}) (
-            lib.mkOptionDefault { path = "${cfg.directory}/${name}"; }
+          config.response = lib.mkIf (lib.hasAttrByPath instancePath provider.instances) (
+            lib.mkOptionDefault { path = "${cfg.directory}/${lib.concatStringsSep "/" instancePath}"; }
           );
         }
       )
@@ -102,13 +116,12 @@ in
 
   config = {
     contracts.fileSecrets.providers.hardcoded-secret = { };
-    systemd.services = lib.mapAttrs' (
-      name: instance:
-      lib.nameValuePair "hardcodedsecret_${name}" {
+    systemd.services = lib.concatMapNestedAttrs' instancesType (path: instance: {
+      "hardcodedsecret_${lib.concatStringsSep "_" path}" = {
         # Writes `instance.providerOptions.hardcoded-secret.content` to `instance.response.path`,
         # with the permissions in `instance.request`.
-      }
-    ) provider.instances;
+      };
+    }) provider.instances;
   };
 }
 ```
@@ -124,7 +137,7 @@ Example, with the consumer from the example before, and a secret file that the u
 {
   services.stash.passwordFromContract = true;
 
-  contracts.fileSecrets.instances.stash-password = {
+  contracts.fileSecrets.instances.stash.password = {
     provider = null;
     response.path = "/run/keys/stash-password";
   };
@@ -172,7 +185,8 @@ The options of a contract type do not depend on `config`, thus a module can add 
 
 For each contract type, `contracts.<type>` has these options:
 
-- `instances.<name>`: an entry with a `request` from a consumer, the `response` for the consumer, the `provider` that gets the `request` and sets the `response`, and `providerOptions`, the options of the providers for this entry.
+- `instances.<name>`: an entry, or a namespace with entries, refer to [](#contracts-consumers).
+  An entry has a `request` from a consumer, the `response` for the consumer, the `provider` that gets the `request` and sets the `response`, and `providerOptions`, the options of the providers for this entry.
   The default of `provider` is `defaultProvider`.
   A definition of `response` by the user replaces the response of the provider.
 - `providers.<provider>`: an entry for each provider in the configuration.
@@ -192,7 +206,7 @@ Example, with the consumer `services.stash` and the provider `testing.hardcoded-
 {
   contracts.fileSecrets = {
     defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
-    instances.stash-password.providerOptions.hardcoded-secret.content = "MyPassword";
+    instances.stash.password.providerOptions.hardcoded-secret.content = "MyPassword";
   };
   services.stash.passwordFromContract = true;
 }
@@ -205,7 +219,7 @@ To send one entry to a different provider, set `instances.<name>.provider` to th
 ```nix
 { config, ... }:
 {
-  contracts.fileSecrets.instances.stash-password.provider =
+  contracts.fileSecrets.instances.stash.password.provider =
     config.contracts.fileSecrets.providers.other-provider;
 }
 ```
@@ -220,11 +234,11 @@ To connect an entry in a submodule to a provider of the configuration, set the `
 ```nix
 { config, ... }:
 {
-  contracts.fileSecrets.instances.foo-password.request =
+  contracts.fileSecrets.instances.foo.password.request =
     config.services.foo.contracts.fileSecrets.instances.password.request;
   services.foo.contracts.fileSecrets.instances.password = {
     provider = null;
-    inherit (config.contracts.fileSecrets.instances.foo-password) response;
+    inherit (config.contracts.fileSecrets.instances.foo.password) response;
   };
 }
 ```
