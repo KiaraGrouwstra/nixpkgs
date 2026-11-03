@@ -1960,8 +1960,8 @@ rec {
         substSubModules = m: nestedAttrsOf (elemType.substSubModules m);
 
         # Standard functor so the type integrates with lib.types combinators.
-        functor = (lib.types.defaultFunctor "nestedAttrsOf") // {
-          wrapped = elemType;
+        functor = (elemTypeFunctor "nestedAttrsOf" { inherit elemType; }) // {
+          type = payload: lib.types.nestedAttrsOf payload.elemType;
         };
       };
     in

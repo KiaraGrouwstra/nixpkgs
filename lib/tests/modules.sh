@@ -450,6 +450,7 @@ checkConfigOutput '^4$' config.value.d.e ./declare-nested-attrs-properties.nix
 checkConfigError 'A definition for option .* is not of type .*' config.value.a.b ./declare-nested-attrs-properties.nix ./declare-nested-attrs-properties-invalid.nix
 checkConfigError 'A definition for option .* is not of type .*' config.value.b.f ./declare-nested-attrs-unsound.nix
 checkConfigError 'expected an attribute set with keys from \[request, result\]' config.value.consumer ./declare-nested-attrs-misshapen.nix
+checkConfigOutput '^2$' config.value.a.b.y ./declare-nested-attrs-merge.nix
 
 # contracts: find the provider option from `module` and `contract`
 checkConfigOutput '^11$' config.contracts.number.results.a.value ./contracts-provider-path.nix
