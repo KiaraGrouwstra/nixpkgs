@@ -10,10 +10,10 @@ import ./make-test-python.nix (
     meta.maintainers = pkgs.stash.meta.maintainers;
 
     nodes.machine =
-      { ... }:
+      { config, ... }:
       {
         contracts.fileSecrets = {
-          defaultProvider = "hardcoded-secret";
+          defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
           instances = {
             stash-password.providerOptions.hardcoded-secret.content = "MyPassword";
             stash-jwtSecretKey.providerOptions.hardcoded-secret.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

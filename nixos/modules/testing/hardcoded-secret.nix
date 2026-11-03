@@ -15,114 +15,56 @@ let
     ;
   inherit (pkgs) writeText;
 
-  # The options of this provider for one secret.
-  providerOptions = {
-    options.content = mkOption {
-      type = str;
-      description = ''
-        Content of the secret as a string.
-
-        This will be stored in the nix store and should only be used for testing or maybe in dev.
-      '';
-    };
-  };
-
-  # Add this provider to the types of the contract options.
-  providerType = lib.types.nullOr (lib.types.enum [ "hardcoded-secret" ]);
+  # This provider in `contracts.fileSecrets.providers`.
+  provider = config.contracts.fileSecrets.providers.hardcoded-secret;
 in
 {
-  options.testing.hardcoded-secret = {
-    directory = mkOption {
-      type = str;
-      default = "/run/hardcodedsecrets";
-      description = ''
-        Directory in which the provider writes the secret files.
-        Each secret file has the name of its entry in
-        [](#opt-testing.hardcoded-secret.fileSecrets).
-      '';
-    };
-
-    fileSecrets = mkOption {
-      default = { };
-      description = ''
-        Hardcoded file secrets. These should only be used in tests.
-
-        They aim to replace the usage of pkgs.writeText in NixOS VM tests
-        as those make the file world readable
-        while this module set runtime permissions on the file.
-        This makes the tests more accurate, ensuring the permissions
-        set by the contract consumer are correct.
-
-        For each entry, a service writes `providerOptions.content` to `response.path`,
-        with the `mode`, `owner` and `group` from `request`.
-        The service runs after `systemd-sysusers` or `userborn`, and before `sysinit.target`,
-        thus the file exists before the services that use it start.
-        The content is also in the Nix store, where each user can read it.
-      '';
-      example = lib.literalExpression ''
-        {
-          mySecret = {
-            request = {
-              owner = "me";
-              group = "me";
-              mode = "0400";
-            };
-            providerOptions.content = "My Secret";
-          };
-        }
-      '';
-      type = attrsOf (
-        submodule (
-          { name, ... }:
-          {
-            imports = [ lib.contracts.fileSecrets.interface ];
-
-            options = {
-              request = mkOption {
-                type = submodule {
-                  options = {
-                    owner = mkOption { default = "root"; };
-                    group = mkOption { default = "root"; };
-                  };
-                };
-              };
-
-              response = mkOption {
-                default = { };
-                type = submodule {
-                  options.path = mkOption {
-                    default = "${cfg.directory}/${name}";
-                    defaultText = lib.literalExpression ''"''${config.testing.hardcoded-secret.directory}/<name>"'';
-                  };
-                };
-              };
-
-              providerOptions = mkOption {
-                description = "Options of this provider that are not part of the file secrets contract.";
-                default = { };
-                type = submodule providerOptions;
-              };
-            };
-          }
-        )
-      );
-    };
+  options.testing.hardcoded-secret.directory = mkOption {
+    type = str;
+    default = "/run/hardcodedsecrets";
+    description = ''
+      Directory in which the provider writes the secret files.
+      Each secret file has the name of its entry in
+      [](#opt-contracts.fileSecrets.instances).
+    '';
   };
 
-  options.contracts.fileSecrets.defaultProvider = mkOption { type = providerType; };
   options.contracts.fileSecrets.instances = mkOption {
     type = attrsOf (
       submodule (
-        { name, config, ... }:
+        { name, ... }:
         {
-          options.provider = mkOption { type = providerType; };
           options.providerOptions.hardcoded-secret = mkOption {
-            description = "Options of the provider `testing.hardcoded-secret` for this entry.";
+            description = ''
+              Options of the provider `testing.hardcoded-secret` for this entry.
+              This provider should only be used in tests.
+
+              It aims to replace the usage of pkgs.writeText in NixOS VM tests
+              as those make the file world readable
+              while this module set runtime permissions on the file.
+              This makes the tests more accurate, ensuring the permissions
+              set by the contract consumer are correct.
+
+              A service writes `content` to `response.path`,
+              with the `mode`, `owner` and `group` from `request`.
+              The service runs after `systemd-sysusers` or `userborn`, and before `sysinit.target`,
+              thus the file exists before the services that use it start.
+              The content is also in the Nix store, where each user can read it.
+            '';
             default = { };
-            type = submodule providerOptions;
+            type = submodule {
+              options.content = mkOption {
+                type = str;
+                description = ''
+                  Content of the secret as a string.
+
+                  This will be stored in the nix store and should only be used for testing or maybe in dev.
+                '';
+              };
+            };
           };
-          config.response = lib.mkIf (config.provider == "hardcoded-secret") (
-            lib.mkOptionDefault cfg.fileSecrets.${name}.response
+          config.response = lib.mkIf (provider.instances ? ${name}) (
+            lib.mkOptionDefault { path = "${cfg.directory}/${name}"; }
           );
         }
       )
@@ -130,18 +72,7 @@ in
   };
 
   config = {
-    # Fulfill the requests of the entries of `contracts.fileSecrets.instances` with this provider.
-    testing.hardcoded-secret.fileSecrets =
-      lib.mapAttrs
-        (_: instance: {
-          inherit (instance) request;
-          providerOptions = instance.providerOptions.hardcoded-secret;
-        })
-        (
-          lib.filterAttrs (
-            _: instance: instance.provider == "hardcoded-secret"
-          ) config.contracts.fileSecrets.instances
-        );
+    contracts.fileSecrets.providers.hardcoded-secret = { };
 
     # Write each secret in a service and not in an activation script.
     # An activation script can run before the owner of the secret exists:
@@ -150,11 +81,11 @@ in
     # The services run before `sysinit.target`, thus before all services
     # that have default dependencies, such as the consumers of the secrets.
     systemd.services = mapAttrs' (
-      n: cfg':
+      n: instance:
       let
-        source = writeText "hardcodedsecret_${n}_content" cfg'.providerOptions.content;
+        source = writeText "hardcodedsecret_${n}_content" instance.providerOptions.hardcoded-secret.content;
 
-        inherit (cfg') request response;
+        inherit (instance) request response;
       in
       nameValuePair "hardcodedsecret_${n}" {
         description = "Hardcoded secret ${n}";
@@ -179,6 +110,6 @@ in
             ${source} "${response.path}"
         '';
       }
-    ) cfg.fileSecrets;
+    ) provider.instances;
   };
 }

@@ -447,7 +447,16 @@ checkConfigOutput '^5$' config.contracts.number.instances.b.response.value ./con
 checkConfigOutput '^7$' config.contracts.number.instances.c.response.value ./contracts-instances.nix
 checkConfigError 'accessed but has no value defined' config.contracts.number.instances.d.response.value ./contracts-instances.nix
 checkConfigOutput '^15$' config.contracts.number.instances.e.response.value ./contracts-instances.nix
-checkConfigError 'is not of type .null or value "one" \(singular enum\).' config.contracts.number.instances.a.provider ./contracts-instances.nix ./contracts-instances-unknown-provider.nix
+checkConfigOutput '^20$' config.contracts.number.instances.f.response.value ./contracts-instances.nix
+# `providers.<provider>.instances` has the entries with that provider
+checkConfigOutput '^10$' config.contracts.number.providers.two.instances.f.request.value ./contracts-instances.nix
+checkConfigError 'attribute .a. in selection path .* not found' config.contracts.number.providers.two.instances.a ./contracts-instances.nix
+checkConfigError 'attribute .c. in selection path .* not found' config.contracts.number.providers.one.instances.c ./contracts-instances.nix
+# contracts: `provider` takes an entry of `providers` of the same contract type
+checkConfigError 'is not of type .null or provider of the contract type .number..' config.contracts.number.instances.a.provider ./contracts-instances.nix ./contracts-instances-string-provider.nix
+checkConfigError 'attribute .won. missing' config.contracts.number.instances.a.provider ./contracts-instances.nix ./contracts-instances-unknown-provider.nix
+checkConfigError 'is not of type .null or provider of the contract type .number..' config.contracts.number.instances.a.provider ./contracts-instances.nix ./contracts-instances-other-contract.nix
+checkConfigError 'has conflicting providers' config.contracts.number.defaultProvider ./contracts-instances.nix ./contracts-instances-conflicting-providers.nix
 checkConfigOutput '^31$' config.services.sub.contracts.number.instances.x.response.value ./contracts-instances.nix
 
 # submoduleWith

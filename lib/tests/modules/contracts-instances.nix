@@ -1,71 +1,78 @@
 # Each entry of `contracts.<type>.instances` has a `request` and a `response`.
 # The provider `one` adds `providerOptions.one.offset` to the requests that it gets.
+# The provider `two` multiplies the requests that it gets by two.
 { lib, config, ... }:
 let
   inherit (lib) mkOption types;
-  intOption = mkOption {
-    type = types.submodule {
-      options.value = mkOption { type = types.int; };
-    };
-  };
+
+  # The contract type `number`.
   number = {
-    meta = {
+    options.contracts.number = lib.contract.mkContractOption {
+      name = "number";
       description = "A number.";
-      maintainers = [ lib.maintainers.kiara ];
-    };
-    interface.options = {
-      request = intOption;
-      response = intOption;
+      interface.options =
+        let
+          intOption = mkOption {
+            type = types.submodule {
+              options.value = mkOption { type = types.int; };
+            };
+          };
+        in
+        {
+          request = intOption;
+          response = intOption;
+        };
     };
   };
+
+  # A provider of `number`, that sets the response of its entries.
+  mkProvider =
+    providerName: response:
+    { config, ... }:
+    let
+      provider = config.contracts.number.providers.${providerName};
+    in
+    {
+      options.contracts.number.instances = mkOption {
+        type = types.attrsOf (
+          types.submodule (
+            { name, config, ... }:
+            {
+              options.providerOptions.${providerName}.offset = mkOption {
+                type = types.int;
+                default = 1;
+              };
+              config.response = lib.mkIf (provider.instances ? ${name}) (
+                lib.mkOptionDefault { value = response config; }
+              );
+            }
+          )
+        );
+      };
+      config.contracts.number.providers.${providerName} = { };
+    };
 in
 {
-  imports = [ lib.contract.module ];
+  imports = [
+    number
+    (mkProvider "one" (instance: instance.request.value + instance.providerOptions.one.offset))
+    (mkProvider "two" (instance: instance.request.value * 2))
+  ];
 
   options = {
-    # The provider `one` adds its name to the types of `provider` and `defaultProvider`,
-    # and sets the `response` of each entry with its name in `provider`.
-    contracts.number.defaultProvider = mkOption {
-      type = types.nullOr (types.enum [ "one" ]);
-    };
-    contracts.number.instances = mkOption {
-      type = types.attrsOf (
-        types.submodule (
-          { config, ... }:
-          {
-            options.provider = mkOption {
-              type = types.nullOr (types.enum [ "one" ]);
-            };
-            options.providerOptions.one.offset = mkOption {
-              type = types.int;
-              default = 1;
-            };
-            config.response = lib.mkIf (config.provider == "one") (
-              lib.mkOptionDefault {
-                value = config.request.value + config.providerOptions.one.offset;
-              }
-            );
-          }
-        )
-      );
-    };
-
     # A consumer in a different evaluation, with its own `contracts`.
     services.sub = mkOption {
       default = { };
       type = types.submodule {
-        imports = [ lib.contract.module ];
-        contractTypes = { inherit number; };
+        imports = [ number ];
         contracts.number.instances.x.request.value = 30;
       };
     };
   };
 
   config = {
-    contractTypes = { inherit number; };
-
     contracts.number = {
-      defaultProvider = "one";
+      defaultProvider = config.contracts.number.providers.one;
       instances = {
         # The response comes from `defaultProvider`.
         a.request.value = 10;
@@ -82,6 +89,9 @@ in
         # An option of the provider for this entry.
         e.request.value = 10;
         e.providerOptions.one.offset = 5;
+        # A different provider for this entry.
+        f.request.value = 10;
+        f.provider = config.contracts.number.providers.two;
         # The user connects the entry of the other evaluation.
         sub-x.request = config.services.sub.contracts.number.instances.x.request;
       };

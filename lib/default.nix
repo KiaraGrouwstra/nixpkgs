@@ -74,7 +74,6 @@ let
 
       # contracts
       contract = callLibs ./contracts;
-      contracts = callLibs ./contracts/definitions;
 
       # constants
       licenses = callLibs ./licenses;

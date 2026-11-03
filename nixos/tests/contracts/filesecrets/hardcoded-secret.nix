@@ -9,7 +9,6 @@ let
 in
 test {
   name = "contracts-secrets-hardcoded-secret";
-  provider = "hardcoded-secret";
   extraModules = [
     ../../../modules/testing/hardcoded-secret.nix
     (
@@ -20,7 +19,10 @@ test {
         test.owner = "secretowner";
         test.group = "secretgroup";
         test.content = "a super secret secret!";
-        contracts.fileSecrets.instances.test.providerOptions.hardcoded-secret.content = config.test.content;
+        contracts.fileSecrets = {
+          defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
+          instances.test.providerOptions.hardcoded-secret.content = config.test.content;
+        };
       }
     )
   ];

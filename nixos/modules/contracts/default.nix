@@ -1,8 +1,5 @@
-{ lib, ... }:
 {
-  imports = [ lib.contract.module ];
+  imports = [ ./file-secrets.nix ];
 
   meta.doc = ./contracts.md;
-
-  contractTypes = lib.contracts;
 }

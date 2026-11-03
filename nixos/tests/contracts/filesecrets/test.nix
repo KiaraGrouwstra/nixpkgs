@@ -9,8 +9,7 @@ let
 in
 {
   name,
-  # Name of the provider, a value of `contracts.fileSecrets.defaultProvider`.
-  provider,
+  # Modules that add the provider and set `contracts.fileSecrets.defaultProvider`.
   extraModules ? [ ],
 }:
 {
@@ -48,11 +47,8 @@ in
       config = lib.mkMerge [
         {
           # Send the request through the contracts module, as a consumer does.
-          contracts.fileSecrets = {
-            defaultProvider = provider;
-            instances.test.request = {
-              inherit (config.test) owner group mode;
-            };
+          contracts.fileSecrets.instances.test.request = {
+            inherit (config.test) owner group mode;
           };
         }
         (lib.mkIf (config.test.owner != "root") {
