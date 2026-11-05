@@ -28,9 +28,7 @@ import ./make-test-python.nix (
           enable = true;
 
           username = "test";
-          passwordFromContract = true;
-          jwtSecretKeyFromContract = true;
-          sessionStoreKeyFromContract = true;
+          passwordFile = { };
 
           plugins =
             let

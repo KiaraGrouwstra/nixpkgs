@@ -35,15 +35,28 @@ let
   cfg = config.services.stash;
 in
 {
-  options.services.stash.passwordFromContract = lib.mkEnableOption "the password from the file secrets contract";
+  options.services.stash.passwordFile = lib.mkOption {
+    type = lib.types.nullOr (
+      lib.types.oneOf [
+        lib.types.path
+        (lib.types.addCheck (lib.types.submodule {
+          options.response = lib.mkOption {
+            type = lib.types.raw;
+            readOnly = true;
+            default = config.contracts.fileSecrets.instances.stash.password.response;
+          };
+        }) lib.isAttrs)
+      ]
+    );
+    default = null;
+  };
 
-  config = lib.mkIf cfg.passwordFromContract {
+  config = lib.mkIf (lib.contract.isInstance cfg.passwordFile) {
     contracts.fileSecrets.instances.stash.password.request = {
       mode = "0400";
       owner = cfg.user;
       group = cfg.group;
     };
-    services.stash.passwordFile = lib.mkDefault config.contracts.fileSecrets.instances.stash.password.response.path;
   };
 }
 ```
@@ -51,9 +64,14 @@ in
 The consumer sets the values of the `request` with a normal priority.
 If the user sets a different value, the two definitions conflict.
 
-A consumer can keep an option without a contract next to the contract.
-For example, `services.stash.passwordFile` takes a plain path.
-If the user sets `services.stash.passwordFromContract`, the module sets `passwordFile` to the path in the `response` with `lib.mkDefault`.
+One option of the consumer can take a value without a contract, or a value from the contract.
+In the example, `services.stash.passwordFile` takes a path, or an attribute set, for example `{ }`.
+`lib.contract.isInstance` finds which of the two the user set.
+`lib.types.addCheck` with `lib.isAttrs` is necessary, because `lib.types.submodule` also takes a path, as a module to import.
+If the value is an attribute set, the module sends the request, and reads the path in `cfg.passwordFile.response.path`.
+`lib.contract.isInstance` reads only the names in the attribute set, thus the condition does not cause infinite recursion.
+An option for a resource that the consumer must have, such as `services.stash.jwtSecretKeyFile`, can have the default `{ }`.
+Then the consumer sends the request, unless the user sets a path.
 
 ## Providers {#contracts-providers}
 
@@ -134,7 +152,7 @@ Example, with the consumer from the example before, and a secret file that the u
 
 ```nix
 {
-  services.stash.passwordFromContract = true;
+  services.stash.passwordFile = { };
 
   contracts.fileSecrets.instances.stash.password = {
     provider = null;
@@ -207,7 +225,7 @@ Example, with the consumer `services.stash` and the provider `testing.hardcoded-
     defaultProvider = config.contracts.fileSecrets.providers.hardcoded-secret;
     instances.stash.password.providerOptions.hardcoded-secret.content = "MyPassword";
   };
-  services.stash.passwordFromContract = true;
+  services.stash.passwordFile = { };
 }
 ```
 

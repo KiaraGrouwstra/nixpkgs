@@ -1,6 +1,5 @@
 {
   config,
-  options,
   pkgs,
   lib,
   ...
@@ -9,7 +8,6 @@ let
   inherit (lib)
     getExe
     literalExpression
-    mkDefault
     mkEnableOption
     mkIf
     mkOption
@@ -20,6 +18,29 @@ let
     ;
 
   cfg = config.services.stash;
+
+  inherit (lib.contract) isInstance;
+
+  # The type of a `*File` option: a path, or an attribute set that gets the path from the file secrets contract.
+  secretFileType =
+    name:
+    types.oneOf [
+      types.path
+      # A submodule also takes a path, as a module to import.
+      # Thus with only `types.submodule`, a path and an attribute set at the same priority merge as two modules.
+      (types.addCheck (types.submodule {
+        options.response = mkOption {
+          description = "The `response` of the entry `stash.${name}` of {option}`contracts.fileSecrets.instances`.";
+          type = types.raw;
+          readOnly = true;
+          default = config.contracts.fileSecrets.instances.stash.${name}.response;
+          defaultText = literalExpression "config.contracts.fileSecrets.instances.stash.${name}.response";
+        };
+      }) lib.isAttrs)
+    ];
+
+  # The path of the secret file in the value of a `*File` option.
+  secretPath = v: if isInstance v then v.response.path else v;
 
   stashType = types.submodule {
     options = {
@@ -421,11 +442,14 @@ in
       };
 
       passwordFile = mkOption {
-        type = types.nullOr types.path;
+        type = types.nullOr (secretFileType "password");
         default = null;
         example = "/path/to/password/file";
         description = ''
           Path to file containing password for login.
+          To get the file from the file secrets contract, set it to `{ }`.
+          Then stash sends a request to the entry `stash.password` of {option}`contracts.fileSecrets.instances`,
+          and uses the path in its `response`.
 
           ::: {.warning}
             This option takes precedence over {option}`services.stash.settings.password`
@@ -434,40 +458,24 @@ in
         '';
       };
 
-      passwordFromContract = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to get the login password from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash.password` of `contracts.fileSecrets.instances`,
-          and sets {option}`services.stash.passwordFile` to the path in its `response`.
-        '';
-      };
-
       jwtSecretKeyFile = mkOption {
-        type = types.path;
-        description = "Path to file containing a secret used to sign JWT tokens.";
-      };
-      jwtSecretKeyFromContract = mkOption {
-        type = types.bool;
-        default = false;
+        type = secretFileType "jwtSecretKey";
+        default = { };
         description = ''
-          Whether to get the secret used to sign JWT tokens from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash.jwtSecretKey` of `contracts.fileSecrets.instances`,
-          and sets {option}`services.stash.jwtSecretKeyFile` to the path in its `response`.
+          Path to file containing a secret used to sign JWT tokens.
+          If the value is an attribute set, for example the default `{ }`,
+          stash sends a request to the entry `stash.jwtSecretKey` of {option}`contracts.fileSecrets.instances`,
+          and uses the path in its `response`.
         '';
       };
       sessionStoreKeyFile = mkOption {
-        type = types.path;
-        description = "Path to file containing a secret for session store.";
-      };
-      sessionStoreKeyFromContract = mkOption {
-        type = types.bool;
-        default = false;
+        type = secretFileType "sessionStoreKey";
+        default = { };
         description = ''
-          Whether to get the secret for the session store from the file secrets contract.
-          If `true`, stash sends a request to the entry `stash.sessionStoreKey` of `contracts.fileSecrets.instances`,
-          and sets {option}`services.stash.sessionStoreKeyFile` to the path in its `response`.
+          Path to file containing a secret for session store.
+          If the value is an attribute set, for example the default `{ }`,
+          stash sends a request to the entry `stash.sessionStoreKey` of {option}`contracts.fileSecrets.instances`,
+          and uses the path in its `response`.
         '';
       };
 
@@ -494,18 +502,7 @@ in
   };
 
   config = mkIf cfg.enable {
-    # A secret from the contract gives the path of its `*File` option.
-    services.stash.passwordFile = mkIf cfg.passwordFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash.password.response.path
-    );
-    services.stash.jwtSecretKeyFile = mkIf cfg.jwtSecretKeyFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash.jwtSecretKey.response.path
-    );
-    services.stash.sessionStoreKeyFile = mkIf cfg.sessionStoreKeyFromContract (
-      mkDefault config.contracts.fileSecrets.instances.stash.sessionStoreKey.response.path
-    );
-
-    # Send a request for each secret from the contract.
+    # Send a request for each `*File` option with an attribute set as its value.
     # A definition of the user for a value of a request conflicts with the definition here.
     contracts.fileSecrets.instances =
       let
@@ -516,9 +513,9 @@ in
         };
       in
       {
-        stash.password = mkIf cfg.passwordFromContract { inherit request; };
-        stash.jwtSecretKey = mkIf cfg.jwtSecretKeyFromContract { inherit request; };
-        stash.sessionStoreKey = mkIf cfg.sessionStoreKeyFromContract { inherit request; };
+        stash.password = mkIf (isInstance cfg.passwordFile) { inherit request; };
+        stash.jwtSecretKey = mkIf (isInstance cfg.jwtSecretKeyFile) { inherit request; };
+        stash.sessionStoreKey = mkIf (isInstance cfg.sessionStoreKeyFile) { inherit request; };
       };
 
     assertions = [
@@ -529,18 +526,7 @@ in
           );
         message = "You must set either both username and password, or neither.";
       }
-    ]
-    ++ lib.forEach [ "password" "jwtSecretKey" "sessionStoreKey" ] (
-      name:
-      let
-        fileOption = options.services.stash."${name}File";
-      in
-      {
-        # A definition with a higher priority than `mkDefault` replaces the path from the contract.
-        assertion = !cfg."${name}FromContract" || fileOption.highestPrio >= (mkDefault null).priority;
-        message = "Set only one of `services.stash.${name}File` and `services.stash.${name}FromContract`.";
-      }
-    );
+    ];
 
     services.stash.settings = {
       username = mkIf (cfg.username != null) cfg.username;
@@ -583,9 +569,9 @@ in
               install -d ${cfg.settings.generated}
               if [[ -z "${toString cfg.mutableSettings}" || ! -f ${cfg.dataDir}/config.yml ]]; then
                 env \
-                  password=$(< ${cfg.passwordFile}) \
-                  jwtSecretKeyFile=$(< ${cfg.jwtSecretKeyFile}) \
-                  sessionStoreKeyFile=$(< ${cfg.sessionStoreKeyFile}) \
+                  password=$(< ${secretPath cfg.passwordFile}) \
+                  jwtSecretKeyFile=$(< ${secretPath cfg.jwtSecretKeyFile}) \
+                  sessionStoreKeyFile=$(< ${secretPath cfg.sessionStoreKeyFile}) \
                   ${lib.getExe pkgs.yq-go} '
                     .jwt_secret_key = strenv(jwtSecretKeyFile) |
                     .session_store_key = strenv(sessionStoreKeyFile) |
