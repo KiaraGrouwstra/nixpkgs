@@ -104,11 +104,29 @@ To let a user select one subcommand, a consumer can use `types.attrTag`:
 
 Then `(lib.head (lib.attrValues config.tunnel)).portable.argv` is the command line.
 
+### Configuration files {#modules-generic-pkgs-config-files}
+
+`config-files.nix` has the inputs of `pkgs.configFiles`, and imports `config-module.nix`, which has the options of the program.
+`pkgs.configFiles` evaluates these modules. `portable.files` has the configuration files, and `portable.directory` is a directory that holds them.
+The package exposes the result as `passthru.configFiles`, and the module of the program as `passthru.configModule`.
+
+A NixOS module imports `config-files.nix` by path, not from the attribute of the package, because the sandbox that builds the option documentation has no packages.
+For example, `nixos/modules/services/hardware/lact.nix` imports `la/lact/config-files.nix`.
+See `pkgs.configFiles` in `pkgs/pkgs-lib/config-files.nix`.
+
+### Commands and configuration files together {#modules-generic-pkgs-commands-config-files}
+
+A module can import a command module and the modules of `pkgs.configFiles`.
+They use the same `portable` prefix, and declare different options in it.
+The module sets the flag that selects the configuration file from `portable.files`.
+For example, `nixos/modules/services/misc/litellm.nix` sets `portable.flags.config = config.portable.files."config.yaml".source`.
+If the module does not set this flag, the program does not read the configuration file.
+
 ### `settings` {#modules-generic-pkgs-settings}
 
 As [RFC 42](https://github.com/NixOS/rfcs/blob/master/rfcs/0042-config-option.md) specifies, an option named `settings` has the contents of a configuration file.
-Thus a module sets flags from an option with a different name, or from `portable.flags`.
-For example, `services.litellm.settings` has the contents of the configuration file of `litellm`, and the NixOS module sets `portable.flags.config` to that file.
+Thus a command module sets flags from an option with a different name, or from `portable.flags`.
+For example, `services.lact.settings` and `services.litellm.settings` have the contents of the configuration files of `lact` and `litellm`.
 
 In `wstunnel`, `settings` has flags, because the program reads no configuration file.
 This keeps the paths of the options of `services.wstunnel`.

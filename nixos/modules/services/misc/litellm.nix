@@ -8,7 +8,6 @@ let
   inherit (lib) types;
 
   cfg = config.services.litellm;
-  settingsFormat = pkgs.formats.yaml { };
 
   tiktokenEncodings = {
     cl100k_base = {
@@ -47,11 +46,15 @@ in
       LiteLLM, an LLM gateway.
     '';
 
-    # The options of the command line are next to the package, so that a
-    # system that does not use NixOS can use them too.
+    # The options of the command line, and the options that map the settings
+    # to the configuration file, are next to the package, so that a system
+    # that does not use NixOS can use them too. The import by path does not
+    # evaluate the package, see `pkgs.configFiles`.
     type = types.submoduleWith {
       modules = [
         ../../../../modules/generic/pkgs/by-name/li/litellm/commands/litellm.nix
+        (pkgs.configFiles (import ../../../../modules/generic/pkgs/by-name/li/litellm/config-files.nix))
+        .module
         (
           { config, ... }:
           {
@@ -67,57 +70,6 @@ in
                 default = "/var/lib/litellm";
                 example = "/home/foo";
                 description = "State directory of LiteLLM.";
-              };
-
-              settings = lib.mkOption {
-                type = types.submodule {
-                  freeformType = settingsFormat.type;
-                  options = {
-                    model_list = lib.mkOption {
-                      type = settingsFormat.type;
-                      description = ''
-                        List of supported models on the server, with model-specific configs.
-                      '';
-                      default = [ ];
-                    };
-                    router_settings = lib.mkOption {
-                      type = settingsFormat.type;
-                      description = ''
-                        LiteLLM Router settings
-                      '';
-                      default = { };
-                    };
-
-                    litellm_settings = lib.mkOption {
-                      type = settingsFormat.type;
-                      description = ''
-                        LiteLLM Module settings
-                      '';
-                      default = { };
-                    };
-
-                    general_settings = lib.mkOption {
-                      type = settingsFormat.type;
-                      description = ''
-                        LiteLLM Server settings
-                      '';
-                      default = { };
-                    };
-
-                    environment_variables = lib.mkOption {
-                      type = settingsFormat.type;
-                      description = ''
-                        Environment variables to pass to the Lite
-                      '';
-                      default = { };
-                    };
-                  };
-                };
-                default = { };
-                description = ''
-                  Configuration for LiteLLM.
-                  See <https://docs.litellm.ai/docs/proxy/configs> for more.
-                '';
               };
 
               environment = lib.mkOption {
@@ -143,7 +95,7 @@ in
                   Useful for passing secrets to the service to prevent them from being
                   world-readable in the Nix store.
                 '';
-                type = lib.types.nullOr lib.types.path;
+                type = types.nullOr types.path;
                 default = null;
                 example = "/var/lib/secrets/liteLLMSecrets";
               };
@@ -158,7 +110,7 @@ in
               };
             };
 
-            config.portable.flags.config = settingsFormat.generate "config.yaml" config.settings;
+            config.portable.flags.config = config.portable.files."config.yaml".source;
           }
         )
       ];

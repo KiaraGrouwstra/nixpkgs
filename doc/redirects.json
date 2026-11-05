@@ -278,6 +278,12 @@
   "modules-generic-pkgs-commands": [
     "index.html#modules-generic-pkgs-commands"
   ],
+  "modules-generic-pkgs-commands-config-files": [
+    "index.html#modules-generic-pkgs-commands-config-files"
+  ],
+  "modules-generic-pkgs-config-files": [
+    "index.html#modules-generic-pkgs-config-files"
+  ],
   "modules-generic-pkgs-settings": [
     "index.html#modules-generic-pkgs-settings"
   ],
