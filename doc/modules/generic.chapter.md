@@ -15,7 +15,7 @@ source: ../options-modules-generic-meta-maintainers.json
 
 ## `lib.genericModules.command-line` {#modules-generic-command-line}
 
-This module has the options that make the command line of a program.
+This module has the options to construct argument strings for a given program.
 A module of a program sets `flags` from the options of the program, and a consumer reads `argv`.
 
 The module takes a `prefix` argument through `lib.modules.importApply`, which is the attribute path of the options:
