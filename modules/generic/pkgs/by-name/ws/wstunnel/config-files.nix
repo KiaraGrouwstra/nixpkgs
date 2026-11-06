@@ -2,5 +2,5 @@
 # imports this file by path.
 {
   name = "wstunnel";
-  modules = [ ./config-module.nix ];
+  moduleFiles = [ ./config-module.nix ];
 }

@@ -6,15 +6,13 @@
 # This option is not named `settings`, because the command modules of `wstunnel`
 # declare `settings`, which has the flags. See "Modules of a package" in the
 # Nixpkgs manual.
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+# Non-module dependencies. `pkgs.configFiles` gives them.
+{ formats }:
+
+{ config, lib, ... }:
 let
   # The tags are part of the format of the file, for example `!Tunnel`.
-  format = pkgs.formats.yaml_1_2 { tags = true; };
+  format = formats.yaml_1_2 { tags = true; };
 in
 {
   options.restrictions = lib.mkOption {
