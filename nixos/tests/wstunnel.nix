@@ -34,6 +34,37 @@ in
             tls-certificate = "${certs.${domain}.cert}";
             tls-private-key = "${certs.${domain}.key}";
           };
+          # `settings` has the flags, and this option has a file. Both come to
+          # the command line of the server.
+          restrictions = [
+            {
+              name = "tunnels of the test";
+              match = [ { "!PathPrefix" = "^.*$"; } ];
+              allow = [
+                {
+                  "!Tunnel" = {
+                    protocol = [ "Tcp" ];
+                    port = [ 2080 ];
+                    host = "^.*$";
+                    cidr = [
+                      "0.0.0.0/0"
+                      "::/0"
+                    ];
+                  };
+                }
+                {
+                  "!ReverseTunnel" = {
+                    protocol = [ "Tcp" ];
+                    port = [ 2081 ];
+                    cidr = [
+                      "0.0.0.0/0"
+                      "::/0"
+                    ];
+                  };
+                }
+              ];
+            }
+          ];
         };
       };
     };
@@ -63,7 +94,11 @@ in
           autoStart = false;
           connectTo = "wss://${domain}:443";
           settings = {
-            local-to-remote = [ "tcp://8080:localhost:2080" ];
+            local-to-remote = [
+              "tcp://8080:localhost:2080"
+              # `restrictions` does not allow this port.
+              "tcp://8082:localhost:2082"
+            ];
             remote-to-local = [ "tcp://2081:localhost:8081" ];
           };
         };
@@ -91,6 +126,14 @@ in
         server.sleep(1)
         server.succeed('nc -w1 localhost 2081 <<<"Hello from server"')
         client.succeed('grep "Hello from server" /tmp/msg')
+
+      with subtest("restrictions does not allow other ports"):
+        server.succeed("nc -l 2082 >/tmp/denied &")
+        client.sleep(1)
+        client.execute('nc -w1 localhost 8082 <<<"Denied by restrictions"')
+        client.sleep(1)
+        server.fail('grep "Denied by restrictions" /tmp/denied')
+        server.wait_until_succeeds("journalctl -u wstunnel-server-my-server.service --grep 'not allowed destination'")
 
       client.systemctl("stop wstunnel-client-my-client.service")
     '';

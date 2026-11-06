@@ -48,6 +48,8 @@ let
     {
       imports = [
         ../../../../modules/generic/pkgs/by-name/ws/wstunnel/commands/wstunnel/server.nix
+        (pkgs.configFiles (import ../../../../modules/generic/pkgs/by-name/ws/wstunnel/config-files.nix))
+        .module
         ../../misc/assertions.nix
 
         (lib.mkRenamedOptionModule
@@ -95,6 +97,10 @@ let
           tls-certificate = "${certConfig.directory}/fullchain.pem";
           tls-private-key = "${certConfig.directory}/key.pem";
         };
+
+        portable.flags.restrict-config = lib.mkIf (
+          config.restrictions != null
+        ) config.portable.files."restrictions.yaml".source;
       };
     };
 

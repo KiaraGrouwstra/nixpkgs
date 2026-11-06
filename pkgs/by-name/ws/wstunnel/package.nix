@@ -5,9 +5,16 @@
   nixosTests,
   nix-update-script,
   versionCheckHook,
+  configFiles,
   path,
 }:
 
+let
+  # In `modules`, not in this directory, so that the sandbox that builds the
+  # option documentation contains it. See "Modules of a package" in the Nixpkgs
+  # manual.
+  genericModules = path + "/modules/generic/pkgs/by-name/ws/wstunnel";
+in
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "wstunnel";
   version = "11.1.0";
@@ -37,11 +44,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
     tests = {
       nixosTest = nixosTests.wstunnel;
     };
+    configFiles = configFiles (import (genericModules + "/config-files.nix"));
+    configModule = genericModules + "/config-module.nix";
     commandModules = lib.modules.commandTree {
-      # In `modules`, not in this directory, so that the sandbox that builds the
-      # option documentation contains it. See "Modules of a package" in the
-      # Nixpkgs manual.
-      directory = path + "/modules/generic/pkgs/by-name/ws/wstunnel/commands";
+      directory = genericModules + "/commands";
       package = finalAttrs.finalPackage;
     };
   };
