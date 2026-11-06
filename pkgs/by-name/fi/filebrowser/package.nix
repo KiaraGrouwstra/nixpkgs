@@ -12,10 +12,17 @@
   installShellFiles,
   nix-update-script,
   nixosTests,
+  configFiles,
+  path,
 }:
 
 let
   version = "2.63.23";
+
+  # In `modules`, not in this directory, so that the sandbox that builds the
+  # option documentation contains it. See "Modules of a package" in the Nixpkgs
+  # manual.
+  genericModules = path + "/modules/generic/pkgs/by-name/fi/filebrowser";
 
   src = fetchFromGitHub {
     owner = "filebrowser";
@@ -60,7 +67,7 @@ let
   });
 
 in
-buildGoModule {
+buildGoModule (finalAttrs: {
   pname = "filebrowser";
   inherit version src;
 
@@ -96,6 +103,12 @@ buildGoModule {
     tests = {
       inherit (nixosTests) filebrowser;
     };
+    configFiles = configFiles (import (genericModules + "/config-files.nix"));
+    configModule = genericModules + "/config-module.nix";
+    commandModules = lib.modules.commandTree {
+      directory = genericModules + "/commands";
+      package = finalAttrs.finalPackage;
+    };
   };
 
   meta = {
@@ -106,4 +119,4 @@ buildGoModule {
     maintainers = with lib.maintainers; [ oakenshield ];
     mainProgram = "filebrowser";
   };
-}
+})

@@ -7,83 +7,68 @@
 }:
 let
   cfg = config.services.filebrowser;
-  format = pkgs.formats.json { };
   inherit (lib) types;
 in
 {
-  options = {
-    services.filebrowser = {
-      enable = lib.mkEnableOption "FileBrowser";
+  options.services.filebrowser = lib.mkOption {
+    default = { };
+    description = ''
+      FileBrowser, a web application to manage files and directories.
+    '';
 
-      package = lib.mkPackageOption pkgs "filebrowser" { };
+    # The options of the command line, and the options that map the settings
+    # to the configuration file, are next to the package, so that a system
+    # that does not use NixOS can use them too. The import by path does not
+    # evaluate the package, see `pkgs.configFiles`.
+    type = types.submoduleWith {
+      modules = [
+        ../../../../modules/generic/pkgs/by-name/fi/filebrowser/commands/filebrowser.nix
+        (pkgs.configFiles (import ../../../../modules/generic/pkgs/by-name/fi/filebrowser/config-files.nix))
+        .module
+        (
+          { config, ... }:
+          {
+            options = {
+              enable = lib.mkEnableOption "FileBrowser";
 
-      user = lib.mkOption {
-        type = types.str;
-        default = "filebrowser";
-        description = "User account under which FileBrowser runs.";
-      };
+              package = lib.mkOption {
+                default = pkgs.filebrowser;
+                defaultText = lib.literalExpression "pkgs.filebrowser";
+              };
 
-      group = lib.mkOption {
-        type = types.str;
-        default = "filebrowser";
-        description = "Group under which FileBrowser runs.";
-      };
+              user = lib.mkOption {
+                type = types.str;
+                default = "filebrowser";
+                description = "User account under which FileBrowser runs.";
+              };
 
-      openFirewall = lib.mkEnableOption "opening firewall ports for FileBrowser";
+              group = lib.mkOption {
+                type = types.str;
+                default = "filebrowser";
+                description = "Group under which FileBrowser runs.";
+              };
 
-      settings = lib.mkOption {
-        default = { };
-        description = ''
-          Settings for FileBrowser.
-          Refer to <https://filebrowser.org/cli/filebrowser#options> for all supported values.
-        '';
-        type = types.submodule {
-          freeformType = format.type;
+              openFirewall = lib.mkEnableOption "opening firewall ports for FileBrowser";
 
-          options = {
-            address = lib.mkOption {
-              default = "localhost";
-              description = ''
-                The address to listen on.
-              '';
-              type = types.str;
+              # NixOS makes this directory with `CacheDirectory`.
+              settings = lib.mkOption {
+                type = types.submodule {
+                  options.cache-dir = lib.mkOption {
+                    default = "/var/cache/filebrowser";
+                    description = ''
+                      The directory where FileBrowser stores its cache.
+                    '';
+                    type = types.path;
+                    readOnly = true;
+                  };
+                };
+              };
             };
 
-            port = lib.mkOption {
-              default = 8080;
-              description = ''
-                The port to listen on.
-              '';
-              type = types.port;
-            };
-
-            root = lib.mkOption {
-              default = "/var/lib/filebrowser/data";
-              description = ''
-                The directory where FileBrowser stores files.
-              '';
-              type = types.path;
-            };
-
-            database = lib.mkOption {
-              default = "/var/lib/filebrowser/database.db";
-              description = ''
-                The path to FileBrowser's Bolt database.
-              '';
-              type = types.path;
-            };
-
-            cache-dir = lib.mkOption {
-              default = "/var/cache/filebrowser";
-              description = ''
-                The directory where FileBrowser stores its cache.
-              '';
-              type = types.path;
-              readOnly = true;
-            };
-          };
-        };
-      };
+            config.portable.flags.config = config.portable.files."config.json".source;
+          }
+        )
+      ];
     };
   };
 
@@ -94,15 +79,7 @@ in
         description = "FileBrowser";
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
-          ExecStart =
-            let
-              args = [
-                (lib.getExe cfg.package)
-                "--config"
-                (format.generate "config.json" cfg.settings)
-              ];
-            in
-            utils.escapeSystemdExecArgs args;
+          ExecStart = utils.escapeSystemdExecArgs cfg.portable.argv;
 
           StateDirectory = "filebrowser";
           CacheDirectory = "filebrowser";
