@@ -125,10 +125,20 @@ If the module does not set this flag, the program does not read the configuratio
 ### `settings` {#modules-generic-pkgs-settings}
 
 As [RFC 42](https://github.com/NixOS/rfcs/blob/master/rfcs/0042-config-option.md) specifies, an option named `settings` has the contents of a configuration file.
-Thus a command module sets flags from an option with a different name, or from `portable.flags`.
 For example, `services.lact.settings` and `services.litellm.settings` have the contents of the configuration files of `lact` and `litellm`.
 
-In `wstunnel`, `settings` has flags, because the program reads no configuration file.
-This keeps the paths of the options of `services.wstunnel`.
+A program can read one value from a flag and from a key of its configuration file.
+For these keys, `settings.nix` declares `settings`, and `commands/<program>.nix` and `config-module.nix` both import it.
+The command module sets flags from `settings`, and `config-module.nix` writes all of `settings` to the file.
+For example, `fi/filebrowser/settings.nix` declares `address`, `port`, `root` and `database`, and `pkgs.filebrowser.commandModules.filebrowser` sets the flags without a configuration file.
+
+- The module system evaluates a path one time, thus the two imports do not clash. A copy of the file at a different path clashes.
+- Only `config-module.nix` adds `freeformType`, in a declaration that has only a type. Thus a key that has no flag is an error in a command module without a configuration file, and is not silently ignored.
+- `settings.nix` must not use `pkgs`, because a command module has no `pkgs`.
+- If a flag and its key have different names, the command module maps the name.
+
+A command module sets a flag that has no key from an option with a different name, or from `portable.flags`.
+
+In `wstunnel`, `settings` has flags, to keep the paths of the options of `services.wstunnel`.
 
 [class]: https://nixos.org/manual/nixpkgs/unstable/#module-system-lib-evalModules-param-class
