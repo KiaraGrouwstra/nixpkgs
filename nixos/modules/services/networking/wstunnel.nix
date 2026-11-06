@@ -307,6 +307,18 @@ in
           If services.wstunnel.servers."${name}".listen.enableHTTPS is set to true, either services.wstunnel.servers."${name}".useACMEHost or both services.wstunnel.servers."${name}".settings.tls-private-key and services.wstunnel.servers."${name}".settings.tls-certificate need to be set.
         '';
       }) cfg.servers)
+      ++ (lib.mapAttrsToList (name: serverCfg: {
+        assertion =
+          serverCfg.restrictions != null
+          -> lib.all (flag: (serverCfg.settings.${flag} or [ ]) == [ ]) [
+            "restrict-config"
+            "restrict-http-upgrade-path-prefix"
+            "restrict-to"
+          ];
+        message = ''
+          services.wstunnel.servers."${name}".restrictions cannot be set with settings.restrict-config, settings.restrict-http-upgrade-path-prefix or settings.restrict-to, because wstunnel does not start with these flags and `--restrict-config`.
+        '';
+      }) cfg.servers)
       ++ (lib.foldlAttrs (
         assertions: _: server:
         assertions ++ server.assertions
