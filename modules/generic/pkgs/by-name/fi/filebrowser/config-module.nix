@@ -3,14 +3,12 @@
 # system that does not use NixOS can also evaluate it.
 # `pkgs.filebrowser.configModule` exposes this file, to use it in a different
 # `pkgs.configFiles` call.
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+# Non-module dependencies. `pkgs.configFiles` gives them.
+{ formats }:
+
+{ config, lib, ... }:
 let
-  format = pkgs.formats.json { };
+  format = formats.json { };
 in
 {
   imports = [ ./settings.nix ];
