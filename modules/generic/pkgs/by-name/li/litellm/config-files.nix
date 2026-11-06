@@ -2,5 +2,5 @@
 # imports this file by path.
 {
   name = "litellm";
-  modules = [ ./config-module.nix ];
+  moduleFiles = [ ./config-module.nix ];
 }

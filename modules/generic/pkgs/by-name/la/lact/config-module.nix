@@ -2,14 +2,16 @@
 # LACT reads. `pkgs.lact.configFiles` exposes it, so that a system that does not
 # use NixOS can also evaluate it. `pkgs.lact.configModule` exposes this file, to
 # use it in a different `pkgs.configFiles` call.
+# Non-module dependencies. `pkgs.configFiles` gives them.
+{ formats }:
+
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 let
-  format = pkgs.formats.yaml { };
+  format = formats.yaml { };
 in
 {
   options.settings = lib.mkOption {

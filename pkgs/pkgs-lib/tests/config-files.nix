@@ -2,46 +2,14 @@
 let
   inherit (pkgs) lib;
 
-  # A program module, of the kind that a package puts in its `passthru`. It
-  # takes `pkgs` as a module argument, to show that `configFiles` gives it.
-  programModule =
-    {
-      config,
-      lib,
-      pkgs,
-      ...
-    }:
-    let
-      format = pkgs.formats.ini { };
-    in
-    {
-      options.settings = lib.mkOption {
-        type = lib.types.submodule { freeformType = format.type; };
-        default = { };
-      };
-
-      options.extraConfig = lib.mkOption {
-        type = lib.types.lines;
-        default = "";
-      };
-
-      config.portable.files = {
-        "main.ini".source = format.generate "main.ini" config.settings;
-        "extra.conf" = {
-          enable = config.extraConfig != "";
-          text = config.extraConfig;
-        };
-      };
-    };
-
   demo = pkgs.configFiles {
     name = "pkgs-lib-test";
-    modules = [ programModule ];
+    moduleFiles = [ ./config-files-program.nix ];
   };
 
   extendedDemo = pkgs.configFiles {
     name = "pkgs-lib-test";
-    modules = [ programModule ];
+    moduleFiles = [ ./config-files-program.nix ];
     extraFileModules = [
       {
         options.mode = lib.mkOption {
@@ -51,6 +19,32 @@ let
       }
     ];
   };
+
+  # The same file twice, which must evaluate once.
+  twice = pkgs.configFiles {
+    name = "pkgs-lib-test";
+    moduleFiles = [
+      ./config-files-program.nix
+      ./config-files-program.nix
+    ];
+  };
+
+  # The set of `nixos/lib/eval-cacheable-options.nix`, which has no packages.
+  sandboxPkgs = lib.fix (
+    self:
+    import ../. {
+      inherit lib;
+      pkgs = self;
+    }
+  );
+
+  withPackage =
+    configFiles:
+    (configFiles {
+      name = "pkgs-lib-test";
+      moduleFiles = [ ./config-files-package.nix ];
+    }).eval
+      { };
 
   settings = {
     settings.main.verbose = true;
@@ -150,6 +144,22 @@ in
           "${standalone.portable.directory}/main.ini"
         ];
       msg = "a module cannot declare an option in `portable`";
+    }
+    {
+      ok = (twice.eval settings).portable.directory == standalone.portable.directory;
+      msg = "a file in `moduleFiles` that occurs twice does not evaluate once";
+    }
+    {
+      ok = (withPackage pkgs.configFiles).package == pkgs.hello;
+      msg = "a file in `moduleFiles` does not get its argument from `pkgs`";
+    }
+    {
+      ok = (withPackage sandboxPkgs.configFiles).settings == { };
+      msg = "a set without packages cannot evaluate a file that needs a package";
+    }
+    {
+      ok = !withArgv._module.args ? pkgs;
+      msg = "the module gives `pkgs` to the modules next to it";
     }
     {
       ok = lib.hasSuffix "-pkgs-lib-test-config" standalone.portable.directory;

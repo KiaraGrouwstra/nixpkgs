@@ -14,7 +14,7 @@
   `modules/generic/pkgs/by-name/<shard>/<package>`, and the modules in more
   files next to it. The package gets this directory from the `path` argument of
   `callPackage`, see "Modules of a package" in the Nixpkgs manual. The package
-  exposes the result as `passthru.configFiles`, and the module of the program as
+  exposes the result as `passthru.configFiles`, and the file of the program as
   `passthru.configModule`. A NixOS module imports `config-files.nix` by path,
   puts `module` next to the options that only NixOS has, and does not repeat the
   declarations. A system that is not NixOS calls `eval` and gets the same files.
@@ -26,8 +26,14 @@
   change the NixOS options. The sandbox has the files, because it has
   `modules`.
 
-  The module carries `pkgs` itself, because a submodule does not inherit the
-  module arguments of the evaluation that holds it.
+  The evaluation does not give a `pkgs` module argument, because a modular
+  service must not get the complete package set from the modules that it
+  imports. A module that needs a package goes in `moduleFiles`. Such a file is
+  a function that takes the packages that it needs and returns a module, as
+  the `service.nix` file of a modular service is. This function gets each
+  argument from `pkgs` by name, and only when the module uses the value. Thus
+  the sandbox can evaluate the options of a module that needs a package only to
+  build its files.
 
   A type cannot depend on the value of an option. Thus, if the user sets the
   `package` option of a NixOS service to a different version of the program,
@@ -51,6 +57,13 @@
   : Modules that declare the options of the program, and that set
     `portable.files` from them.
 
+  `moduleFiles`
+  : Paths of files that do the same as `modules`, for a module that needs
+    packages. Each file has the form `{ formats }: { config, lib, ... }: { }`.
+    The first function asks for attributes of `pkgs`. A default value of an
+    argument of this function has no effect. A path that occurs more than once
+    evaluates once.
+
   `extraFileModules`
   : Modules to add to every file, as `extraModules` of `pkgs.generatedFiles`.
 
@@ -60,6 +73,7 @@
   configFiles :: {
     name :: String,
     modules :: [ Module ],
+    moduleFiles :: [ Path ],
     extraFileModules :: [ Module ],
   } -> {
     module :: Module,
@@ -101,15 +115,17 @@
   # modules/generic/pkgs/by-name/my/my-program/config-files.nix
   {
     name = "my-program";
-    modules = [ ./config-module.nix ];
+    moduleFiles = [ ./config-module.nix ];
   }
   ```
 
   ```nix
   # modules/generic/pkgs/by-name/my/my-program/config-module.nix
-  { lib, config, pkgs, ... }:
+  { formats }:
+
+  { lib, config, ... }:
   let
-    format = pkgs.formats.ini { };
+    format = formats.ini { };
   in
   {
     options.settings = lib.mkOption {
@@ -122,7 +138,7 @@
   }
   ```
 
-  The package exposes the result, and the module of the program:
+  The package exposes the result, and the file of the program:
 
   ```nix
   # pkgs/by-name/my/my-program/package.nix
@@ -164,13 +180,14 @@
   (pkgs.my-program.configFiles.eval { settings.verbose = true; }).portable.directory
   ```
 
-  A different call uses the module of the program with other inputs, for
-  example to add an option to every file:
+  A different call uses the file of the program with other inputs, for example
+  to add an option to every file. The file is not a module, thus give it to
+  `moduleFiles`, and not to `imports`:
 
   ```nix
   pkgs.configFiles {
     name = "my-program";
-    modules = [ pkgs.my-program.configModule ];
+    moduleFiles = [ pkgs.my-program.configModule ];
     extraFileModules = [
       {
         options.mode = lib.mkOption {
@@ -186,9 +203,25 @@
 {
   name,
   modules ? [ ],
+  moduleFiles ? [ ],
   extraFileModules ? [ ],
 }:
 let
+  # Do not use `callPackage`. The sandbox that builds the option documentation
+  # does not have it, and it has no packages. Thus each attribute must stay
+  # unevaluated until a module uses it.
+  #
+  # The module system cannot see that two applied files are the same. `key`
+  # tells it.
+  applyModuleFile = file: {
+    key = toString file;
+    imports = [
+      (lib.modules.importApply file (
+        lib.mapAttrs (dependency: _: pkgs.${dependency}) (lib.functionArgs (import file))
+      ))
+    ];
+  };
+
   files = pkgs.generatedFiles {
     namePrefix = name;
     extraModules = extraFileModules;
@@ -226,12 +259,7 @@ rec {
   inherit files;
 
   module = {
-    imports = [ base ] ++ modules;
-
-    # A submodule does not inherit the module arguments of the evaluation that
-    # holds it. The modules of the program need `pkgs` to build the files, so
-    # the module gives it to them itself.
-    _module.args.pkgs = lib.mkDefault pkgs;
+    imports = [ base ] ++ modules ++ map applyModuleFile moduleFiles;
   };
 
   type = lib.types.submoduleWith {

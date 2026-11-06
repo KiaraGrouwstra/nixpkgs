@@ -2,5 +2,5 @@
 # imports this file by path.
 {
   name = "lact";
-  modules = [ ./config-module.nix ];
+  moduleFiles = [ ./config-module.nix ];
 }

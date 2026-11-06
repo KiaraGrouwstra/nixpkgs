@@ -12,8 +12,8 @@ let
   modulesPath = "${nixosPath}/modules";
   # dummy pkgs set that contains no packages, only `pkgs.lib` from the full set.
   # not having `pkgs.lib` causes all users of `pkgs.formats` to fail.
-  # The set is its own `pkgs`, so that the modules of `pkgs.configFiles` can
-  # use `pkgs.formats` too.
+  # The set is its own `pkgs`, so that `pkgs.configFiles` can use
+  # `pkgs.generatedFiles`, and give `formats` to its `moduleFiles`.
   pkgs = lib.fix (
     self:
     import pkgsLibPath {

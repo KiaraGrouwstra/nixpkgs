@@ -106,9 +106,26 @@ Then `(lib.head (lib.attrValues config.tunnel)).portable.argv` is the command li
 
 ### Configuration files {#modules-generic-pkgs-config-files}
 
-`config-files.nix` has the inputs of `pkgs.configFiles`, and imports `config-module.nix`, which has the options of the program.
+`config-files.nix` has the inputs of `pkgs.configFiles`, and refers to `config-module.nix`, which has the options of the program.
 `pkgs.configFiles` evaluates these modules. `portable.files` has the configuration files, and `portable.directory` is a directory that holds them.
-The package exposes the result as `passthru.configFiles`, and the module of the program as `passthru.configModule`.
+The package exposes the result as `passthru.configFiles`, and the file of the program as `passthru.configModule`.
+
+`config-module.nix` must work where no `pkgs` module argument exists, for example in a modular service.
+Thus it is a function that takes the packages that it needs and returns a module, as `service.nix` of a modular service is:
+
+```nix
+{ formats }:
+
+{ config, lib, ... }:
+let
+  format = formats.ini { };
+in
+{
+  # ...
+}
+```
+
+`config-files.nix` puts this file in `moduleFiles`, and `pkgs.configFiles` gets the arguments from `pkgs`.
 
 A NixOS module imports `config-files.nix` by path, not from the attribute of the package, because the sandbox that builds the option documentation has no packages.
 For example, `nixos/modules/services/hardware/lact.nix` imports `la/lact/config-files.nix`.
