@@ -119,13 +119,16 @@ See `pkgs.configFiles` in `pkgs/pkgs-lib/config-files.nix`.
 A module can import a command module and the modules of `pkgs.configFiles`.
 They use the same `portable` prefix, and declare different options in it.
 The module sets the flag that selects the configuration file from `portable.files`.
-For example, `nixos/modules/services/misc/litellm.nix` sets `portable.flags.config = config.portable.files."config.yaml".source`.
+For example, `nixos/modules/services/misc/litellm.nix` sets `portable.flags.config = config.portable.files."config.yaml".source`, and `nixos/modules/services/web-apps/filebrowser.nix` sets this flag from `config.json`.
 If the module does not set this flag, the program does not read the configuration file.
 
 ### `settings` {#modules-generic-pkgs-settings}
 
 As [RFC 42](https://github.com/NixOS/rfcs/blob/master/rfcs/0042-config-option.md) specifies, an option named `settings` has the contents of a configuration file.
 For example, `services.lact.settings` and `services.litellm.settings` have the contents of the configuration files of `lact` and `litellm`.
+
+If the flags that a module sets are not keys of the file, the package does not need `settings.nix`.
+For example, the command module of `litellm` declares `host` and `port`, and `settings` has only the contents of the file.
 
 A program can read one value from a flag and from a key of its configuration file.
 For these keys, `settings.nix` declares `settings`, and `commands/<program>.nix` and `config-module.nix` both import it.
@@ -139,6 +142,7 @@ For example, `fi/filebrowser/settings.nix` declares `address`, `port`, `root` an
 
 A command module sets a flag that has no key from an option with a different name, or from `portable.flags`.
 
-In `wstunnel`, `settings` has flags, to keep the paths of the options of `services.wstunnel`.
+In `wstunnel`, no key of the file has a flag, thus it has no `settings.nix`.
+`settings` has flags, to keep the paths of the options of `services.wstunnel`, and `restrictions` has the contents of the file.
 
 [class]: https://nixos.org/manual/nixpkgs/unstable/#module-system-lib-evalModules-param-class
