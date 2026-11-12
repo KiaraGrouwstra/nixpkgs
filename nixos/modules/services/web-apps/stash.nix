@@ -369,28 +369,37 @@ let
           '';
     };
 
-  # Type of the options that take a file secrets contract.
-  secretContractType = types.submodule {
-    imports = [ lib.contracts.fileSecrets.interface ];
-    options.request = mkOption {
-      default = { };
-      type = types.submodule {
-        options = {
-          mode = mkOption { readOnly = true; };
-          owner = mkOption {
-            default = cfg.user;
-            defaultText = literalExpression "config.services.stash.user";
-            readOnly = true;
-          };
-          group = mkOption {
-            default = cfg.group;
-            defaultText = literalExpression "config.services.stash.group";
-            readOnly = true;
+  # ID of the credential of each secret.
+  credentialIds = {
+    password = "password";
+    jwtSecretKey = "jwt_secret_key";
+    sessionStoreKey = "session_store_key";
+  };
+
+  # Type of the option that takes the credential secrets contract for the secret `name`.
+  secretContractType =
+    name:
+    types.submodule {
+      imports = [ lib.contracts.credentialSecrets.interface ];
+      options.request = mkOption {
+        default = { };
+        type = types.submodule {
+          options = {
+            unit = mkOption {
+              default = "stash.service";
+              readOnly = true;
+            };
+            id = mkOption {
+              default = credentialIds.${name};
+              readOnly = true;
+            };
           };
         };
       };
     };
-  };
+
+  # Reads the credential of the secret `name` in the setup script.
+  readCredential = name: ''"$(< "$CREDENTIALS_DIRECTORY/${credentialIds.${name}}")"'';
 in
 {
   meta = {
@@ -447,7 +456,8 @@ in
         default = null;
         example = "/path/to/password/file";
         description = ''
-          Path to file containing password for login.
+          Path to a file or an `AF_UNIX` stream socket that contains the password for login.
+          The service loads it with `LoadCredential=`.
 
           ::: {.warning}
             This option takes precedence over {option}`services.stash.settings.password`
@@ -457,36 +467,36 @@ in
       };
 
       passwordSecret = mkOption {
-        type = types.nullOr secretContractType;
+        type = types.nullOr (secretContractType "password");
         default = null;
         description = ''
-          File secrets contract for the login password.
-          If set, it sets {option}`services.stash.passwordFile` to the path of the secret file.
+          Credential secrets contract for the login password.
+          If set, it sets {option}`services.stash.passwordFile` to the path from the contract.
         '';
       };
 
       jwtSecretKeyFile = mkOption {
         type = types.path;
-        description = "Path to file containing a secret used to sign JWT tokens.";
+        description = "Path to a file or an `AF_UNIX` stream socket that contains a secret used to sign JWT tokens. The service loads it with `LoadCredential=`.";
       };
       jwtSecretKeySecret = mkOption {
-        type = types.nullOr secretContractType;
+        type = types.nullOr (secretContractType "jwtSecretKey");
         default = null;
         description = ''
-          File secrets contract for the secret used to sign JWT tokens.
-          If set, it sets {option}`services.stash.jwtSecretKeyFile` to the path of the secret file.
+          Credential secrets contract for the secret used to sign JWT tokens.
+          If set, it sets {option}`services.stash.jwtSecretKeyFile` to the path from the contract.
         '';
       };
       sessionStoreKeyFile = mkOption {
         type = types.path;
-        description = "Path to file containing a secret for session store.";
+        description = "Path to a file or an `AF_UNIX` stream socket that contains a secret for session store. The service loads it with `LoadCredential=`.";
       };
       sessionStoreKeySecret = mkOption {
-        type = types.nullOr secretContractType;
+        type = types.nullOr (secretContractType "sessionStoreKey");
         default = null;
         description = ''
-          File secrets contract for the secret for the session store.
-          If set, it sets {option}`services.stash.sessionStoreKeyFile` to the path of the secret file.
+          Credential secrets contract for the secret for the session store.
+          If set, it sets {option}`services.stash.sessionStoreKeyFile` to the path from the contract.
         '';
       };
 
@@ -586,9 +596,9 @@ in
               install -d ${cfg.settings.generated}
               if [[ -z "${toString cfg.mutableSettings}" || ! -f ${cfg.dataDir}/config.yml ]]; then
                 env \
-                  password=$(< ${cfg.passwordFile}) \
-                  jwtSecretKeyFile=$(< ${cfg.jwtSecretKeyFile}) \
-                  sessionStoreKeyFile=$(< ${cfg.sessionStoreKeyFile}) \
+                  password=${if cfg.passwordFile == null then "''" else readCredential "password"} \
+                  jwtSecretKeyFile=${readCredential "jwtSecretKey"} \
+                  sessionStoreKeyFile=${readCredential "sessionStoreKey"} \
                   ${lib.getExe pkgs.yq-go} '
                     .jwt_secret_key = strenv(jwtSecretKeyFile) |
                     .session_store_key = strenv(sessionStoreKeyFile) |
@@ -609,6 +619,12 @@ in
             ''
           );
           ExecStart = getExe cfg.package;
+          LoadCredential =
+            lib.optional (cfg.passwordFile != null) "${credentialIds.password}:${cfg.passwordFile}"
+            ++ [
+              "${credentialIds.jwtSecretKey}:${cfg.jwtSecretKeyFile}"
+              "${credentialIds.sessionStoreKey}:${cfg.sessionStoreKeyFile}"
+            ];
 
           ProtectHome = "tmpfs";
           BindReadOnlyPaths = mkIf (cfg.settings != { }) (map (stash: "${stash.path}") cfg.settings.stash);

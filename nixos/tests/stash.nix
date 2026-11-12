@@ -12,18 +12,18 @@ import ./make-test-python.nix (
     nodes.machine =
       { config, ... }:
       let
-        inherit (config.testing.hardcoded-secret) fileSecrets;
+        inherit (config.testing.hardcoded-secret) credentialSecrets;
       in
       {
-        testing.hardcoded-secret.fileSecrets."stash-password" = {
+        testing.hardcoded-secret.credentialSecrets."stash-password" = {
           request = config.services.stash.passwordSecret.request;
           providerOptions.content = "MyPassword";
         };
-        testing.hardcoded-secret.fileSecrets."jwt_secret_key" = {
+        testing.hardcoded-secret.credentialSecrets."jwt_secret_key" = {
           request = config.services.stash.jwtSecretKeySecret.request;
           providerOptions.content = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
         };
-        testing.hardcoded-secret.fileSecrets."session_store_key" = {
+        testing.hardcoded-secret.credentialSecrets."session_store_key" = {
           request = config.services.stash.sessionStoreKeySecret.request;
           providerOptions.content = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         };
@@ -33,9 +33,9 @@ import ./make-test-python.nix (
           enable = true;
 
           username = "test";
-          passwordSecret.response = fileSecrets."stash-password".response;
-          jwtSecretKeySecret.response = fileSecrets."jwt_secret_key".response;
-          sessionStoreKeySecret.response = fileSecrets."session_store_key".response;
+          passwordSecret.response = credentialSecrets."stash-password".response;
+          jwtSecretKeySecret.response = credentialSecrets."jwt_secret_key".response;
+          sessionStoreKeySecret.response = credentialSecrets."session_store_key".response;
 
           plugins =
             let
