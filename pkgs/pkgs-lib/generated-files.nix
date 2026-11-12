@@ -165,7 +165,9 @@ rec {
                 description = ''
                   Format of the file, a value of `pkgs.formats`. If this is not
                   `null`, `source` defaults to the store path that
-                  `format.generate` writes from `value`.
+                  `format.generate` writes from `value`. If the format also has
+                  `generateText`, `text` holds the content of that file, and
+                  reading it builds nothing.
                 '';
               };
 
@@ -195,11 +197,27 @@ rec {
                   name' = namePrefix + "-" + lib.replaceStrings [ "/" ] [ "-" ] name;
                 in
                 lib.mkMerge [
-                  (lib.mkIf (config.text != null) (lib.mkDerivedConfig options.text (pkgs.writeText name')))
-                  (lib.mkIf (config.format != null) (
+                  (lib.mkIf (config.text != null) (
+                    lib.mkDerivedConfig options.text (
+                      text:
+                      # `text` is of type `lines`, thus the module system joins
+                      # a `text` and the `text` from `format`, and does not
+                      # give an error.
+                      lib.throwIf (config.format != null && lib.length options.text.definitions > 1)
+                        "The file `${name}` has both `text` and `format`. Give only one of them."
+                        (pkgs.writeText name' text)
+                    )
+                  ))
+                  (lib.mkIf (config.format != null && !config.format ? generateText) (
                     lib.mkDerivedConfig options.value (config.format.generate name')
                   ))
                 ];
+              # A format that Nix itself can write gives the content as `text`.
+              # `source` then comes from `text`, and is the same store path
+              # that `format.generate` gives.
+              text = lib.mkIf (config.format != null && config.format ? generateText) (
+                lib.mkDerivedConfig options.value config.format.generateText
+              );
             };
           }
         )

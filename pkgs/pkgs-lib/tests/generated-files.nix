@@ -68,6 +68,25 @@ let
     };
   };
 
+  # A format that Nix itself can write gives its content as `text`.
+  ini = pkgs.formats.ini { };
+  iniValue.main.verbose = true;
+  textFormatted = eval {
+    "conf.d/main.ini" = {
+      format = ini;
+      value = iniValue;
+    };
+  };
+
+  # `text` and a format that gives `text` do not join silently.
+  textAndFormat = eval {
+    "both.ini" = {
+      format = ini;
+      value = iniValue;
+      text = "other = true\n";
+    };
+  };
+
   explicit = eval {
     "preexisting.conf".source = pkgs.writeText "some-other-name" "already = built\n";
   };
@@ -188,6 +207,24 @@ in
     {
       ok = lib.hasSuffix "-pkgs-lib-test-conf.d-main.json" formatted."conf.d/main.json".source;
       msg = "the derivation name of a `format` file does not hold the attribute name";
+    }
+    {
+      ok = formatted."conf.d/main.json".text == null;
+      msg = "a format that only Nix builds gives `text`";
+    }
+    {
+      ok = textFormatted."conf.d/main.ini".text == "[main]\nverbose=true\n";
+      msg = "a format with `generateText` does not give the content as `text`";
+    }
+    {
+      # The store path does not change when a format adds `generateText`.
+      ok =
+        textFormatted."conf.d/main.ini".source == ini.generate "pkgs-lib-test-conf.d-main.ini" iniValue;
+      msg = "a format with `generateText` gives a different `source` than `format.generate`";
+    }
+    {
+      ok = !(builtins.tryEval textAndFormat."both.ini".source).success;
+      msg = "`text` and a format with `generateText` join without an error";
     }
     {
       ok = lib.hasSuffix "-some-other-name" explicit."preexisting.conf".source;
