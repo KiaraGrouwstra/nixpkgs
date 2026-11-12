@@ -3,5 +3,6 @@
 # Each file has the `meta` and the `interface` of one contract type.
 { lib, ... }:
 lib.mapAttrs (_: file: import file { inherit lib; }) {
+  credentialSecrets = ./credential-secrets.nix;
   fileSecrets = ./file-secrets.nix;
 }
