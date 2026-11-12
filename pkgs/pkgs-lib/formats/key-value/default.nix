@@ -36,7 +36,7 @@ in
       ...
     }@args:
     assert listsAsDuplicateKeys -> listToValue == null;
-    {
+    lib.fix (self: {
 
       type =
         let
@@ -69,7 +69,7 @@ in
         in
         attrsOf atom;
 
-      generate =
+      generateText =
         let
           transformValue =
             if listToValue != null then
@@ -78,6 +78,8 @@ in
               id;
           finalArgs = removeAttrs args [ "listToValue" ];
         in
-        name: value: pkgs.writeText name (toKeyValue finalArgs (transformValue value));
-    };
+        value: toKeyValue finalArgs (transformValue value);
+
+      generate = name: value: pkgs.writeText name (self.generateText value);
+    });
 }

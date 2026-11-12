@@ -121,17 +121,18 @@ in
         atomsCoercedToLists = atomsCoercedToLists';
       };
     in
-    {
+    lib.fix (self: {
       type = attrsOf (iniSection atom);
 
       lib.types.atom = atom;
 
-      generate =
-        name: value:
+      generateText =
+        value:
         pipe value [
           (maybeCoerceAllLists listToValue)
           (toINI (removeAttrs args ignoredArgs))
-          (pkgs.writeText name)
         ];
-    };
+
+      generate = name: value: pkgs.writeText name (self.generateText value);
+    });
 }

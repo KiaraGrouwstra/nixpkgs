@@ -29,9 +29,10 @@ in
         atomsCoercedToLists = false;
       };
     in
-    {
+    lib.fix (self: {
       type = attrsOf (attrsOf (either atom (attrsOf atom)));
       lib.types.atom = atom;
-      generate = name: value: pkgs.writeText name (toGitINI value);
-    };
+      generateText = toGitINI;
+      generate = name: value: pkgs.writeText name (self.generateText value);
+    });
 }

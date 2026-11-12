@@ -23,7 +23,7 @@ in
     {
       escape ? true,
     }:
-    {
+    lib.fix (self: {
       type =
         let
           valueType =
@@ -42,6 +42,8 @@ in
         in
         valueType;
 
-      generate = name: value: pkgs.writeText name (toPlist { inherit escape; } value);
-    };
+      generateText = toPlist { inherit escape; };
+
+      generate = name: value: pkgs.writeText name (self.generateText value);
+    });
 }

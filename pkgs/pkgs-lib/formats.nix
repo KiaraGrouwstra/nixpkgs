@@ -76,6 +76,12 @@ optionalAttrs allowAliases aliases
         # A function for generating a file with a value of such a type
         generate = ...;
 
+        # generateText :: Value -> String
+        # A function that returns the content of the file as a string, without
+        # a build (optional). Give it only if Nix itself can write the format.
+        # Then `generate` must be `name: value: pkgs.writeText name (generateText value)`.
+        generateText = ...;
+
       });
 
     Please note that `pkgs` may not always be available for use due to the split
