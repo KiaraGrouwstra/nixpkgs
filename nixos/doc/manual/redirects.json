@@ -370,6 +370,9 @@
   "contracts-connect": [
     "index.html#contracts-connect"
   ],
+  "contracts-secrets": [
+    "index.html#contracts-secrets"
+  ],
   "modular-service-composition": [
     "index.html#modular-service-composition"
   ],
