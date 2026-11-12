@@ -47,7 +47,10 @@ let
     in
     {
       imports = [
-        ../../../../modules/generic/pkgs/by-name/ws/wstunnel/commands/wstunnel/server.nix
+        ../../../../modules/generic/pkgs/by-name/ws/wstunnel/commands/wstunnel.nix
+        # The options of `wstunnel server` are at the root of this submodule.
+        (lib.mkAliasOptionModule [ "listen" ] [ "command" "server" "listen" ])
+        (lib.mkAliasOptionModule [ "settings" ] [ "command" "server" "settings" ])
         ../../misc/assertions.nix
 
         (lib.mkRenamedOptionModule
@@ -102,7 +105,10 @@ let
     { config, ... }:
     {
       imports = [
-        ../../../../modules/generic/pkgs/by-name/ws/wstunnel/commands/wstunnel/client.nix
+        ../../../../modules/generic/pkgs/by-name/ws/wstunnel/commands/wstunnel.nix
+        # The options of `wstunnel client` are at the root of this submodule.
+        (lib.mkAliasOptionModule [ "connectTo" ] [ "command" "client" "connectTo" ])
+        (lib.mkAliasOptionModule [ "settings" ] [ "command" "client" "settings" ])
         ../../misc/assertions.nix
       ]
       ++

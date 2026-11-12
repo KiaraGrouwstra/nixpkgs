@@ -82,26 +82,26 @@ For example, `pkgs.ghostunnel.commandModules.ghostunnel.commands.server` is for 
 A consumer can use `pkgs.ghostunnel.commandModules.ghostunnel` to add a subcommand that has no module.
 A consumer can import a node together with its subcommands.
 
-To let a user select one subcommand, a consumer can use `types.attrTag`:
+A module can also have its subcommands as submodules of an option of type `types.attrTag`.
+`pkgs.wstunnel.commandModules.wstunnel` has the option `command`, with an attribute for each subcommand.
+The consumer sets exactly one attribute:
 
 ```nix
-{ lib, pkgs, ... }:
-{
-  options.tunnel = lib.mkOption {
-    type = lib.types.attrTag (
-      lib.mapAttrs (
-        name: module:
-        lib.mkOption {
-          description = "Run `wstunnel ${name}`.";
-          type = lib.types.submodule module;
-        }
-      ) pkgs.wstunnel.commandModules.wstunnel.commands
-    );
-  };
-}
+(lib.evalModules {
+  modules = [
+    pkgs.wstunnel.commandModules.wstunnel
+    {
+      command.client = {
+        connectTo = "wss://example.com";
+        settings.local-to-remote = [ "tcp://8080:localhost:80" ];
+      };
+    }
+  ];
+}).config.portable.argv
 ```
 
-Then `(lib.head (lib.attrValues config.tunnel)).portable.argv` is the command line.
+The submodule of a subcommand has the options that all subcommands share, thus its files do not import `wstunnel.nix`.
+The documentation of `command` shows the options of each subcommand.
 
 ### `settings` {#modules-generic-pkgs-settings}
 

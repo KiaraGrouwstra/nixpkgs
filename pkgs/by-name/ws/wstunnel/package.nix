@@ -37,11 +37,11 @@ rustPlatform.buildRustPackage (finalAttrs: {
     tests = {
       nixosTest = nixosTests.wstunnel;
     };
-    commandModules = lib.modules.commandTree {
+    commandModules.wstunnel = {
       # In `modules`, not in this directory, so that the sandbox that builds the
       # option documentation contains it. See "Modules of a package" in the
       # Nixpkgs manual.
-      directory = path + "/modules/generic/pkgs/by-name/ws/wstunnel/commands";
+      imports = [ (path + "/modules/generic/pkgs/by-name/ws/wstunnel/commands/wstunnel.nix") ];
       package = finalAttrs.finalPackage;
     };
   };

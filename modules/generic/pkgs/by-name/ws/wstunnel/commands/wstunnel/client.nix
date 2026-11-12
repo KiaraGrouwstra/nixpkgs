@@ -1,8 +1,8 @@
-# Command line of `wstunnel client`, in a module that is not specific to a
-# module class. The NixOS module `services.wstunnel` and
-# `passthru.commandModules.wstunnel.commands.client` of `pkgs.wstunnel` use it.
-# The options that all subcommands share are in `../wstunnel.nix`. See "Modules
-# of a package" in the Nixpkgs manual for why it is in this directory.
+# Arguments of `wstunnel client` that come after the subcommand, in a module
+# that is not specific to a module class. `command.client` of `../wstunnel.nix`
+# uses it as a submodule. That submodule also has the options that all
+# subcommands share. See "Modules of a package" in the Nixpkgs manual for why it
+# is in this directory.
 
 {
   lib,
@@ -19,8 +19,6 @@ let
     ;
 in
 {
-  imports = [ ../wstunnel.nix ];
-
   options = {
     connectTo = mkOption {
       description = "Server address and port to connect to.";
@@ -49,8 +47,6 @@ in
   };
 
   config.portable.argv = mkMerge [
-    [ "client" ]
-    # The flags of the subcommand come after it.
     (mkOrder 1250 (lib.cli.toCommandLine config.portable.flagFormat config.settings))
     (mkAfter [ config.connectTo ])
   ];

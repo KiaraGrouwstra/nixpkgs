@@ -2324,17 +2324,17 @@ let
     ```nix
     # package.nix
     passthru.commandModules = lib.modules.commandTree {
-      directory = path + "/modules/generic/pkgs/by-name/ws/wstunnel/commands";
+      directory = path + "/modules/generic/pkgs/by-name/gh/ghostunnel/commands";
       package = finalAttrs.finalPackage;
     };
 
     # A consumer
     lib.evalModules {
       modules = [
-        pkgs.wstunnel.commandModules.wstunnel.commands.client
+        pkgs.ghostunnel.commandModules.ghostunnel.commands.server
         {
-          connectTo = "wss://example.com";
-          settings.local-to-remote = [ "tcp://8080:localhost:80" ];
+          listen = "0.0.0.0:443";
+          target = "localhost:80";
         }
       ];
     }
