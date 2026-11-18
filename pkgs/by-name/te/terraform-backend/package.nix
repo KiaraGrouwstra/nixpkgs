@@ -20,7 +20,14 @@ buildGoModule (finalAttrs: {
   ldflags = [
     "-s"
     "-w"
+    "-X github.com/nimbolus/terraform-backend/pkg/version.Version=v${finalAttrs.version}"
   ];
+
+  # this test wants a version name without `ldflags`
+  postPatch = ''
+    substituteInPlace pkg/server/migration_test.go \
+      --replace-fail '"dev", s.Metadata.TerraformBackendVersion' '"v${finalAttrs.version}", s.Metadata.TerraformBackendVersion'
+  '';
 
   installPhase = ''
     runHook preInstall
