@@ -8,6 +8,7 @@ mod init;
 mod initrd_init;
 mod path;
 mod proc_mounts;
+mod setup_etc;
 mod switch_root;
 
 use std::path::{Path, PathBuf};
@@ -22,6 +23,7 @@ pub use crate::{
     init::init,
     initrd_init::initrd_init,
     path::{resolve_in_prefix, resolve_in_root},
+    setup_etc::setup_etc,
     switch_root::switch_root,
 };
 

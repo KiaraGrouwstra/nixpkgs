@@ -12,11 +12,14 @@
 }:
 let
   node = evalMinimalConfig (
-    { config, ... }:
+    { config, pkgs, ... }:
     {
       imports = [
         pkgsModule
         ../etc/etc.nix
+        {
+          options.system.nixos-init.package = lib.mkPackageOption pkgs "nixos-init" { };
+        }
       ];
       environment.etc."passwd" = {
         text = passwdText;

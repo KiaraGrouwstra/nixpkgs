@@ -50,6 +50,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
     "clear-etc-opaque"
     "resolve-in-root"
     "env-generator"
+    "setup-etc"
   ];
 
   postInstall = ''

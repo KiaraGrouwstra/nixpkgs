@@ -100,7 +100,7 @@ in
         type = lib.types.bool;
         default = false;
         description = ''
-          Mount `/etc` as an overlayfs instead of generating it via a perl script.
+          Mount `/etc` as an overlayfs instead of generating it with symlinks.
 
           Note: This is currently experimental. Only enable this option if you're
           confident that you can recover your system if it breaks.
@@ -375,7 +375,7 @@ in
         ''
           # Set up the statically computed bits of /etc.
           echo "setting up /etc..."
-          ${pkgs.perl.withPackages (p: [ p.FileSlurp ])}/bin/perl ${./setup-etc.pl} ${etc}/etc
+          ${config.system.nixos-init.package}/bin/setup-etc ${etc}/etc
         '';
 
     system.build.etcBasedir = pkgs.runCommandLocal "etc-lowerdir" { } ''

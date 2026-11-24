@@ -2,7 +2,9 @@ use std::{env, io::Write, process::ExitCode};
 
 use log::Level;
 
-use nixos_init::{clear_etc_opaque, env_generator, find_etc, initrd_init, resolve_in_root};
+use nixos_init::{
+    clear_etc_opaque, env_generator, find_etc, initrd_init, resolve_in_root, setup_etc,
+};
 
 fn main() -> ExitCode {
     let arg0 = env::args()
@@ -17,6 +19,7 @@ fn main() -> ExitCode {
         "resolve-in-root" => resolve_in_root,
         "initrd-init" => initrd_init,
         "env-generator" => env_generator,
+        "setup-etc" => setup_etc,
         _ => {
             log::error!("Command {arg0} unknown");
             return ExitCode::FAILURE;

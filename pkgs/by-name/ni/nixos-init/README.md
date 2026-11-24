@@ -55,6 +55,9 @@ closure. Currently nixos-init comes in at ~500 KiB.
 - `clear-etc-opaque`: Clears stale `trusted.overlay.opaque` xattrs from the
   mutable `/etc` overlay's upperdir before it is mounted, so that lowerdir
   entries added by a new generation are not hidden.
+- `setup-etc`: Sets up `/etc` from the `etc` tree of a generation when `/etc`
+  is not an overlay, with symlinks into `/etc/static` and copies of the files
+  that need a mode.
 - `resolve-in-root`: Figures out the canonical path inside a chroot.
 
 ## Future
