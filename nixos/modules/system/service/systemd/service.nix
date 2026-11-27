@@ -2,6 +2,7 @@
   lib,
   config,
   systemdPackage,
+  allowUserNamespaces ? true,
   ...
 }:
 let
@@ -49,6 +50,40 @@ let
   # Quotes a list of arguments into a single string for use in a Exec*
   # line.
   escapeSystemdExecArgs = concatMapStringsSep " " escapeSystemdExecArg;
+
+  # Settings derived from `security.capabilities`. See its description.
+  caps = config.security.capabilities;
+  lacks = cap: !(lib.elem cap caps);
+  # Each system call group needs the capability, so a process without the
+  # capability cannot use these calls.
+  # Not here: `@mount` (it has `chroot`, and a process can mount in a user
+  # namespace that it owns), `@clock` and `@module` (`ProtectClock` and
+  # `ProtectKernelModules` handle these).
+  syscallGroupCaps = {
+    "@swap" = "CAP_SYS_ADMIN";
+    "@reboot" = "CAP_SYS_BOOT";
+    "@raw-io" = "CAP_SYS_RAWIO";
+  };
+  deniedSyscalls = lib.mapAttrsToList (group: _: "~${group}:EPERM") (
+    lib.filterAttrs (_: lacks) syscallGroupCaps
+  );
+  capabilitySettings = lib.optionalAttrs (caps != null) {
+    # An empty list writes no line, which systemd reads as all capabilities.
+    CapabilityBoundingSet = lib.mkDefault (if caps == [ ] then "" else caps);
+    AmbientCapabilities = lib.mkDefault (if caps == [ ] then "" else caps);
+    ProtectKernelModules = lib.mkIf (lacks "CAP_SYS_MODULE") (lib.mkDefault true);
+    ProtectKernelLogs = lib.mkIf (lacks "CAP_SYSLOG") (lib.mkDefault true);
+    # Not `ProtectClock`: it adds `DeviceAllow=`, so the process cannot open
+    # other devices, for example `/dev/net/tun`.
+    # Not `PrivateDevices`: it also hides `/dev`.
+    # Normal priority and `mkAfter`: a `SystemCallFilter` from the service
+    # does not remove these entries, and an allow list from the service
+    # (for example `@system-service`) comes first, so these entries remove
+    # calls from it.
+    SystemCallFilter = lib.mkIf (deniedSyscalls != [ ]) (lib.mkAfter deniedSyscalls);
+    # systemd stops the service when it cannot make the user namespace.
+    PrivateUsers = lib.mkIf (caps == [ ] && allowUserNamespaces) (lib.mkDefault true);
+  };
 
 in
 {
@@ -192,7 +227,7 @@ in
             ./service.nix
           ];
           specialArgs = {
-            inherit systemdPackage;
+            inherit systemdPackage allowUserNamespaces;
           };
         }
       );
@@ -209,7 +244,7 @@ in
     systemd.services."" = {
       # TODO description;
       wantedBy = lib.mkDefault [ "multi-user.target" ];
-      serviceConfig = {
+      serviceConfig = capabilitySettings // {
         ExecReload = lib.mkIf (config.systemd.mainExecReload != null) config.systemd.mainExecReload;
         Type = lib.mkDefault (if config.notificationProtocol.systemd then "notify" else "simple");
         Restart = lib.mkDefault "always";

@@ -68,6 +68,7 @@ let
     ];
     extraRootSpecialArgs = {
       systemdPackage = config.systemd.package;
+      inherit (config.security) allowUserNamespaces;
     };
   };
 in

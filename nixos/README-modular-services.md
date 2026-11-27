@@ -33,6 +33,7 @@ When reviewing a modular service, you should check the following. Details and ra
 - [ ] Has a `meta.maintainers` attribute
 - [ ] Systemd-specific definitions are behind `optionalAttrs (options ? systemd)` to promote portability.
 - [ ] `_class = "service"`
+- [ ] Sets `security.capabilities` when the capabilities of the process are known, instead of systemd capability and sandbox settings that the systemd backend derives from it.
 - [ ] Modular services provided through `passthru.services` must override the default of the package option using `finalAttrs.finalPackage`
 - [ ] Is the modular services infrastructure sufficient for this service? If one or more features are not covered, comment in https://github.com/NixOS/nixpkgs/issues/428084
 - [ ] Has been added to `nixos/modules/misc/documentation/modular-services.nix`
@@ -100,3 +101,13 @@ stdenv.mkDerivation (finalAttrs: {
   };
 })
 ```
+
+### `security.capabilities`
+
+Set [`security.capabilities`](https://nixos.org/manual/nixos/unstable/#service-opt-security.capabilities) in the portable part of the module, outside `optionalAttrs (options ? systemd)`.
+Use `[ ]` when the process needs no capabilities, and a list such as `[ "CAP_NET_BIND_SERVICE" ]` when it needs some.
+Keep the default `null` when you do not know which capabilities the process needs.
+
+The systemd backend then derives `CapabilityBoundingSet`, `AmbientCapabilities` and some sandbox settings.
+Do not set these settings in `systemd.service.serviceConfig` too, unless the service needs a different value.
+The option description gives the derived settings.

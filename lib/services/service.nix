@@ -27,6 +27,51 @@ let
   # after the flags. See the `flags` option description.
   unadornedFlagPriority = 1250;
 
+  # The capabilities of capabilities(7), in the form that systemd uses.
+  capabilityNames = [
+    "CAP_AUDIT_CONTROL"
+    "CAP_AUDIT_READ"
+    "CAP_AUDIT_WRITE"
+    "CAP_BLOCK_SUSPEND"
+    "CAP_BPF"
+    "CAP_CHECKPOINT_RESTORE"
+    "CAP_CHOWN"
+    "CAP_DAC_OVERRIDE"
+    "CAP_DAC_READ_SEARCH"
+    "CAP_FOWNER"
+    "CAP_FSETID"
+    "CAP_IPC_LOCK"
+    "CAP_IPC_OWNER"
+    "CAP_KILL"
+    "CAP_LEASE"
+    "CAP_LINUX_IMMUTABLE"
+    "CAP_MAC_ADMIN"
+    "CAP_MAC_OVERRIDE"
+    "CAP_MKNOD"
+    "CAP_NET_ADMIN"
+    "CAP_NET_BIND_SERVICE"
+    "CAP_NET_BROADCAST"
+    "CAP_NET_RAW"
+    "CAP_PERFMON"
+    "CAP_SETFCAP"
+    "CAP_SETGID"
+    "CAP_SETPCAP"
+    "CAP_SETUID"
+    "CAP_SYS_ADMIN"
+    "CAP_SYS_BOOT"
+    "CAP_SYS_CHROOT"
+    "CAP_SYS_MODULE"
+    "CAP_SYS_NICE"
+    "CAP_SYS_PACCT"
+    "CAP_SYS_PTRACE"
+    "CAP_SYS_RAWIO"
+    "CAP_SYS_RESOURCE"
+    "CAP_SYS_TIME"
+    "CAP_SYS_TTY_CONFIG"
+    "CAP_SYSLOG"
+    "CAP_WAKE_ALARM"
+  ];
+
   # `attrListWith` re-emits every flag wrapped in `lib.mkOrder`, using
   # `lib.modules.defaultOrderPriority` for flags that carried no ordering
   # property of their own. Rewrite exactly that priority; anything else is an
@@ -63,6 +108,43 @@ in
       '';
       default = { };
       visible = "shallow";
+    };
+    security.capabilities = mkOption {
+      type = types.nullOr (types.listOf (types.enum capabilityNames));
+      default = null;
+      example = [ "CAP_NET_BIND_SERVICE" ];
+      description = ''
+        The Linux capabilities that the process needs, as names from
+        {manpage}`capabilities(7)` with the `CAP_` prefix.
+
+        - `null` (the default): the capabilities are not known.
+          The service manager does not derive settings from this option.
+        - `[ ]`: the process needs no capabilities.
+        - A list of names: the process needs these capabilities, and no others.
+
+        A service manager can use this value to limit the capabilities of the
+        process and to derive more sandbox settings.
+        The systemd backend derives these settings, at a priority that a
+        definition in `systemd.service.serviceConfig` overrides:
+
+        - `CapabilityBoundingSet` and `AmbientCapabilities`: the capabilities
+          in this list. The process gets these capabilities also when it does
+          not run as root.
+        - `ProtectKernelModules`: when `CAP_SYS_MODULE` is not in the list.
+        - `ProtectKernelLogs`: when `CAP_SYSLOG` is not in the list.
+          This also makes `/dev/kmsg` inaccessible, also for writing.
+        - `SystemCallFilter`: denies the `@swap` group when `CAP_SYS_ADMIN` is
+          not in the list, `@reboot` when `CAP_SYS_BOOT` is not in the list,
+          and `@raw-io` when `CAP_SYS_RAWIO` is not in the list.
+          A denied call fails with `EPERM`, as it would without the capability.
+          With a system call filter, systemd also sets `NoNewPrivileges` for a
+          process that does not run as `root`; the process then cannot get
+          privileges from setuid, setgid or file capabilities.
+        - `PrivateUsers`: when the list is empty and the system allows user
+          namespaces. The process then sees only `root`, its own user and its
+          own group; it cannot use supplementary groups of other users to get
+          access to files.
+      '';
     };
     process = {
       argv = mkOption {
