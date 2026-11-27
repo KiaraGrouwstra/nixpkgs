@@ -153,6 +153,8 @@ in
   };
 
   config = {
+    security.capabilities = [ "CAP_NET_BIND_SERVICE" ];
+
     assertions = [
       {
         message = ''
@@ -229,7 +231,6 @@ in
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
           Restart = "always";
-          AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
           DynamicUser = true;
           LoadCredential =
             optional (cfg.keystore != null) "keystore:${cfg.keystore}"
