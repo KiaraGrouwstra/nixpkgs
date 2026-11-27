@@ -57,6 +57,8 @@ in
   };
 
   config = {
+    security.capabilities = [ ];
+
     git-pages.settings.storage.fs.root = lib.mkDefault "/var/lib/${name}/data";
 
     process.argv = [
@@ -101,11 +103,8 @@ in
         RestrictAddressFamilies = "AF_INET AF_INET6 AF_UNIX";
         RestrictNamespaces = true;
         LockPersonality = true;
-        ProtectKernelLogs = true;
         ProtectKernelTunables = true;
         ProtectHostname = true;
-        ProtectKernelModules = true;
-        PrivateUsers = true;
         ProtectClock = true;
         SystemCallArchitectures = "native";
         SystemCallErrorNumber = "EPERM";
