@@ -118,6 +118,8 @@ in
   };
 
   config = {
+    security.capabilities = [ "CAP_NET_BIND_SERVICE" ];
+
     assertions = [
       {
         assertion = cfg.mode == "nat46" -> cfg.nat46Prefix != null;
@@ -168,7 +170,6 @@ in
       serviceConfig = {
         Restart = "on-failure";
         DynamicUser = true;
-        AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
       };
     };
   };
