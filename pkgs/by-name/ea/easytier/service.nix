@@ -125,6 +125,11 @@ in
   };
 
   config = {
+    security.capabilities = [
+      "CAP_NET_ADMIN"
+      "CAP_NET_RAW"
+    ];
+
     easytier = {
       settings.peer = lib.mkIf (cfg.peers != [ ]) (map (p: { uri = p; }) cfg.peers);
       configFile = lib.mkDefault (
@@ -178,20 +183,10 @@ in
 
         # Hardening
         DynamicUser = true;
-        CapabilityBoundingSet = [
-          "CAP_NET_RAW"
-          "CAP_NET_ADMIN"
-        ];
-        AmbientCapabilities = [
-          "CAP_NET_RAW"
-          "CAP_NET_ADMIN"
-        ];
         DeviceAllow = "/dev/net/tun";
         MemoryDenyWriteExecute = true;
         PrivateTmp = true;
         ProtectHome = true;
-        ProtectKernelLogs = true;
-        ProtectKernelModules = true;
         ProtectProc = "invisible";
         ProtectSystem = "strict";
         RestrictRealtime = true;
