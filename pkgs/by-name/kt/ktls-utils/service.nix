@@ -49,6 +49,8 @@ in
   };
 
   config = {
+    security.capabilities = [ "CAP_NET_ADMIN" ];
+
     configData."tlshd.conf".text = lib.generators.toINI { } cfg.settings;
 
     process.argv = [
@@ -67,8 +69,6 @@ in
       serviceConfig = {
         Restart = "on-failure";
         DynamicUser = true;
-        AmbientCapabilities = [ "CAP_NET_ADMIN" ];
-        CapabilityBoundingSet = [ "CAP_NET_ADMIN" ];
       };
     };
   };
